@@ -1,0 +1,2 @@
+# This file ensures the bin/az directory is tracked in git
+# All binaries in bin/ are ignored via .gitignore
