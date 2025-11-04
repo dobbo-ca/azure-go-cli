@@ -8,7 +8,13 @@ import (
   "github.com/cdobbyn/azure-go-cli/internal/aks"
   "github.com/cdobbyn/azure-go-cli/internal/auth"
   "github.com/cdobbyn/azure-go-cli/internal/group"
+  "github.com/cdobbyn/azure-go-cli/internal/identity"
+  "github.com/cdobbyn/azure-go-cli/internal/keyvault"
   "github.com/cdobbyn/azure-go-cli/internal/network"
+  "github.com/cdobbyn/azure-go-cli/internal/postgres"
+  "github.com/cdobbyn/azure-go-cli/internal/quota"
+  "github.com/cdobbyn/azure-go-cli/internal/storage"
+  "github.com/cdobbyn/azure-go-cli/internal/vm"
   "github.com/spf13/cobra"
 )
 
@@ -26,7 +32,13 @@ func main() {
     account.NewAccountCommand(),
     aks.NewAKSCommand(),
     group.NewGroupCommand(),
+    identity.NewIdentityCommand(),
     network.NewNetworkCommand(),
+    storage.NewStorageCommand(),
+    postgres.NewPostgresCommand(),
+    keyvault.NewKeyVaultCommand(),
+    quota.NewQuotaCommand(),
+    vm.NewVMCommand(),
   )
 
   if err := rootCmd.Execute(); err != nil {
