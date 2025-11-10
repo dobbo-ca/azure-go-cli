@@ -127,12 +127,30 @@ func Delete() error {
     return err
   }
 
-  if _, err := os.Stat(configPath); os.IsNotExist(err) {
-    return nil
+  // Remove profile
+  if _, err := os.Stat(configPath); err == nil {
+    if err := os.Remove(configPath); err != nil {
+      return fmt.Errorf("failed to remove profile: %w", err)
+    }
   }
 
-  if err := os.Remove(configPath); err != nil {
-    return fmt.Errorf("failed to remove profile: %w", err)
+  // Also clear MSAL cache files to ensure complete logout
+  // This prevents old tokens from persisting across different accounts
+  home, err := os.UserHomeDir()
+  if err == nil {
+    azureDir := filepath.Join(home, ConfigDir)
+
+    // Remove MSAL token cache
+    msalTokenCache := filepath.Join(azureDir, "msal_token_cache.json")
+    if _, err := os.Stat(msalTokenCache); err == nil {
+      _ = os.Remove(msalTokenCache) // Ignore errors, best effort
+    }
+
+    // Remove MSAL HTTP cache (created by Azure SDK)
+    msalHttpCache := filepath.Join(azureDir, "msal_http_cache.bin")
+    if _, err := os.Stat(msalHttpCache); err == nil {
+      _ = os.Remove(msalHttpCache) // Ignore errors, best effort
+    }
   }
 
   return nil
