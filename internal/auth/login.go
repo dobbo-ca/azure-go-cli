@@ -10,6 +10,13 @@ import (
 )
 
 func Login(ctx context.Context) error {
+  // Clear any existing profile to ensure fresh login
+  // This prevents old subscription data from persisting if the new login fails
+  if err := config.Delete(); err != nil {
+    // Ignore errors if profile doesn't exist
+    _ = err
+  }
+
   fmt.Println("A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize. Please continue the login in the web browser. If no web browser is available or if the web browser fails to open, use device code flow with `az login --use-device-code`.")
   fmt.Println()
 
