@@ -21,6 +21,17 @@ func NewGroupCommand() *cobra.Command {
     },
   }
 
-  cmd.AddCommand(listCmd)
+  showCmd := &cobra.Command{
+    Use:   "show",
+    Short: "Show details of a resource group",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      name, _ := cmd.Flags().GetString("name")
+      return Show(context.Background(), name)
+    },
+  }
+  showCmd.Flags().StringP("name", "n", "", "Resource group name")
+  showCmd.MarkFlagRequired("name")
+
+  cmd.AddCommand(listCmd, showCmd)
   return cmd
 }

@@ -18,7 +18,8 @@ func NewIdentityCommand() *cobra.Command {
     Short: "List managed identities",
     RunE: func(cmd *cobra.Command, args []string) error {
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      return List(context.Background(), resourceGroup)
+      subscription, _ := cmd.Flags().GetString("subscription")
+      return List(context.Background(), resourceGroup, subscription)
     },
   }
   listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")
@@ -29,7 +30,8 @@ func NewIdentityCommand() *cobra.Command {
     RunE: func(cmd *cobra.Command, args []string) error {
       name, _ := cmd.Flags().GetString("name")
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      return Show(context.Background(), name, resourceGroup)
+      subscription, _ := cmd.Flags().GetString("subscription")
+      return Show(context.Background(), name, resourceGroup, subscription)
     },
   }
   showCmd.Flags().StringP("name", "n", "", "Managed identity name")

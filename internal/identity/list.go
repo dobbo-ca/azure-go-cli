@@ -10,13 +10,13 @@ import (
   "github.com/cdobbyn/azure-go-cli/pkg/config"
 )
 
-func List(ctx context.Context, resourceGroup string) error {
+func List(ctx context.Context, resourceGroup, subscriptionOverride string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
   }
 
-  subscriptionID, err := config.GetDefaultSubscription()
+  subscriptionID, err := config.GetSubscription(subscriptionOverride)
   if err != nil {
     return err
   }

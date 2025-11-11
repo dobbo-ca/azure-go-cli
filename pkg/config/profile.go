@@ -121,6 +121,34 @@ func GetDefaultSubscription() (string, error) {
   return "", fmt.Errorf("no subscription found")
 }
 
+// GetSubscription returns the subscription ID to use
+// If subscriptionIDOrName is provided, it looks up the subscription by ID or name
+// Otherwise, it returns the default subscription
+func GetSubscription(subscriptionIDOrName string) (string, error) {
+  // If no override provided, use default
+  if subscriptionIDOrName == "" {
+    return GetDefaultSubscription()
+  }
+
+  // Load profile to find matching subscription
+  profile, err := Load()
+  if err != nil {
+    return "", err
+  }
+
+  // Try to find by ID or name
+  for i := range profile.Subscriptions {
+    if profile.Subscriptions[i].ID == subscriptionIDOrName ||
+       profile.Subscriptions[i].Name == subscriptionIDOrName {
+      return profile.Subscriptions[i].ID, nil
+    }
+  }
+
+  // If not found in profile, assume it's a valid subscription ID
+  // (user might be using a subscription they have access to but isn't in profile)
+  return subscriptionIDOrName, nil
+}
+
 func Delete() error {
   configPath, err := GetConfigPath()
   if err != nil {

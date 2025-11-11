@@ -3,6 +3,13 @@ package aks
 import (
   "context"
 
+  "github.com/cdobbyn/azure-go-cli/internal/aks/addon"
+  "github.com/cdobbyn/azure-go-cli/internal/aks/machine"
+  "github.com/cdobbyn/azure-go-cli/internal/aks/maintenanceconfiguration"
+  "github.com/cdobbyn/azure-go-cli/internal/aks/nodepool"
+  "github.com/cdobbyn/azure-go-cli/internal/aks/operation"
+  "github.com/cdobbyn/azure-go-cli/internal/aks/podidentity"
+  "github.com/cdobbyn/azure-go-cli/internal/aks/snapshot"
   "github.com/spf13/cobra"
 )
 
@@ -56,10 +63,11 @@ or use -f - to output to stdout.`,
       clusterName, _ := cmd.Flags().GetString("name")
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
       bastionResourceID, _ := cmd.Flags().GetString("bastion")
+      subscription, _ := cmd.Flags().GetString("subscription")
       admin, _ := cmd.Flags().GetBool("admin")
       port, _ := cmd.Flags().GetInt("port")
 
-      return Bastion(context.Background(), clusterName, resourceGroup, bastionResourceID, admin, port)
+      return Bastion(context.Background(), clusterName, resourceGroup, bastionResourceID, subscription, admin, port)
     },
   }
   bastionCmd.Flags().StringP("name", "n", "", "AKS cluster name")
@@ -95,6 +103,18 @@ or use -f - to output to stdout.`,
   showCmd.MarkFlagRequired("name")
   showCmd.MarkFlagRequired("resource-group")
 
-  cmd.AddCommand(getCredsCmd, bastionCmd, listCmd, showCmd)
+  cmd.AddCommand(
+    getCredsCmd,
+    bastionCmd,
+    listCmd,
+    showCmd,
+    nodepool.NewNodePoolCommand(),
+    addon.NewAddonCommand(),
+    machine.NewMachineCommand(),
+    maintenanceconfiguration.NewMaintenanceConfigurationCommand(),
+    snapshot.NewSnapshotCommand(),
+    operation.NewOperationCommand(),
+    podidentity.NewPodIdentityCommand(),
+  )
   return cmd
 }

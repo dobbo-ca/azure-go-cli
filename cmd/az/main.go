@@ -25,6 +25,9 @@ func main() {
     Long:  "A lightweight Azure CLI implementation in Go with core authentication and management commands",
   }
 
+  // Add global flags
+  rootCmd.PersistentFlags().String("subscription", "", "Subscription ID or name (overrides default)")
+
   // Add all domain commands
   rootCmd.AddCommand(
     auth.NewLoginCommand(),
