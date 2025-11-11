@@ -1,7 +1,6 @@
 package bastion
 
 import (
-  "bytes"
   "context"
   "crypto/tls"
   "encoding/json"
@@ -9,6 +8,7 @@ import (
   "io"
   "net"
   "net/http"
+  "net/url"
   "strings"
   "time"
 
@@ -22,7 +22,9 @@ import (
 
 // TokenResponse represents the response from the token exchange API
 type TokenResponse struct {
-  Token string `json:"token"`
+  AuthToken      string `json:"authToken"`
+  NodeID         string `json:"nodeId"`
+  WebSocketToken string `json:"websocketToken"`
 }
 
 // Tunnel opens a tunnel to a target resource through Azure Bastion
@@ -112,26 +114,24 @@ func getAccessToken(ctx context.Context, cred azcore.TokenCredential) (string, e
 
 // exchangeToken exchanges an Azure AD token for a WebSocket token
 func exchangeToken(bastionEndpoint, accessToken, targetResourceID string, resourcePort int) (string, error) {
-  // Prepare request payload
-  payload := map[string]interface{}{
-    "resourceId": targetResourceID,
-    "port":       resourcePort,
-  }
-
-  jsonData, err := json.Marshal(payload)
-  if err != nil {
-    return "", fmt.Errorf("failed to marshal payload: %w", err)
-  }
+  // Prepare form data payload (not JSON!)
+  // Azure Bastion API expects application/x-www-form-urlencoded
+  formData := url.Values{}
+  formData.Set("resourceId", targetResourceID)
+  formData.Set("protocol", "tcptunnel")
+  formData.Set("workloadHostPort", fmt.Sprintf("%d", resourcePort))
+  formData.Set("aztoken", accessToken)
+  formData.Set("token", "") // Empty for first connection
 
   // Create HTTPS request
-  url := fmt.Sprintf("https://%s/api/tokens", bastionEndpoint)
-  req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+  tokenURL := fmt.Sprintf("https://%s/api/tokens", bastionEndpoint)
+  req, err := http.NewRequest("POST", tokenURL, strings.NewReader(formData.Encode()))
   if err != nil {
     return "", fmt.Errorf("failed to create request: %w", err)
   }
 
-  req.Header.Set("Authorization", "Bearer "+accessToken)
-  req.Header.Set("Content-Type", "application/json")
+  // Set form content type (not JSON)
+  req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
   // Send request
   client := &http.Client{
@@ -154,7 +154,8 @@ func exchangeToken(bastionEndpoint, accessToken, targetResourceID string, resour
     return "", fmt.Errorf("failed to decode response: %w", err)
   }
 
-  return tokenResp.Token, nil
+  // Return the websocketToken field
+  return tokenResp.WebSocketToken, nil
 }
 
 // handleConnection handles a single TCP connection by forwarding it through WebSocket
