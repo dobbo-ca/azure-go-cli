@@ -1,27 +1,14 @@
 # Uplift configuration for semantic versioning
 # https://upliftci.dev/
 
-# Conventional commit configuration
+# Git configuration
 git:
   ignoreDetached: false
   ignoreShallow: false
 
-# Bump configuration
-bumps:
-  - file: cmd/az/main.go
-    regex:
-      - pattern: 'version = "(.*)"'
-        semver: true
+# Commit message template
+commitMessage: "chore: release version $VERSION"
 
-# Changelog configuration
+# Changelog configuration - skip to use git-cliff instead
 changelog:
-  skip: true  # We use git-cliff for changelog generation
-
-# Git commit and tag configuration
-commitMessage: |
-  chore: release version $VERSION
-
-  $CHANGES
-
-tagMessage: |
-  Release $VERSION
+  skip: true
