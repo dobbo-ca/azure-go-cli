@@ -1,0 +1,220 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force version update'
+        required: false
+        default: 'false'
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  semantic-release:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.uplift.outputs.new_version }}
+      version_changed: ${{ steps.uplift.outputs.version_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Uplift
+        uses: gembaadvantage/uplift-action@v2
+        with:
+          version: latest
+          install-only: true
+
+      - name: Run Uplift
+        id: uplift
+        run: |
+          if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
+            uplift release --fetch-all --skip-changelog
+          else
+            uplift release --fetch-all --skip-changelog
+          fi
+
+          NEW_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -n "$NEW_VERSION" ]; then
+            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+            echo "version_changed=true" >> $GITHUB_OUTPUT
+          else
+            echo "version_changed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Generate Changelog
+        if: steps.uplift.outputs.version_changed == 'true'
+        uses: orhun/git-cliff-action@v4
+        with:
+          config: .cliff.toml
+          args: --verbose --current
+        env:
+          OUTPUT: CHANGELOG.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Commit Changelog
+        if: steps.uplift.outputs.version_changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "docs: update changelog for ${{ steps.uplift.outputs.new_version }}" || echo "No changes to commit"
+          git push origin main || echo "No changes to push"
+
+  build:
+    needs: semantic-release
+    if: needs.semantic-release.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+          - goos: windows
+            goarch: amd64
+          - goos: windows
+            goarch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+
+      - name: Build Binary
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          VERSION="${{ needs.semantic-release.outputs.new_version }}"
+          COMMIT="${{ github.sha }}"
+          BUILD_DATE="$(date -u '+%Y-%m-%d_%H:%M:%S')"
+
+          LDFLAGS="-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${BUILD_DATE}"
+
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            OUTPUT="az-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
+          else
+            OUTPUT="az-${{ matrix.goos }}-${{ matrix.goarch }}"
+          fi
+
+          go build -ldflags "${LDFLAGS}" -o "${OUTPUT}" ./cmd/az/main.go
+
+          echo "Built: ${OUTPUT}"
+          ls -lh "${OUTPUT}"
+
+      - name: Create Archive
+        run: |
+          VERSION="${{ needs.semantic-release.outputs.new_version }}"
+
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            BINARY="az-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
+            ARCHIVE="az-go-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
+            zip "${ARCHIVE}" "${BINARY}"
+          else
+            BINARY="az-${{ matrix.goos }}-${{ matrix.goarch }}"
+            ARCHIVE="az-go-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz"
+            tar czf "${ARCHIVE}" "${BINARY}"
+          fi
+
+          # Generate SHA256
+          shasum -a 256 "${ARCHIVE}" | awk '{print $1}' > "${ARCHIVE}.sha256"
+
+          echo "Created: ${ARCHIVE}"
+          cat "${ARCHIVE}.sha256"
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: az-go-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            az-go-*.tar.gz
+            az-go-*.tar.gz.sha256
+            az-go-*.zip
+            az-go-*.zip.sha256
+
+  release:
+    needs: [semantic-release, build]
+    if: needs.semantic-release.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Prepare Release Assets
+        run: |
+          mkdir -p release-assets
+          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.sha256" \) -exec cp {} release-assets/ \;
+          ls -lh release-assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.semantic-release.outputs.new_version }}
+          name: ${{ needs.semantic-release.outputs.new_version }}
+          body_path: CHANGELOG.md
+          files: release-assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-homebrew:
+    needs: [semantic-release, release]
+    if: needs.semantic-release.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download All Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Extract SHA256 Checksums
+        id: checksums
+        run: |
+          mkdir -p checksums
+          find artifacts -name "*.sha256" -exec cp {} checksums/ \;
+
+          # Extract checksums for each platform
+          echo "darwin_amd64=$(cat checksums/az-go-*-darwin-amd64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+          echo "darwin_arm64=$(cat checksums/az-go-*-darwin-arm64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+          echo "linux_amd64=$(cat checksums/az-go-*-linux-amd64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+          echo "linux_arm64=$(cat checksums/az-go-*-linux-arm64.tar.gz.sha256)" >> $GITHUB_OUTPUT
+
+      - name: Trigger Homebrew Tap Update
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: cdobbyn/homebrew-taps
+          event-type: update-formula
+          client-payload: |
+            {
+              "formula": "az-go",
+              "version": "${{ needs.semantic-release.outputs.new_version }}",
+              "darwin_amd64_sha": "${{ steps.checksums.outputs.darwin_amd64 }}",
+              "darwin_arm64_sha": "${{ steps.checksums.outputs.darwin_arm64 }}",
+              "linux_amd64_sha": "${{ steps.checksums.outputs.linux_amd64 }}",
+              "linux_arm64_sha": "${{ steps.checksums.outputs.linux_arm64 }}"
+            }
