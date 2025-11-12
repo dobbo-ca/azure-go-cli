@@ -33,15 +33,12 @@ jobs:
         with:
           version: latest
           install-only: true
+          args: version
 
       - name: Run Uplift
         id: uplift
         run: |
-          if [[ "${{ github.event.inputs.force_update }}" == "true" ]]; then
-            uplift release --fetch-all --skip-changelog
-          else
-            uplift release --fetch-all --skip-changelog
-          fi
+          uplift release --fetch-all --skip-changelog
 
           NEW_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           if [ -n "$NEW_VERSION" ]; then
