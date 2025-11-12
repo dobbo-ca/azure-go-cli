@@ -76,6 +76,61 @@ make test
 ./bin/az/az {command} {subcommand} {flags}
 ```
 
+## Commit Conventions and Versioning
+
+This project uses **conventional commits** and **semantic versioning** with automated releases.
+
+### Commit Message Prefixes
+
+Use these prefixes in your commit messages to trigger automatic version bumps:
+
+**Version Bumps:**
+- `feat:` - New feature → **MINOR version bump** (0.1.0 → 0.2.0)
+- `fix:` - Bug fix → **PATCH version bump** (0.1.0 → 0.1.1)
+- `perf:` - Performance improvement → **PATCH version bump**
+
+**Breaking Changes:**
+- Any commit with `BREAKING CHANGE:` in the body → **MAJOR version bump** (0.1.0 → 1.0.0)
+- Add `!` after prefix (e.g., `feat!:`, `fix!:`) → **MAJOR version bump**
+
+**No Version Bump (Changelog Only):**
+- `docs:` - Documentation changes → 📚 Documentation
+- `style:` - Code style/formatting → 🎨 Styling
+- `refactor:` - Code refactoring → ♻️ Refactor
+- `test:` - Test changes → 🧪 Testing
+- `chore:` - Build/tooling changes → 🔧 Miscellaneous Tasks
+- `ci:` - CI/CD changes → 🔧 Miscellaneous Tasks
+- `revert:` - Revert previous commit → ⏪ Revert
+
+### Examples
+
+```bash
+# Patch release (0.1.0 → 0.1.1)
+git commit -m "fix: resolve authentication timeout issue"
+
+# Minor release (0.1.0 → 0.2.0)
+git commit -m "feat: add support for private endpoints"
+
+# Major release (0.1.0 → 1.0.0)
+git commit -m "feat!: redesign CLI argument structure
+
+BREAKING CHANGE: Command arguments have been restructured.
+Use --resource-group instead of -g flag."
+
+# No version bump
+git commit -m "docs: update README with installation instructions"
+git commit -m "chore: update dependencies"
+```
+
+### Release Process
+
+When you push to `main` with conventional commits:
+1. **Uplift** analyzes commits and determines the next version
+2. **git-cliff** generates a changelog with emojis
+3. **GitHub Actions** builds binaries for all platforms
+4. **GitHub Release** is created with all artifacts
+5. **Homebrew tap** is automatically updated
+
 ## Dependencies
 
 The project uses:
