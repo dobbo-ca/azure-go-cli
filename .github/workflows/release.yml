@@ -95,6 +95,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Fetch Tags
+        run: |
+          git fetch --tags --force
+          git describe --tags --abbrev=0
+
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
