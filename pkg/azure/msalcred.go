@@ -54,15 +54,21 @@ func NewMSALSilentCredential(tenantID string, authRecord azidentity.Authenticati
   return &MSALSilentCredential{
     client:  client,
     account: account,
-    scopes:  []string{"https://management.azure.com/.default"},
+    scopes:  []string{}, // Don't hardcode scopes - will use opts.Scopes in GetToken
   }, nil
 }
 
 // GetToken implements azcore.TokenCredential interface
 func (m *MSALSilentCredential) GetToken(ctx context.Context, opts policy.TokenRequestOptions) (azcore.AccessToken, error) {
+  // Use the scopes from opts if provided, otherwise fall back to management API
+  scopes := opts.Scopes
+  if len(scopes) == 0 {
+    scopes = []string{"https://management.azure.com/.default"}
+  }
+
   // Use AcquireTokenSilent - this ONLY uses cache and refresh tokens (no user interaction)
   // This is exactly what Python CLI does: acquire_token_silent_with_error
-  result, err := m.client.AcquireTokenSilent(ctx, m.scopes, public.WithSilentAccount(m.account))
+  result, err := m.client.AcquireTokenSilent(ctx, scopes, public.WithSilentAccount(m.account))
   if err != nil {
     return azcore.AccessToken{}, fmt.Errorf("failed to acquire token silently: %w", err)
   }

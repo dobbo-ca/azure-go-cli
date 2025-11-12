@@ -59,6 +59,10 @@ or use -f - to output to stdout.`,
   bastionCmd := &cobra.Command{
     Use:   "bastion",
     Short: "Open tunnel to AKS cluster through Azure Bastion",
+    Long: `Open tunnel to AKS cluster through Azure Bastion.
+
+Creates a temporary kubeconfig and establishes a secure tunnel to the cluster.
+Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
     RunE: func(cmd *cobra.Command, args []string) error {
       clusterName, _ := cmd.Flags().GetString("name")
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
@@ -66,15 +70,27 @@ or use -f - to output to stdout.`,
       subscription, _ := cmd.Flags().GetString("subscription")
       admin, _ := cmd.Flags().GetBool("admin")
       port, _ := cmd.Flags().GetInt("port")
+      launchK9s, _ := cmd.Flags().GetBool("k9s")
 
-      return Bastion(context.Background(), clusterName, resourceGroup, bastionResourceID, subscription, admin, port)
+      opts := BastionOptions{
+        ClusterName:          clusterName,
+        ResourceGroup:        resourceGroup,
+        BastionResourceID:    bastionResourceID,
+        SubscriptionOverride: subscription,
+        Admin:                admin,
+        Port:                 port,
+        LaunchK9s:            launchK9s,
+      }
+
+      return Bastion(context.Background(), opts)
     },
   }
   bastionCmd.Flags().StringP("name", "n", "", "AKS cluster name")
   bastionCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
   bastionCmd.Flags().String("bastion", "", "Bastion resource ID")
   bastionCmd.Flags().BoolP("admin", "a", false, "Use admin credentials")
-  bastionCmd.Flags().IntP("port", "p", 8001, "Local port to use for tunnel")
+  bastionCmd.Flags().IntP("port", "p", 0, "Local port to use for tunnel (0 = random port)")
+  bastionCmd.Flags().Bool("k9s", false, "Launch k9s automatically (closes tunnel when k9s exits)")
   bastionCmd.MarkFlagRequired("name")
   bastionCmd.MarkFlagRequired("resource-group")
   bastionCmd.MarkFlagRequired("bastion")
@@ -103,11 +119,24 @@ or use -f - to output to stdout.`,
   showCmd.MarkFlagRequired("name")
   showCmd.MarkFlagRequired("resource-group")
 
+  installCliCmd := &cobra.Command{
+    Use:   "install-cli",
+    Short: "Install kubectl and kubelogin",
+    Long: `Install kubectl and kubelogin to /usr/local/bin.
+
+This command requires sudo privileges to install to /usr/local/bin.
+Run with: sudo az aks install-cli`,
+    RunE: func(cmd *cobra.Command, args []string) error {
+      return InstallCLI(context.Background())
+    },
+  }
+
   cmd.AddCommand(
     getCredsCmd,
     bastionCmd,
     listCmd,
     showCmd,
+    installCliCmd,
     nodepool.NewNodePoolCommand(),
     addon.NewAddonCommand(),
     machine.NewMachineCommand(),

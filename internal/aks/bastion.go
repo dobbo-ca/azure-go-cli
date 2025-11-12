@@ -3,22 +3,58 @@ package aks
 import (
   "context"
   "fmt"
+  "math/rand"
+  "os"
+  "os/signal"
+  "path/filepath"
+  "syscall"
+  "time"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
   "github.com/cdobbyn/azure-go-cli/internal/network/bastion"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
+
+// BastionOptions contains options for the bastion tunnel
+type BastionOptions struct {
+  ClusterName        string
+  ResourceGroup      string
+  BastionResourceID  string
+  SubscriptionOverride string
+  Admin              bool
+  Port               int
+  LaunchK9s          bool
+}
 
 // Bastion is a convenience wrapper around network bastion tunnel
 // It fetches the AKS cluster details and calls the bastion tunnel with appropriate parameters
-func Bastion(ctx context.Context, clusterName, resourceGroup, bastionResourceID, subscriptionOverride string, admin bool, port int) error {
+func Bastion(ctx context.Context, opts BastionOptions) error {
+  // Check dependencies
+  missing := CheckDependencies()
+  if len(missing) > 0 {
+    fmt.Printf("Warning: The following required tools are not installed: %v\n", missing)
+    fmt.Println("Please install them using: sudo az aks install-cli")
+    fmt.Println("(Note: This command requires sudo to install to /usr/local/bin)")
+    fmt.Println()
+  }
+
+  // Use random high port if not specified
+  port := opts.Port
+  if port == 0 {
+    rand.Seed(time.Now().UnixNano())
+    port = 49152 + rand.Intn(16384) // Ephemeral port range: 49152-65535
+    logger.Debug("Using random port: %d", port)
+  }
+
+  clusterName := opts.ClusterName
   cred, err := azure.GetCredential()
   if err != nil {
     return err
   }
 
-  subscriptionID, err := config.GetSubscription(subscriptionOverride)
+  subscriptionID, err := config.GetSubscription(opts.SubscriptionOverride)
   if err != nil {
     return err
   }
@@ -29,7 +65,7 @@ func Bastion(ctx context.Context, clusterName, resourceGroup, bastionResourceID,
     return fmt.Errorf("failed to create AKS client: %w", err)
   }
 
-  cluster, err := client.Get(ctx, resourceGroup, clusterName, nil)
+  cluster, err := client.Get(ctx, opts.ResourceGroup, clusterName, nil)
   if err != nil {
     return fmt.Errorf("failed to get cluster: %w", err)
   }
@@ -38,17 +74,102 @@ func Bastion(ctx context.Context, clusterName, resourceGroup, bastionResourceID,
     return fmt.Errorf("cluster ID not found")
   }
 
+  // Get cluster FQDN for kubeconfig
+  clusterFQDN := ""
+  if cluster.Properties != nil && cluster.Properties.Fqdn != nil {
+    clusterFQDN = *cluster.Properties.Fqdn
+  }
+
+  // Create temporary kubeconfig
+  kubeconfigPath, err := CreateTempKubeconfig(ctx, clusterName, clusterFQDN, port)
+  if err != nil {
+    return fmt.Errorf("failed to create temporary kubeconfig: %w", err)
+  }
+  defer func() {
+    // Clean up temp directory
+    tmpDir := filepath.Dir(filepath.Dir(kubeconfigPath))
+    logger.Debug("Cleaning up temporary directory: %s", tmpDir)
+    os.RemoveAll(tmpDir)
+  }()
+
+  fmt.Printf("Merged \"%s\" as current context in %s\n", clusterName, kubeconfigPath)
+  fmt.Println("Converted kubeconfig to use Azure CLI authentication.")
+
   fmt.Printf("Opening tunnel to AKS cluster %s through Bastion...\n", clusterName)
 
   // Extract bastion details from resource ID
-  // Format: /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.Network/bastionHosts/{name}
-  bastionName, bastionRG, err := parseBastionResourceID(bastionResourceID)
+  bastionName, bastionRG, err := parseBastionResourceID(opts.BastionResourceID)
   if err != nil {
     return fmt.Errorf("failed to parse bastion resource ID: %w", err)
   }
 
-  // Delegate to network bastion tunnel with AKS-specific parameters
-  return bastion.Tunnel(ctx, bastionName, bastionRG, *cluster.ID, 443, port)
+  // Start bastion tunnel in background
+  tunnelCtx, cancelTunnel := context.WithCancel(ctx)
+  defer cancelTunnel()
+
+  tunnelErrCh := make(chan error, 1)
+  go func() {
+    tunnelErrCh <- bastion.Tunnel(tunnelCtx, bastionName, bastionRG, *cluster.ID, 443, port)
+  }()
+
+  // Wait a moment for tunnel to establish
+  time.Sleep(2 * time.Second)
+
+  // Check if tunnel failed to start
+  select {
+  case err := <-tunnelErrCh:
+    if err != nil {
+      return fmt.Errorf("tunnel failed to start: %w", err)
+    }
+  default:
+    // Tunnel is running
+  }
+
+  // If --k9s flag is set, authenticate and launch k9s
+  if opts.LaunchK9s {
+    // Perform authentication first (handles device code flow)
+    if err := AuthenticateKubeconfig(ctx, kubeconfigPath); err != nil {
+      return fmt.Errorf("authentication failed: %w", err)
+    }
+
+    // Now launch k9s
+    if err := LaunchK9s(ctx, kubeconfigPath); err != nil {
+      return fmt.Errorf("k9s failed: %w", err)
+    }
+    // K9s exited, clean up
+    fmt.Println("\nK9s closed, shutting down tunnel...")
+    return nil
+  }
+
+  // Otherwise, show export command and copy to clipboard
+  // TODO: Replace --k9s flag with --cmd flag to allow running any command with KUBECONFIG set
+  //       Example: --cmd "kubectl get pods" or --cmd "k9s"
+  exportCmd := fmt.Sprintf("export KUBECONFIG=%s", kubeconfigPath)
+
+  fmt.Printf("\n%s\n", exportCmd)
+
+  // Copy to clipboard
+  if err := copyToClipboard(exportCmd); err != nil {
+    logger.Debug("Failed to copy to clipboard: %v", err)
+  } else {
+    fmt.Println("✓ Copied to clipboard")
+  }
+
+  fmt.Println("\nPress Ctrl+C to close the tunnel")
+
+  // Set up signal handling for graceful shutdown
+  sigCh := make(chan os.Signal, 1)
+  signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+  // Wait for tunnel to exit, error, or interrupt signal
+  select {
+  case err := <-tunnelErrCh:
+    return err
+  case <-sigCh:
+    fmt.Println("\nReceived interrupt signal, shutting down tunnel...")
+    cancelTunnel()
+    return nil
+  }
 }
 
 func parseBastionResourceID(resourceID string) (name string, resourceGroup string, err error) {
