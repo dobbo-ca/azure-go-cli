@@ -28,8 +28,18 @@ type TokenResponse struct {
   WebSocketToken string `json:"websocketToken"`
 }
 
+// TunnelSSH opens an SSH tunnel with optional username for AAD authentication
+func TunnelSSH(ctx context.Context, bastionName, resourceGroup, targetResourceID string, localPort int, username string) error {
+  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, 22, localPort, "tcptunnel", username)
+}
+
 // Tunnel opens a tunnel to a target resource through Azure Bastion
 func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int) error {
+  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, resourcePort, localPort, "tcptunnel", "")
+}
+
+// tunnelWithProtocol opens a tunnel with specific protocol and optional username
+func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int, protocol, username string) error {
   fmt.Printf("Opening tunnel through Bastion %s...\n", bastionName)
   fmt.Printf("Local port: %d\n", localPort)
   fmt.Printf("Target: %s:%d\n", targetResourceID, resourcePort)
@@ -87,8 +97,9 @@ func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID st
   }
   defer listener.Close()
 
-  fmt.Printf("Tunnel ready at 127.0.0.1:%d\n", localPort)
-  fmt.Println("Press Ctrl+C to close the tunnel")
+  // Only show tunnel ready messages in debug mode
+  // In SSH mode, these messages are suppressed to avoid interfering with SSH I/O
+  logger.Debug("Tunnel ready at 127.0.0.1:%d", localPort)
   logger.Debug("Tunnel listener ready, waiting for connections...")
 
   // Track WebSocket token for reuse in subsequent connections
@@ -104,7 +115,6 @@ func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID st
         return nil
       }
       logger.Debug("Error accepting connection: %v", err)
-      fmt.Printf("Error accepting connection: %v\n", err)
       continue
     }
 
@@ -113,7 +123,7 @@ func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID st
     // Get fresh WebSocket token for this connection
     // Pass previous token (empty for first connection)
     logger.Debug("Exchanging token for WebSocket tunnel token...")
-    wsToken, nodeID, err := exchangeTokenWithPrevious(bastionEndpoint, token, targetResourceID, resourcePort, currentWSToken)
+    wsToken, nodeID, err := exchangeTokenWithProtocol(bastionEndpoint, token, targetResourceID, resourcePort, currentWSToken, protocol, username)
     if err != nil {
       logger.Debug("Failed to exchange token: %v", err)
       conn.Close()
@@ -145,20 +155,31 @@ func getAccessToken(ctx context.Context, cred azcore.TokenCredential) (string, e
 // For the first connection, pass empty string as previousWSToken
 // For subsequent connections, pass the previous WebSocket token
 func exchangeTokenWithPrevious(bastionEndpoint, accessToken, targetResourceID string, resourcePort int, previousWSToken string) (string, string, error) {
+  return exchangeTokenWithProtocol(bastionEndpoint, accessToken, targetResourceID, resourcePort, previousWSToken, "tcptunnel", "")
+}
+
+// exchangeTokenWithProtocol exchanges tokens with specific protocol and optional username
+func exchangeTokenWithProtocol(bastionEndpoint, accessToken, targetResourceID string, resourcePort int, previousWSToken, protocol, username string) (string, string, error) {
   // Prepare form data payload (not JSON!)
   // Azure Bastion API expects application/x-www-form-urlencoded
   formData := url.Values{}
   formData.Set("resourceId", targetResourceID)
-  formData.Set("protocol", "tcptunnel")
+  formData.Set("protocol", protocol)
   formData.Set("workloadHostPort", fmt.Sprintf("%d", resourcePort))
   formData.Set("aztoken", accessToken)
   formData.Set("token", previousWSToken) // Empty for first connection, previous token for subsequent
 
   logger.Debug("Token exchange request payload:")
   logger.Debug("  resourceId: %s", targetResourceID)
-  logger.Debug("  protocol: tcptunnel")
+  logger.Debug("  protocol: %s", protocol)
   logger.Debug("  workloadHostPort: %d", resourcePort)
   logger.Debug("  aztoken: <redacted> (length: %d)", len(accessToken))
+  if hostname := formData.Get("hostname"); hostname != "" {
+    logger.Debug("  hostname: %s", hostname)
+  }
+  if username != "" {
+    logger.Debug("  workloadUsername: %s", username)
+  }
   if previousWSToken == "" {
     logger.Debug("  token: <empty - first connection>")
   } else {
@@ -301,4 +322,16 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   case <-ctx.Done():
     return
   }
+}
+
+// extractHostnameFromResourceID extracts the VM/resource name from an Azure resource ID
+// Example: /subscriptions/.../resourceGroups/.../providers/Microsoft.Compute/virtualMachines/myvm
+// Returns: myvm
+func extractHostnameFromResourceID(resourceID string) string {
+  parts := strings.Split(resourceID, "/")
+  if len(parts) > 0 {
+    // The last part is the resource name
+    return parts[len(parts)-1]
+  }
+  return ""
 }

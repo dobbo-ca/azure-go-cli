@@ -1,6 +1,6 @@
 # Azure Go CLI - Implementation Tracking
 
-## 📊 Quick Status (Updated 2025-11-03)
+## 📊 Quick Status (Updated 2025-11-11)
 
 **Current Phase:** Read-only operations ✅ COMPLETE
 **Next Phase:** Write operations (scale, create, update, delete)
@@ -11,6 +11,11 @@
 - ✅ Added Managed Identity support (az identity list/show)
 - ✅ All commands tested against live Azure environment
 - ✅ SDK upgraded to v6 for AKS and Network resources
+- ✅ AKS Bastion enhancements:
+  - Per-connection WebSocket token exchange (fixes timeout issues)
+  - `--cmd` flag for running arbitrary commands with KUBECONFIG
+  - Automatic clipboard integration for export commands
+  - Device code authentication with browser opening
 
 ### Ready to Resume
 See [Next Priorities](#-next-priorities) section below for recommended next steps.
@@ -76,7 +81,11 @@ We are prioritizing implementation for the following Azure resource types:
 - [x] `az aks list` - List AKS clusters
 - [x] `az aks show` - Show cluster details
 - [x] `az aks get-credentials` - Get kubeconfig
-- [x] `az aks bastion` - Connect via Azure Bastion
+- [x] `az aks bastion` - Connect via Azure Bastion with enhancements:
+  - Per-connection WebSocket token exchange for stable multi-command usage
+  - `--cmd` flag to run arbitrary commands (e.g., `--cmd "kubectl get pods"` or `--cmd "k9s"`)
+  - Automatic clipboard integration for export commands
+  - Device code authentication with browser opening
 - [ ] `az aks get-versions` - Get available K8s versions
 - [ ] `az aks get-upgrades` - Get available cluster upgrades
 
@@ -458,6 +467,21 @@ Currently, we are focusing on **read-only operations** (list, show). Future work
 - [ ] Add filtering and query capabilities
 - [ ] Add verbose/debug logging options
 - [ ] Add progress indicators for long-running operations
+
+### Authentication Enhancements
+- [ ] Keychain support with better UX (LOW priority)
+  - Pre-authorize CLI in keychain to avoid repeated prompts
+  - Add command-line flag: `--use-keychain` vs `--use-file-cache`
+  - Provide clear setup instructions for keychain authorization
+  - Consider codesigning the binary to reduce keychain prompts
+- [ ] Token refresh testing (MEDIUM priority)
+  - Test expired token refresh
+  - Verify refresh tokens are used instead of re-prompting
+  - Test multi-tenant scenarios
+- [ ] Error message improvements (LOW priority)
+  - "Not authenticated" should suggest `az login`
+  - Authorization failures should check if user has required role
+  - Network errors should be more descriptive
 
 ---
 

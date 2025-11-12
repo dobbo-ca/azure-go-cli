@@ -15,7 +15,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions v1.3.0
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage v1.8.1
-	github.com/AzureAD/microsoft-authentication-library-for-go v1.5.0
+	github.com/AzureAD/microsoft-authentication-library-for-go v1.6.0
 	github.com/spf13/cobra v1.10.1
 	gopkg.in/yaml.v3 v3.0.1
 )

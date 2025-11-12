@@ -25,7 +25,7 @@ type BastionOptions struct {
   SubscriptionOverride string
   Admin              bool
   Port               int
-  LaunchK9s          bool
+  Command            string // Command to run with KUBECONFIG set (e.g., "k9s" or "kubectl get pods")
 }
 
 // Bastion is a convenience wrapper around network bastion tunnel
@@ -125,25 +125,23 @@ func Bastion(ctx context.Context, opts BastionOptions) error {
     // Tunnel is running
   }
 
-  // If --k9s flag is set, authenticate and launch k9s
-  if opts.LaunchK9s {
+  // If --cmd flag is set, authenticate and run the specified command
+  if opts.Command != "" {
     // Perform authentication first (handles device code flow)
     if err := AuthenticateKubeconfig(ctx, kubeconfigPath); err != nil {
       return fmt.Errorf("authentication failed: %w", err)
     }
 
-    // Now launch k9s
-    if err := LaunchK9s(ctx, kubeconfigPath); err != nil {
-      return fmt.Errorf("k9s failed: %w", err)
+    // Now run the specified command
+    if err := RunCommand(ctx, kubeconfigPath, opts.Command); err != nil {
+      return fmt.Errorf("command failed: %w", err)
     }
-    // K9s exited, clean up
-    fmt.Println("\nK9s closed, shutting down tunnel...")
+    // Command exited, clean up
+    fmt.Println("\nCommand exited, shutting down tunnel...")
     return nil
   }
 
   // Otherwise, show export command and copy to clipboard
-  // TODO: Replace --k9s flag with --cmd flag to allow running any command with KUBECONFIG set
-  //       Example: --cmd "kubectl get pods" or --cmd "k9s"
   exportCmd := fmt.Sprintf("export KUBECONFIG=%s", kubeconfigPath)
 
   fmt.Printf("\n%s\n", exportCmd)

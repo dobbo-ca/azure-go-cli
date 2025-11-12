@@ -70,7 +70,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
       subscription, _ := cmd.Flags().GetString("subscription")
       admin, _ := cmd.Flags().GetBool("admin")
       port, _ := cmd.Flags().GetInt("port")
-      launchK9s, _ := cmd.Flags().GetBool("k9s")
+      cmdToRun, _ := cmd.Flags().GetString("cmd")
 
       opts := BastionOptions{
         ClusterName:          clusterName,
@@ -79,7 +79,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
         SubscriptionOverride: subscription,
         Admin:                admin,
         Port:                 port,
-        LaunchK9s:            launchK9s,
+        Command:              cmdToRun,
       }
 
       return Bastion(context.Background(), opts)
@@ -90,7 +90,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
   bastionCmd.Flags().String("bastion", "", "Bastion resource ID")
   bastionCmd.Flags().BoolP("admin", "a", false, "Use admin credentials")
   bastionCmd.Flags().IntP("port", "p", 0, "Local port to use for tunnel (0 = random port)")
-  bastionCmd.Flags().Bool("k9s", false, "Launch k9s automatically (closes tunnel when k9s exits)")
+  bastionCmd.Flags().String("cmd", "", "Command to run with KUBECONFIG set (e.g., 'k9s' or 'kubectl get pods')")
   bastionCmd.MarkFlagRequired("name")
   bastionCmd.MarkFlagRequired("resource-group")
   bastionCmd.MarkFlagRequired("bastion")

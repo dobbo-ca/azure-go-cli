@@ -32,6 +32,12 @@ func EnableDebug() {
   )
 }
 
+// DisableDebug disables debug logging
+func DisableDebug() {
+  DebugEnabled = false
+  log.SetListener(nil)
+}
+
 // Debug prints a debug message if debug mode is enabled
 func Debug(format string, args ...interface{}) {
   if DebugEnabled {

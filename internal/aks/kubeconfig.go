@@ -280,3 +280,40 @@ func LaunchK9s(ctx context.Context, kubeconfigPath string) error {
   logger.Debug("k9s exited cleanly")
   return nil
 }
+
+// RunCommand runs an arbitrary command with the specified kubeconfig
+func RunCommand(ctx context.Context, kubeconfigPath, command string) error {
+  // Parse command string into parts
+  parts := strings.Fields(command)
+  if len(parts) == 0 {
+    return fmt.Errorf("empty command")
+  }
+
+  executable := parts[0]
+  args := parts[1:]
+
+  // Check if executable is in PATH
+  execPath, err := exec.LookPath(executable)
+  if err != nil {
+    return fmt.Errorf("%s not found in PATH", executable)
+  }
+
+  logger.Debug("Running command with kubeconfig: %s", kubeconfigPath)
+  logger.Debug("Executable: %s", execPath)
+  logger.Debug("Args: %v", args)
+
+  cmd := exec.CommandContext(ctx, executable, args...)
+  cmd.Env = append(os.Environ(), fmt.Sprintf("KUBECONFIG=%s", kubeconfigPath))
+  cmd.Stdin = os.Stdin
+  cmd.Stdout = os.Stdout
+  cmd.Stderr = os.Stderr
+
+  fmt.Printf("\nRunning: %s\n\n", command)
+
+  if err := cmd.Run(); err != nil {
+    return fmt.Errorf("command exited with error: %w", err)
+  }
+
+  logger.Debug("Command completed successfully")
+  return nil
+}

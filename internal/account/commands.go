@@ -46,6 +46,19 @@ func NewAccountCommand() *cobra.Command {
     },
   }
 
-  cmd.AddCommand(listCmd, showCmd, setCmd, clearCmd)
+  getAccessTokenCmd := &cobra.Command{
+    Use:   "get-access-token",
+    Short: "Get an access token for Azure resources",
+    Long:  "Get an AAD token to access Azure resources. This command is used by kubelogin for AKS authentication.",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      resource, _ := cmd.Flags().GetString("resource")
+      subscription, _ := cmd.Flags().GetString("subscription")
+      return GetAccessToken(resource, subscription)
+    },
+  }
+  getAccessTokenCmd.Flags().String("resource", "", "Azure resource ID to get token for")
+  getAccessTokenCmd.Flags().StringP("subscription", "s", "", "Subscription ID (optional)")
+
+  cmd.AddCommand(listCmd, showCmd, setCmd, clearCmd, getAccessTokenCmd)
   return cmd
 }

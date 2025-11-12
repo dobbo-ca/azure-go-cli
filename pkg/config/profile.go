@@ -149,6 +149,26 @@ func GetSubscription(subscriptionIDOrName string) (string, error) {
   return subscriptionIDOrName, nil
 }
 
+// GetTenantID returns the tenant ID for a given subscription ID
+func GetTenantID(subscriptionID string) (string, error) {
+  profile, err := Load()
+  if err != nil {
+    return "", err
+  }
+
+  // Find subscription by ID
+  for i := range profile.Subscriptions {
+    if profile.Subscriptions[i].ID == subscriptionID {
+      if profile.Subscriptions[i].TenantID == "" {
+        return "", fmt.Errorf("tenant ID not found for subscription %s", subscriptionID)
+      }
+      return profile.Subscriptions[i].TenantID, nil
+    }
+  }
+
+  return "", fmt.Errorf("subscription %s not found in profile", subscriptionID)
+}
+
 func Delete() error {
   configPath, err := GetConfigPath()
   if err != nil {

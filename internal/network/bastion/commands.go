@@ -36,6 +36,34 @@ func NewBastionCommand() *cobra.Command {
   tunnelCmd.MarkFlagRequired("target-resource-id")
   tunnelCmd.MarkFlagRequired("port")
 
-  cmd.AddCommand(tunnelCmd)
+  sshCmd := &cobra.Command{
+    Use:   "ssh",
+    Short: "Open SSH session to a VM through Azure Bastion",
+    Long: `Open SSH session to a VM through Azure Bastion.
+
+This command creates a tunnel through Azure Bastion and launches an SSH session.
+Requires ssh client to be installed.
+
+For AAD authentication, provide your Azure AD username (typically your email or UPN).`,
+    RunE: func(cmd *cobra.Command, args []string) error {
+      bastionName, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      targetResourceID, _ := cmd.Flags().GetString("target-resource-id")
+      authType, _ := cmd.Flags().GetString("auth-type")
+      username, _ := cmd.Flags().GetString("username")
+
+      return SSH(context.Background(), bastionName, resourceGroup, targetResourceID, authType, username)
+    },
+  }
+  sshCmd.Flags().StringP("name", "n", "", "Bastion name")
+  sshCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  sshCmd.Flags().String("target-resource-id", "", "Target VM resource ID")
+  sshCmd.Flags().String("auth-type", "AAD", "Authentication type (AAD, password, ssh-key)")
+  sshCmd.Flags().StringP("username", "u", "", "SSH username (Azure AD email for AAD auth)")
+  sshCmd.MarkFlagRequired("name")
+  sshCmd.MarkFlagRequired("resource-group")
+  sshCmd.MarkFlagRequired("target-resource-id")
+
+  cmd.AddCommand(tunnelCmd, sshCmd)
   return cmd
 }
