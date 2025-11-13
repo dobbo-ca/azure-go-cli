@@ -1,6 +1,7 @@
 package role
 
 import (
+  "github.com/cdobbyn/azure-go-cli/internal/role/assignment"
   "github.com/spf13/cobra"
 )
 
@@ -14,6 +15,7 @@ func NewRoleCmd() *cobra.Command {
 
   cmd.AddCommand(newListCmd())
   cmd.AddCommand(newShowCmd())
+  cmd.AddCommand(assignment.NewAssignmentCmd())
 
   return cmd
 }
