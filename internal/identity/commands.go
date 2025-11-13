@@ -34,7 +34,7 @@ func NewIdentityCommand() *cobra.Command {
 
       // If --ids is provided, use ShowByIDs
       if len(ids) > 0 {
-        return ShowByIDs(context.Background(), ids, subscription)
+        return ShowByIDs(context.Background(), cmd, ids, subscription)
       }
 
       // Otherwise use name and resource-group
@@ -45,7 +45,7 @@ func NewIdentityCommand() *cobra.Command {
         return cmd.Usage()
       }
 
-      return Show(context.Background(), name, resourceGroup, subscription)
+      return Show(context.Background(), cmd, name, resourceGroup, subscription)
     },
   }
   showCmd.Flags().StringP("name", "n", "", "Managed identity name")

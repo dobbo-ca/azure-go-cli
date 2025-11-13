@@ -38,6 +38,7 @@ func main() {
   rootCmd.PersistentFlags().Bool("debug", false, "Enable debug logging")
   rootCmd.PersistentFlags().String("subscription", "", "Subscription ID or name (overrides default)")
   rootCmd.PersistentFlags().StringP("output", "o", "json", "Output format (json, table, tsv, yaml, none)")
+  rootCmd.PersistentFlags().String("query", "", "JMESPath query string to filter output")
 
   // Add all domain commands
   rootCmd.AddCommand(

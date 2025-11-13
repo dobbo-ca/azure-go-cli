@@ -2,16 +2,17 @@ package identity
 
 import (
   "context"
-  "encoding/json"
   "fmt"
   "strings"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
+  "github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, name, resourceGroup, subscriptionOverride string) error {
+func Show(ctx context.Context, cmd *cobra.Command, name, resourceGroup, subscriptionOverride string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -32,17 +33,11 @@ func Show(ctx context.Context, name, resourceGroup, subscriptionOverride string)
     return fmt.Errorf("failed to get managed identity: %w", err)
   }
 
-  data, err := json.MarshalIndent(identity, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format managed identity: %w", err)
-  }
-
-  fmt.Println(string(data))
-  return nil
+  return output.PrintJSON(cmd, identity)
 }
 
 // ShowByIDs shows one or more managed identities by their resource IDs
-func ShowByIDs(ctx context.Context, ids []string, subscriptionOverride string) error {
+func ShowByIDs(ctx context.Context, cmd *cobra.Command, ids []string, subscriptionOverride string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -83,18 +78,9 @@ func ShowByIDs(ctx context.Context, ids []string, subscriptionOverride string) e
     results = append(results, identity)
   }
 
-  // Output results
-  var data []byte
+  // Output results - if single ID, output just the object; if multiple, output array
   if len(results) == 1 {
-    data, err = json.MarshalIndent(results[0], "", "  ")
-  } else {
-    data, err = json.MarshalIndent(results, "", "  ")
+    return output.PrintJSON(cmd, results[0])
   }
-
-  if err != nil {
-    return fmt.Errorf("failed to format managed identities: %w", err)
-  }
-
-  fmt.Println(string(data))
-  return nil
+  return output.PrintJSON(cmd, results)
 }
