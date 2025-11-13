@@ -265,8 +265,11 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   defer wsConn.Close()
   logger.Debug("WebSocket connection established")
 
-  // Create channels for errors
+  // Create channels for errors and error tracking
   errChan := make(chan error, 2)
+  var lastError error
+  var errorCount int
+  errorThreshold := 3 // Only display errors after they occur 3 times consecutively
 
   // TCP -> WebSocket
   go func() {
@@ -314,13 +317,31 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   }()
 
   // Wait for either goroutine to finish or context to be cancelled
-  select {
-  case err := <-errChan:
-    if err != nil {
-      fmt.Printf("Connection error: %v\n", err)
+  for {
+    select {
+    case err := <-errChan:
+      if err != nil {
+        // Check if this is the same error as before
+        errMsg := err.Error()
+        if lastError != nil && lastError.Error() == errMsg {
+          errorCount++
+        } else {
+          // New error type, reset counter
+          lastError = err
+          errorCount = 1
+        }
+
+        // Only display error if it's persistent (occurred multiple times)
+        if errorCount >= errorThreshold {
+          fmt.Printf("Persistent connection error: %v\n", err)
+          return
+        }
+        // For transient errors, just log debug and continue
+        logger.Debug("Transient error (count: %d/%d): %v", errorCount, errorThreshold, err)
+      }
+    case <-ctx.Done():
+      return
     }
-  case <-ctx.Done():
-    return
   }
 }
 
