@@ -132,11 +132,17 @@ jobs:
           if [ "${{ matrix.goos }}" = "windows" ]; then
             BINARY="az-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
             ARCHIVE="az-go-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
-            zip "${ARCHIVE}" "${BINARY}"
+            # Rename to az.exe for archive
+            cp "${BINARY}" "az.exe"
+            zip "${ARCHIVE}" "az.exe"
+            rm "az.exe"
           else
             BINARY="az-${{ matrix.goos }}-${{ matrix.goarch }}"
             ARCHIVE="az-go-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz"
-            tar czf "${ARCHIVE}" "${BINARY}"
+            # Rename to az for archive
+            cp "${BINARY}" "az"
+            tar czf "${ARCHIVE}" "az"
+            rm "az"
           fi
 
           # Generate SHA256
