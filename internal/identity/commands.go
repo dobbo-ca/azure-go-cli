@@ -27,17 +27,30 @@ func NewIdentityCommand() *cobra.Command {
   showCmd := &cobra.Command{
     Use:   "show",
     Short: "Show details of a managed identity",
+    Long:  "Show details of a managed identity by name and resource group, or by one or more resource IDs",
     RunE: func(cmd *cobra.Command, args []string) error {
+      ids, _ := cmd.Flags().GetStringSlice("ids")
+      subscription, _ := cmd.Flags().GetString("subscription")
+
+      // If --ids is provided, use ShowByIDs
+      if len(ids) > 0 {
+        return ShowByIDs(context.Background(), ids, subscription)
+      }
+
+      // Otherwise use name and resource-group
       name, _ := cmd.Flags().GetString("name")
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      subscription, _ := cmd.Flags().GetString("subscription")
+
+      if name == "" || resourceGroup == "" {
+        return cmd.Usage()
+      }
+
       return Show(context.Background(), name, resourceGroup, subscription)
     },
   }
   showCmd.Flags().StringP("name", "n", "", "Managed identity name")
   showCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
-  showCmd.MarkFlagRequired("name")
-  showCmd.MarkFlagRequired("resource-group")
+  showCmd.Flags().StringSlice("ids", []string{}, "One or more resource IDs (space-separated)")
 
   cmd.AddCommand(listCmd, showCmd)
   return cmd
