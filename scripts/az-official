@@ -1,0 +1,26 @@
+#!/bin/bash
+# Wrapper script to run official Azure CLI via container
+# Useful for checking --help or running unimplemented commands
+
+set -euo pipefail
+
+# Check if we can use docker or podman
+CONTAINER_CMD=""
+if command -v docker &> /dev/null; then
+  CONTAINER_CMD="docker"
+elif command -v podman &> /dev/null; then
+  CONTAINER_CMD="podman"
+else
+  echo "Error: Neither docker nor podman found. Please install one to run the official Azure CLI."
+  exit 1
+fi
+
+# Azure config directory for auth
+AZURE_CONFIG_DIR="${HOME}/.azure"
+
+# Run the official Azure CLI with same environment
+exec ${CONTAINER_CMD} run --rm -it \
+  -v "${AZURE_CONFIG_DIR}:/root/.azure:ro" \
+  -e AZURE_CONFIG_DIR=/root/.azure \
+  mcr.microsoft.com/azure-cli:latest \
+  az "$@"
