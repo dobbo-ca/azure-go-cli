@@ -9,8 +9,8 @@ Legend:
 ## Summary
 
 - **Total Commands**:     3757
-- **Implemented**:      101 (2.7%)
-- **Missing**:     3694
+- **Implemented**:      138 (3.7%)
+- **Missing**:     3664
 
 ---
 
@@ -309,7 +309,7 @@ Legend:
   - ❌ `command`
     - ❌ `invoke`
     - ❌ `result`
-  - ❌ `delete`
+  - ✅ `delete`
   - ❌ `disable-addons`
   - ❌ `enable-addons`
   - ✅ `get-credentials`
@@ -1649,8 +1649,8 @@ Legend:
 ### az group
 
 - ✅ `group`
-  - ❌ `create`
-  - ❌ `delete`
+  - ✅ `create`
+  - ✅ `delete`
   - ❌ `exists`
   - ❌ `export`
   - ✅ `list`
@@ -1720,8 +1720,8 @@ Legend:
 ### az identity
 
 - ✅ `identity`
-  - ❌ `create`
-  - ❌ `delete`
+  - ✅ `create`
+  - ✅ `delete`
   - ❌ `federated-credential`
     - ❌ `create`
     - ❌ `delete`
@@ -1816,8 +1816,8 @@ Legend:
     - ❌ `show`
     - ❌ `show-deleted`
   - ❌ `check-name`
-  - ❌ `create`
-  - ❌ `delete`
+  - ✅ `create`
+  - ✅ `delete`
   - ❌ `delete-policy`
   - ❌ `key`
     - ❌ `backup`
@@ -1868,19 +1868,19 @@ Legend:
   - ❌ `role`
     - ❌ `assignment`
     - ❌ `definition`
-  - ❌ `secret`
+  - ✅ `secret`
     - ❌ `backup`
-    - ❌ `delete`
+    - ✅ `delete`
     - ❌ `download`
-    - ❌ `list`
+    - ✅ `list`
     - ❌ `list-deleted`
     - ❌ `list-versions`
     - ❌ `purge`
     - ❌ `recover`
     - ❌ `restore`
-    - ❌ `set`
+    - ✅ `set`
     - ❌ `set-attributes`
-    - ❌ `show`
+    - ✅ `show`
     - ❌ `show-deleted`
   - ❌ `security-domain`
     - ❌ `download`
@@ -2324,8 +2324,8 @@ Legend:
     - ❌ `wait`
   - ✅ `lb`
     - ❌ `address-pool`
-    - ❌ `create`
-    - ❌ `delete`
+    - ✅ `create`
+    - ✅ `delete`
     - ❌ `frontend-ip`
     - ❌ `inbound-nat-pool`
     - ❌ `inbound-nat-rule`
@@ -2377,8 +2377,8 @@ Legend:
     - ❌ `zone`
   - ✅ `private-endpoint`
     - ❌ `asg`
-    - ❌ `create`
-    - ❌ `delete`
+    - ✅ `create`
+    - ✅ `delete`
     - ❌ `dns-zone-group`
     - ❌ `ip-config`
     - ✅ `list`
@@ -2456,8 +2456,8 @@ Legend:
     - ❌ `wait`
   - ✅ `vnet`
     - ❌ `check-ip-address`
-    - ❌ `create`
-    - ❌ `delete`
+    - ✅ `create`
+    - ✅ `delete`
     - ✅ `list`
     - ❌ `list-endpoint-services`
     - ❌ `peering`
@@ -2467,8 +2467,8 @@ Legend:
     - ❌ `wait`
   - ✅ `vnet-gateway`
     - ❌ `aad`
-    - ❌ `create`
-    - ❌ `delete`
+    - ✅ `create`
+    - ✅ `delete`
     - ❌ `get-failover-all-tests-detail`
     - ❌ `get-failover-single-test-detail`
     - ❌ `get-resiliency-information`
@@ -2570,7 +2570,7 @@ Legend:
     - ❌ `advanced-threat-protection-setting`
     - ❌ `backup`
     - ❌ `db`
-    - ❌ `delete`
+    - ✅ `delete`
     - ❌ `deploy`
     - ❌ `fabric-mirroring`
     - ❌ `firewall-rule`
@@ -3428,8 +3428,8 @@ Legend:
   - ✅ `account`
     - ❌ `blob-service-properties`
     - ❌ `check-name`
-    - ❌ `create`
-    - ❌ `delete`
+    - ✅ `create`
+    - ✅ `delete`
     - ❌ `encryption-scope`
     - ❌ `file-service-properties`
     - ❌ `file-service-usage`
@@ -3474,8 +3474,8 @@ Legend:
     - ❌ `upload-batch`
     - ❌ `url`
   - ✅ `container`
-    - ❌ `create`
-    - ❌ `delete`
+    - ✅ `create`
+    - ✅ `delete`
     - ❌ `exists`
     - ❌ `generate-sas`
     - ❌ `immutability-policy`
@@ -3803,7 +3803,7 @@ Legend:
   - ❌ `convert`
   - ❌ `create`
   - ❌ `deallocate`
-  - ❌ `delete`
+  - ✅ `delete`
   - ❌ `diagnostics`
     - ❌ `get-default-config`
     - ❌ `set`
@@ -3848,7 +3848,7 @@ Legend:
     - ❌ `show`
     - ❌ `terms`
   - ❌ `install-patches`
-  - ❌ `list`
+  - ✅ `list`
   - ❌ `list-ip-addresses`
   - ✅ `list-skus`
   - ❌ `list-usage`
@@ -3882,10 +3882,10 @@ Legend:
     - ❌ `format`
     - ❌ `list`
     - ❌ `remove`
-  - ❌ `show`
+  - ✅ `show`
   - ❌ `simulate-eviction`
-  - ❌ `start`
-  - ❌ `stop`
+  - ✅ `start`
+  - ✅ `stop`
   - ❌ `unmanaged-disk`
     - ❌ `attach`
     - ❌ `detach`

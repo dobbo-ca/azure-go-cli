@@ -266,7 +266,6 @@ az aks check-acr
 az aks command
 az aks command invoke
 az aks command result
-az aks delete
 az aks disable-addons
 az aks enable-addons
 az aks get-upgrades
@@ -1481,8 +1480,6 @@ az functionapp vnet-integration
 az functionapp vnet-integration add
 az functionapp vnet-integration list
 az functionapp vnet-integration remove
-az group create
-az group delete
 az group exists
 az group export
 az group lock
@@ -1543,8 +1540,6 @@ az hdinsight script-action show-execution-details
 az hdinsight show
 az hdinsight update
 az hdinsight wait
-az identity create
-az identity delete
 az identity federated-credential
 az identity federated-credential create
 az identity federated-credential delete
@@ -1627,8 +1622,6 @@ az keyvault certificate set-attributes
 az keyvault certificate show
 az keyvault certificate show-deleted
 az keyvault check-name
-az keyvault create
-az keyvault delete
 az keyvault delete-policy
 az keyvault key
 az keyvault key backup
@@ -1678,19 +1671,14 @@ az keyvault restore start
 az keyvault role
 az keyvault role assignment
 az keyvault role definition
-az keyvault secret
 az keyvault secret backup
-az keyvault secret delete
 az keyvault secret download
-az keyvault secret list
 az keyvault secret list-deleted
 az keyvault secret list-versions
 az keyvault secret purge
 az keyvault secret recover
 az keyvault secret restore
-az keyvault secret set
 az keyvault secret set-attributes
-az keyvault secret show
 az keyvault secret show-deleted
 az keyvault security-domain
 az keyvault security-domain download
@@ -2090,8 +2078,6 @@ az network express-route show
 az network express-route update
 az network express-route wait
 az network lb address-pool
-az network lb create
-az network lb delete
 az network lb frontend-ip
 az network lb inbound-nat-pool
 az network lb inbound-nat-rule
@@ -2139,8 +2125,6 @@ az network private-dns link
 az network private-dns record-set
 az network private-dns zone
 az network private-endpoint asg
-az network private-endpoint create
-az network private-endpoint delete
 az network private-endpoint dns-zone-group
 az network private-endpoint ip-config
 az network private-endpoint list-types
@@ -2215,16 +2199,12 @@ az network virtual-appliance sku
 az network virtual-appliance update
 az network virtual-appliance wait
 az network vnet check-ip-address
-az network vnet create
-az network vnet delete
 az network vnet list-endpoint-services
 az network vnet peering
 az network vnet subnet
 az network vnet update
 az network vnet wait
 az network vnet-gateway aad
-az network vnet-gateway create
-az network vnet-gateway delete
 az network vnet-gateway get-failover-all-tests-detail
 az network vnet-gateway get-failover-single-test-detail
 az network vnet-gateway get-resiliency-information
@@ -2316,7 +2296,6 @@ az policy state trigger-scan
 az postgres flexible-server advanced-threat-protection-setting
 az postgres flexible-server backup
 az postgres flexible-server db
-az postgres flexible-server delete
 az postgres flexible-server deploy
 az postgres flexible-server fabric-mirroring
 az postgres flexible-server firewall-rule
@@ -3099,8 +3078,6 @@ az staticwebapp users list
 az staticwebapp users update
 az storage account blob-service-properties
 az storage account check-name
-az storage account create
-az storage account delete
 az storage account encryption-scope
 az storage account file-service-properties
 az storage account file-service-usage
@@ -3142,8 +3119,6 @@ az storage blob update
 az storage blob upload
 az storage blob upload-batch
 az storage blob url
-az storage container create
-az storage container delete
 az storage container exists
 az storage container generate-sas
 az storage container immutability-policy
@@ -3450,7 +3425,6 @@ az vm capture
 az vm convert
 az vm create
 az vm deallocate
-az vm delete
 az vm diagnostics
 az vm diagnostics get-default-config
 az vm diagnostics set
@@ -3495,7 +3469,6 @@ az vm image list-skus
 az vm image show
 az vm image terms
 az vm install-patches
-az vm list
 az vm list-ip-addresses
 az vm list-usage
 az vm list-vm-resize-options
@@ -3528,10 +3501,7 @@ az vm secret add
 az vm secret format
 az vm secret list
 az vm secret remove
-az vm show
 az vm simulate-eviction
-az vm start
-az vm stop
 az vm unmanaged-disk
 az vm unmanaged-disk attach
 az vm unmanaged-disk detach

@@ -4,9 +4,11 @@ import (
   "github.com/cdobbyn/azure-go-cli/internal/network/bastion"
   "github.com/cdobbyn/azure-go-cli/internal/network/lb"
   "github.com/cdobbyn/azure-go-cli/internal/network/natgateway"
+  "github.com/cdobbyn/azure-go-cli/internal/network/nic"
   "github.com/cdobbyn/azure-go-cli/internal/network/nsg"
   "github.com/cdobbyn/azure-go-cli/internal/network/peering"
   "github.com/cdobbyn/azure-go-cli/internal/network/privateendpoint"
+  "github.com/cdobbyn/azure-go-cli/internal/network/publicip"
   "github.com/cdobbyn/azure-go-cli/internal/network/subnet"
   "github.com/cdobbyn/azure-go-cli/internal/network/vnet"
   "github.com/cdobbyn/azure-go-cli/internal/network/vpngateway"
@@ -30,6 +32,8 @@ func NewNetworkCommand() *cobra.Command {
     lb.NewLoadBalancerCommand(),
     privateendpoint.NewPrivateEndpointCommand(),
     nsg.NewNsgCommand(),
+    publicip.NewPublicIPCommand(),
+    nic.NewNicCommand(),
   )
   return cmd
 }

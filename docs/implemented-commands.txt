@@ -10,6 +10,7 @@ az aks addon list
 az aks addon list-available
 az aks addon show
 az aks bastion
+az aks delete
 az aks get-credentials
 az aks install-cli
 az aks list
@@ -37,14 +38,25 @@ az completion fish
 az completion powershell
 az completion zsh
 az group
+az group create
+az group delete
 az group list
 az group show
 az help
 az identity
+az identity create
+az identity delete
 az identity list
 az identity show
 az keyvault
+az keyvault create
+az keyvault delete
 az keyvault list
+az keyvault secret
+az keyvault secret delete
+az keyvault secret list
+az keyvault secret set
+az keyvault secret show
 az keyvault show
 az login
 az logout
@@ -53,28 +65,44 @@ az network bastion
 az network bastion ssh
 az network bastion tunnel
 az network lb
+az network lb create
+az network lb delete
 az network lb list
 az network lb show
 az network nat
+az network nat create
+az network nat delete
 az network nat list
 az network nat show
 az network private-endpoint
+az network private-endpoint create
+az network private-endpoint delete
 az network private-endpoint list
 az network private-endpoint show
 az network subnet
+az network subnet create
+az network subnet delete
 az network subnet list
 az network subnet show
 az network vnet
+az network vnet create
+az network vnet delete
 az network vnet list
 az network vnet show
 az network vnet-gateway
+az network vnet-gateway create
+az network vnet-gateway delete
 az network vnet-gateway list
 az network vnet-gateway show
 az network vnet-peering
+az network vnet-peering create
+az network vnet-peering delete
 az network vnet-peering list
 az network vnet-peering show
 az postgres
 az postgres flexible-server
+az postgres flexible-server create
+az postgres flexible-server delete
 az postgres flexible-server list
 az postgres flexible-server show
 az quota
@@ -92,10 +120,19 @@ az role list
 az role show
 az storage
 az storage account
+az storage account create
+az storage account delete
 az storage account list
 az storage account show
 az storage container
+az storage container create
+az storage container delete
 az storage container list
 az storage container show
 az vm
+az vm delete
+az vm list
 az vm list-skus
+az vm show
+az vm start
+az vm stop

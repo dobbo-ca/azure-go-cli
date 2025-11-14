@@ -103,6 +103,50 @@ func NewVMCommand() *cobra.Command {
   listSkusCmd.Flags().StringP("output", "o", "table", "Output format: json, table")
   listSkusCmd.MarkFlagRequired("location")
 
-  cmd.AddCommand(listCmd, showCmd, deleteCmd, startCmd, stopCmd, listSkusCmd)
+  createCmd := &cobra.Command{
+    Use:   "create",
+    Short: "Create a virtual machine",
+    Long:  "Create a new virtual machine with the specified configuration",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      params := CreateParams{
+        Name:          cmd.Flag("name").Value.String(),
+        ResourceGroup: cmd.Flag("resource-group").Value.String(),
+        Location:      cmd.Flag("location").Value.String(),
+        NicID:         cmd.Flag("nic-id").Value.String(),
+        Size:          cmd.Flag("size").Value.String(),
+        Image:         cmd.Flag("image").Value.String(),
+        AdminUsername: cmd.Flag("admin-username").Value.String(),
+        AdminPassword: cmd.Flag("admin-password").Value.String(),
+        SSHKeyValue:   cmd.Flag("ssh-key-value").Value.String(),
+      }
+
+      // Get OS disk size
+      osDiskSize, _ := cmd.Flags().GetInt32("os-disk-size-gb")
+      params.OSDiskSizeGB = osDiskSize
+
+      // Get tags
+      tags, _ := cmd.Flags().GetStringToString("tags")
+      params.Tags = tags
+
+      return Create(context.Background(), cmd, params)
+    },
+  }
+  createCmd.Flags().StringP("name", "n", "", "VM name")
+  createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  createCmd.Flags().StringP("location", "l", "", "Location (e.g., eastus, westus2)")
+  createCmd.Flags().String("nic-id", "", "Network interface resource ID")
+  createCmd.Flags().String("size", "Standard_D2s_v3", "VM size (e.g., Standard_D2s_v3, Standard_B2s)")
+  createCmd.Flags().String("image", "UbuntuLTS", "OS image (UbuntuLTS, Ubuntu2204, Ubuntu2004, Debian11, CentOS85, Win2022Datacenter, Win2019Datacenter)")
+  createCmd.Flags().String("admin-username", "azureuser", "Admin username")
+  createCmd.Flags().String("admin-password", "", "Admin password (for password authentication)")
+  createCmd.Flags().String("ssh-key-value", "", "SSH public key value (for SSH authentication)")
+  createCmd.Flags().Int32("os-disk-size-gb", 0, "OS disk size in GB (0 = default)")
+  createCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
+  createCmd.MarkFlagRequired("name")
+  createCmd.MarkFlagRequired("resource-group")
+  createCmd.MarkFlagRequired("location")
+  createCmd.MarkFlagRequired("nic-id")
+
+  cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, startCmd, stopCmd, listSkusCmd)
   return cmd
 }

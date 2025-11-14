@@ -7,6 +7,7 @@ import (
   "github.com/cdobbyn/azure-go-cli/internal/account"
   "github.com/cdobbyn/azure-go-cli/internal/aks"
   "github.com/cdobbyn/azure-go-cli/internal/auth"
+  "github.com/cdobbyn/azure-go-cli/internal/disk"
   "github.com/cdobbyn/azure-go-cli/internal/group"
   "github.com/cdobbyn/azure-go-cli/internal/identity"
   "github.com/cdobbyn/azure-go-cli/internal/keyvault"
@@ -46,6 +47,7 @@ func main() {
     auth.NewLogoutCommand(),
     account.NewAccountCommand(),
     aks.NewAKSCommand(),
+    disk.NewDiskCommand(),
     group.NewGroupCommand(),
     identity.NewIdentityCommand(),
     network.NewNetworkCommand(),
