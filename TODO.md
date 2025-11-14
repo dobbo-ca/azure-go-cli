@@ -1,11 +1,17 @@
 # Azure Go CLI - Implementation Tracking
 
-## 📊 Quick Status (Updated 2025-11-11)
+## 📊 Quick Status (Updated 2025-11-13)
 
-**Current Phase:** Read-only operations ✅ COMPLETE
-**Next Phase:** Write operations (scale, create, update, delete)
+**Current Phase:** Core infrastructure complete ✅
+**Next Phase:** VM infrastructure OR AKS write operations
 
-### Completed This Session
+### Completed This Session (2025-11-13)
+- ✅ Storage blob operations (list, show, upload, download, delete)
+  - Complete CRUD operations for blob storage
+  - Upload/download with progress indicators
+  - Table output for list, JSON for show
+
+### Previously Completed (2025-11-11)
 - ✅ All 14 priority resource types have list/show commands
 - ✅ 26 commands implemented (13 list + 13 show)
 - ✅ Added Managed Identity support (az identity list/show)
@@ -16,6 +22,12 @@
   - `--cmd` flag for running arbitrary commands with KUBECONFIG
   - Automatic clipboard integration for export commands
   - Device code authentication with browser opening
+
+### Previously Completed (2025-11-12)
+- ✅ VM infrastructure commands (public-ip, nic, disk, vm create)
+  - Complete VM lifecycle management
+  - Disk attachment and management
+  - Network interface configuration
 
 ### Ready to Resume
 See [Next Priorities](#-next-priorities) section below for recommended next steps.
@@ -315,11 +327,11 @@ We are prioritizing implementation for the following Azure resource types:
 - [ ] `az storage container delete` - Delete container (write operation)
 
 #### Blob Operations (`az storage blob`)
-- [ ] `az storage blob list` - List blobs
-- [ ] `az storage blob show` - Show blob details
-- [ ] `az storage blob upload` - Upload blob (write operation)
-- [ ] `az storage blob download` - Download blob
-- [ ] `az storage blob delete` - Delete blob (write operation)
+- [x] `az storage blob list` - List blobs (requires account name and container name)
+- [x] `az storage blob show` - Show blob details (JSON output)
+- [x] `az storage blob upload` - Upload blob to storage
+- [x] `az storage blob download` - Download blob to local file
+- [x] `az storage blob delete` - Delete blob from storage
 
 ---
 
@@ -393,27 +405,37 @@ All commands tested successfully against live Azure environment with proper JSON
 
 When resuming work, the recommended priorities are:
 
-1. **Add Write Operations** (highest priority)
+1. **VM Infrastructure Expansion** (quick wins, ~30-45 min each)
+   - Option A: VM lifecycle operations (start, stop, restart, deallocate)
+   - Option B: VM network operations (attach/detach NIC, update IP config)
+   - Option C: VM disk operations (attach/detach additional disks)
+   - Option D: VM list/show operations (complete read operations)
+
+2. **AKS Write Operations** (high business value, ~45-60 min each)
    - Start with AKS nodepool scale (most commonly needed)
    - Then AKS cluster upgrade/update operations
-   - Storage account and container create/delete
+   - AKS addon enable/disable
+   - AKS nodepool add/delete
+
+3. **Storage Write Operations** (medium priority, ~20-30 min each)
+   - Storage account create/delete
+   - Storage container create/delete
    - Resource group create/delete
 
-2. **Add Tests** (important for stability)
+4. **Add Tests** (important for stability)
    - Unit tests for command parsing and formatting
    - Integration tests with mocked Azure SDK
    - Test fixtures for common responses
 
-3. **Code Cleanup** (nice to have)
+5. **Code Cleanup** (nice to have)
    - Extract duplicate `getResourceGroupFromID()` helper to pkg/azure/utils.go
    - Standardize error messages across all commands
    - Add consistent logging
 
-4. **Additional Read Commands** (lower priority)
+6. **Additional Read Commands** (lower priority)
    - Load balancer subresources (frontend-ip, backend-pool, rule, probe)
    - PostgreSQL databases, firewall rules, parameters
    - Key Vault secrets, keys, certificates (read-only)
-   - Storage blob list/show
 
 ---
 
