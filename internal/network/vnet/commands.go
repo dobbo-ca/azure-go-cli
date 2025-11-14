@@ -37,6 +37,22 @@ func NewVNetCommand() *cobra.Command {
   showCmd.MarkFlagRequired("name")
   showCmd.MarkFlagRequired("resource-group")
 
-  cmd.AddCommand(listCmd, showCmd)
+  deleteCmd := &cobra.Command{
+    Use:   "delete",
+    Short: "Delete a virtual network",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      vnetName, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      noWait, _ := cmd.Flags().GetBool("no-wait")
+      return Delete(context.Background(), vnetName, resourceGroup, noWait)
+    },
+  }
+  deleteCmd.Flags().StringP("name", "n", "", "Virtual network name")
+  deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the long-running operation to finish")
+  deleteCmd.MarkFlagRequired("name")
+  deleteCmd.MarkFlagRequired("resource-group")
+
+  cmd.AddCommand(listCmd, showCmd, deleteCmd)
   return cmd
 }
