@@ -13,6 +13,33 @@ func NewSecretCommand() *cobra.Command {
     Long:  "Commands to manage secrets in Azure Key Vault",
   }
 
+  listCmd := &cobra.Command{
+    Use:   "list",
+    Short: "List secrets in a key vault",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      vaultName, _ := cmd.Flags().GetString("vault-name")
+      return List(context.Background(), vaultName)
+    },
+  }
+  listCmd.Flags().String("vault-name", "", "Key vault name")
+  listCmd.MarkFlagRequired("vault-name")
+
+  showCmd := &cobra.Command{
+    Use:   "show",
+    Short: "Show a secret from a key vault",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      vaultName, _ := cmd.Flags().GetString("vault-name")
+      name, _ := cmd.Flags().GetString("name")
+      showValue, _ := cmd.Flags().GetBool("show-value")
+      return Show(context.Background(), cmd, vaultName, name, showValue)
+    },
+  }
+  showCmd.Flags().String("vault-name", "", "Key vault name")
+  showCmd.Flags().StringP("name", "n", "", "Secret name")
+  showCmd.Flags().Bool("show-value", false, "Show the secret value (WARNING: displays sensitive data)")
+  showCmd.MarkFlagRequired("vault-name")
+  showCmd.MarkFlagRequired("name")
+
   setCmd := &cobra.Command{
     Use:   "set",
     Short: "Set a secret in a key vault",
@@ -46,6 +73,6 @@ func NewSecretCommand() *cobra.Command {
   deleteCmd.MarkFlagRequired("vault-name")
   deleteCmd.MarkFlagRequired("name")
 
-  cmd.AddCommand(setCmd, deleteCmd)
+  cmd.AddCommand(listCmd, showCmd, setCmd, deleteCmd)
   return cmd
 }
