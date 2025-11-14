@@ -2,6 +2,7 @@ package storage
 
 import (
   "github.com/cdobbyn/azure-go-cli/internal/storage/account"
+  "github.com/cdobbyn/azure-go-cli/internal/storage/blob"
   "github.com/cdobbyn/azure-go-cli/internal/storage/container"
   "github.com/spf13/cobra"
 )
@@ -15,6 +16,7 @@ func NewStorageCommand() *cobra.Command {
 
   cmd.AddCommand(
     account.NewAccountCommand(),
+    blob.NewBlobCommand(),
     container.NewContainerCommand(),
   )
   return cmd
