@@ -37,6 +37,55 @@ func NewFlexibleServerCommand() *cobra.Command {
   showCmd.MarkFlagRequired("name")
   showCmd.MarkFlagRequired("resource-group")
 
-  cmd.AddCommand(listCmd, showCmd)
+  createCmd := &cobra.Command{
+    Use:   "create",
+    Short: "Create a PostgreSQL flexible server",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      name, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      location, _ := cmd.Flags().GetString("location")
+      adminUser, _ := cmd.Flags().GetString("admin-user")
+      adminPassword, _ := cmd.Flags().GetString("admin-password")
+      version, _ := cmd.Flags().GetString("version")
+      tier, _ := cmd.Flags().GetString("tier")
+      sku, _ := cmd.Flags().GetString("sku-name")
+      storageSizeGB, _ := cmd.Flags().GetInt32("storage-size")
+      tags, _ := cmd.Flags().GetStringToString("tags")
+      return Create(context.Background(), cmd, name, resourceGroup, location, adminUser, adminPassword, version, tier, sku, storageSizeGB, tags)
+    },
+  }
+  createCmd.Flags().StringP("name", "n", "", "Server name")
+  createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  createCmd.Flags().StringP("location", "l", "", "Location (e.g., eastus, westus2)")
+  createCmd.Flags().String("admin-user", "", "Administrator username")
+  createCmd.Flags().String("admin-password", "", "Administrator password")
+  createCmd.Flags().String("version", "16", "PostgreSQL version (11, 12, 13, 14, 15, 16)")
+  createCmd.Flags().String("tier", "Burstable", "Pricing tier (Burstable, GeneralPurpose, MemoryOptimized)")
+  createCmd.Flags().String("sku-name", "Standard_B1ms", "SKU name (e.g., Standard_B1ms, Standard_D2s_v3)")
+  createCmd.Flags().Int32("storage-size", 32, "Storage size in GB")
+  createCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
+  createCmd.MarkFlagRequired("name")
+  createCmd.MarkFlagRequired("resource-group")
+  createCmd.MarkFlagRequired("location")
+  createCmd.MarkFlagRequired("admin-user")
+  createCmd.MarkFlagRequired("admin-password")
+
+  deleteCmd := &cobra.Command{
+    Use:   "delete",
+    Short: "Delete a PostgreSQL flexible server",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      name, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      noWait, _ := cmd.Flags().GetBool("no-wait")
+      return Delete(context.Background(), name, resourceGroup, noWait)
+    },
+  }
+  deleteCmd.Flags().StringP("name", "n", "", "Server name")
+  deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+  deleteCmd.MarkFlagRequired("name")
+  deleteCmd.MarkFlagRequired("resource-group")
+
+  cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
   return cmd
 }
