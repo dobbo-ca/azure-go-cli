@@ -18,6 +18,7 @@ func newListCmd() *cobra.Command {
   var output string
   var custom bool
   var scope string
+  var name string
 
   cmd := &cobra.Command{
     Use:   "list",
@@ -25,18 +26,19 @@ func newListCmd() *cobra.Command {
     Long:  "List Azure RBAC role definitions in the subscription",
     RunE: func(cmd *cobra.Command, args []string) error {
       ctx := context.Background()
-      return listRoleDefinitions(ctx, output, custom, scope)
+      return listRoleDefinitions(ctx, output, custom, scope, name)
     },
   }
 
   cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json or table")
   cmd.Flags().BoolVar(&custom, "custom", false, "Show only custom roles")
   cmd.Flags().StringVar(&scope, "scope", "", "Scope to list roles for (defaults to subscription scope)")
+  cmd.Flags().StringVarP(&name, "name", "n", "", "Filter by role definition's name (GUID) or roleName")
 
   return cmd
 }
 
-func listRoleDefinitions(ctx context.Context, output string, customOnly bool, scope string) error {
+func listRoleDefinitions(ctx context.Context, output string, customOnly bool, scope string, nameFilter string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return fmt.Errorf("failed to get credentials: %w", err)
@@ -73,6 +75,22 @@ func listRoleDefinitions(ctx context.Context, output string, customOnly bool, sc
       return fmt.Errorf("failed to get page: %w", err)
     }
     roles = append(roles, page.Value...)
+  }
+
+  // Client-side filter by name if specified
+  if nameFilter != "" {
+    var filtered []*armauthorization.RoleDefinition
+    for _, r := range roles {
+      if r.Properties != nil {
+        // Match against role name (display name) or role ID (GUID in the Name field)
+        matchesName := r.Properties.RoleName != nil && *r.Properties.RoleName == nameFilter
+        matchesID := r.Name != nil && *r.Name == nameFilter
+        if matchesName || matchesID {
+          filtered = append(filtered, r)
+        }
+      }
+    }
+    roles = filtered
   }
 
   if output == "json" {
