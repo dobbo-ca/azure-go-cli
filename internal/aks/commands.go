@@ -131,12 +131,29 @@ Run with: sudo az aks install-cli`,
     },
   }
 
+  deleteCmd := &cobra.Command{
+    Use:   "delete",
+    Short: "Delete an AKS cluster",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      name, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      noWait, _ := cmd.Flags().GetBool("no-wait")
+      return Delete(context.Background(), name, resourceGroup, noWait)
+    },
+  }
+  deleteCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+  deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+  deleteCmd.MarkFlagRequired("name")
+  deleteCmd.MarkFlagRequired("resource-group")
+
   cmd.AddCommand(
     getCredsCmd,
     bastionCmd,
     listCmd,
     showCmd,
     installCliCmd,
+    deleteCmd,
     nodepool.NewNodePoolCommand(),
     addon.NewAddonCommand(),
     machine.NewMachineCommand(),
