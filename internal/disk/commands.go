@@ -3,6 +3,7 @@ package disk
 import (
   "context"
 
+  "github.com/cdobbyn/azure-go-cli/internal/disk/encryptionset"
   "github.com/spf13/cobra"
 )
 
@@ -77,5 +78,12 @@ func NewDiskCommand() *cobra.Command {
   deleteCmd.MarkFlagRequired("resource-group")
 
   cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+
+  // Add encryption-set as a subcommand to support "az disk encryption-set" syntax
+  // This allows both "az disk-encryption-set" and "az disk encryption-set" to work
+  encryptionSetCmd := encryptionset.NewEncryptionSetCommand()
+  encryptionSetCmd.Use = "encryption-set"  // Override to remove "disk-" prefix
+  cmd.AddCommand(encryptionSetCmd)
+
   return cmd
 }
