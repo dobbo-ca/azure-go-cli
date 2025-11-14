@@ -59,11 +59,13 @@ func listRoleAssignments(ctx context.Context, output, scope, assignee, role stri
   }
 
   // Build filter
+  // Note: Azure API has different filter support depending on scope:
+  // - Subscription scope: supports 'principalId eq {value}'
+  // - Resource scope: only supports 'atScope()' or no filter
+  // We use atScope() and filter client-side for all scopes to keep it simple.
   var filter *string
-  if assignee != "" {
-    filterStr := fmt.Sprintf("principalId eq '%s'", assignee)
-    filter = &filterStr
-  }
+  filterStr := "atScope()"
+  filter = &filterStr
 
   pager := client.NewListForScopePager(scope, &armauthorization.RoleAssignmentsClientListForScopeOptions{
     Filter: filter,
@@ -76,6 +78,17 @@ func listRoleAssignments(ctx context.Context, output, scope, assignee, role stri
       return fmt.Errorf("failed to get page: %w", err)
     }
     assignments = append(assignments, page.Value...)
+  }
+
+  // Client-side filter by assignee if specified
+  if assignee != "" {
+    var filtered []*armauthorization.RoleAssignment
+    for _, a := range assignments {
+      if a.Properties != nil && a.Properties.PrincipalID != nil && *a.Properties.PrincipalID == assignee {
+        filtered = append(filtered, a)
+      }
+    }
+    assignments = filtered
   }
 
   // Filter by role if specified
