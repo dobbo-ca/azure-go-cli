@@ -44,6 +44,26 @@ func NewNodePoolCommand() *cobra.Command {
   showCmd.MarkFlagRequired("name")
   showCmd.MarkFlagRequired("resource-group")
 
-  cmd.AddCommand(listCmd, showCmd)
+  scaleCmd := &cobra.Command{
+    Use:   "scale",
+    Short: "Scale the number of nodes in a node pool",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      clusterName, _ := cmd.Flags().GetString("cluster-name")
+      nodepoolName, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      nodeCount, _ := cmd.Flags().GetInt32("node-count")
+      return Scale(context.Background(), clusterName, nodepoolName, resourceGroup, nodeCount)
+    },
+  }
+  scaleCmd.Flags().String("cluster-name", "", "AKS cluster name")
+  scaleCmd.Flags().StringP("name", "n", "", "Node pool name")
+  scaleCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  scaleCmd.Flags().Int32("node-count", 0, "Target number of nodes")
+  scaleCmd.MarkFlagRequired("cluster-name")
+  scaleCmd.MarkFlagRequired("name")
+  scaleCmd.MarkFlagRequired("resource-group")
+  scaleCmd.MarkFlagRequired("node-count")
+
+  cmd.AddCommand(listCmd, showCmd, scaleCmd)
   return cmd
 }
