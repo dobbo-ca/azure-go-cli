@@ -2,6 +2,7 @@ package azure
 
 import (
   "github.com/Azure/azure-sdk-for-go/sdk/azcore"
+  "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 )
 
 // GetCredential returns a credential with MSAL persistent token caching
@@ -21,4 +22,14 @@ func GetStringValue(s *string) string {
     return ""
   }
   return *s
+}
+
+func GetOSType(osType string) *armcontainerservice.OSType {
+  t := armcontainerservice.OSType(osType)
+  return &t
+}
+
+func GetAgentPoolMode(mode string) *armcontainerservice.AgentPoolMode {
+  m := armcontainerservice.AgentPoolMode(mode)
+  return &m
 }

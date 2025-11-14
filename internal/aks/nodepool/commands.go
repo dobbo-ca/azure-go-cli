@@ -64,6 +64,46 @@ func NewNodePoolCommand() *cobra.Command {
   scaleCmd.MarkFlagRequired("resource-group")
   scaleCmd.MarkFlagRequired("node-count")
 
-  cmd.AddCommand(listCmd, showCmd, scaleCmd)
+  addCmd := &cobra.Command{
+    Use:   "add",
+    Short: "Add a new node pool to an AKS cluster",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      clusterName, _ := cmd.Flags().GetString("cluster-name")
+      nodepoolName, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      nodeCount, _ := cmd.Flags().GetInt32("node-count")
+      vmSize, _ := cmd.Flags().GetString("node-vm-size")
+      return Add(context.Background(), clusterName, nodepoolName, resourceGroup, nodeCount, vmSize)
+    },
+  }
+  addCmd.Flags().String("cluster-name", "", "AKS cluster name")
+  addCmd.Flags().StringP("name", "n", "", "Node pool name")
+  addCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  addCmd.Flags().Int32("node-count", 3, "Number of nodes")
+  addCmd.Flags().String("node-vm-size", "Standard_DS2_v2", "VM size for nodes")
+  addCmd.MarkFlagRequired("cluster-name")
+  addCmd.MarkFlagRequired("name")
+  addCmd.MarkFlagRequired("resource-group")
+
+  deleteCmd := &cobra.Command{
+    Use:   "delete",
+    Short: "Delete a node pool from an AKS cluster",
+    RunE: func(cmd *cobra.Command, args []string) error {
+      clusterName, _ := cmd.Flags().GetString("cluster-name")
+      nodepoolName, _ := cmd.Flags().GetString("name")
+      resourceGroup, _ := cmd.Flags().GetString("resource-group")
+      noWait, _ := cmd.Flags().GetBool("no-wait")
+      return Delete(context.Background(), clusterName, nodepoolName, resourceGroup, noWait)
+    },
+  }
+  deleteCmd.Flags().String("cluster-name", "", "AKS cluster name")
+  deleteCmd.Flags().StringP("name", "n", "", "Node pool name")
+  deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+  deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the delete operation to complete")
+  deleteCmd.MarkFlagRequired("cluster-name")
+  deleteCmd.MarkFlagRequired("name")
+  deleteCmd.MarkFlagRequired("resource-group")
+
+  cmd.AddCommand(listCmd, showCmd, scaleCmd, addCmd, deleteCmd)
   return cmd
 }
