@@ -8,6 +8,7 @@ import (
   "github.com/cdobbyn/azure-go-cli/internal/aks"
   "github.com/cdobbyn/azure-go-cli/internal/auth"
   "github.com/cdobbyn/azure-go-cli/internal/disk"
+  "github.com/cdobbyn/azure-go-cli/internal/disk/encryptionset"
   "github.com/cdobbyn/azure-go-cli/internal/group"
   "github.com/cdobbyn/azure-go-cli/internal/identity"
   "github.com/cdobbyn/azure-go-cli/internal/keyvault"
@@ -48,6 +49,7 @@ func main() {
     account.NewAccountCommand(),
     aks.NewAKSCommand(),
     disk.NewDiskCommand(),
+    encryptionset.NewEncryptionSetCommand(),
     group.NewGroupCommand(),
     identity.NewIdentityCommand(),
     network.NewNetworkCommand(),
