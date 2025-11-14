@@ -3,6 +3,7 @@ package keyvault
 import (
   "context"
 
+  "github.com/cdobbyn/azure-go-cli/internal/keyvault/secret"
   "github.com/spf13/cobra"
 )
 
@@ -70,6 +71,6 @@ func NewKeyVaultCommand() *cobra.Command {
   deleteCmd.MarkFlagRequired("name")
   deleteCmd.MarkFlagRequired("resource-group")
 
-  cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+  cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, secret.NewSecretCommand())
   return cmd
 }
