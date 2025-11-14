@@ -10,10 +10,12 @@
   - Complete CRUD operations for blob storage
   - Upload/download with progress indicators
   - Table output for list, JSON for show
-- ✅ AKS nodepool scale operation
-  - Scale node pools up or down
-  - Long-running operation with polling
-  - Shows current count before scaling
+- ✅ AKS write operations
+  - Nodepool scale (scale up/down with node count)
+  - Addon enable/disable (toggle cluster addons)
+  - Nodepool add (create new nodepools with VM size)
+  - Nodepool delete (remove nodepools with confirmation prompt)
+  - All operations use long-running operation (LRO) polling
 
 ### Previously Completed (2025-11-11)
 - ✅ All 14 priority resource types have list/show commands
@@ -109,8 +111,8 @@ We are prioritizing implementation for the following Azure resource types:
 - [x] `az aks nodepool list` - List node pools in cluster
 - [x] `az aks nodepool show` - Show node pool details
 - [x] `az aks nodepool scale` - Scale node pool to target count
-- [ ] `az aks nodepool add` - Add node pool (write operation)
-- [ ] `az aks nodepool delete` - Delete node pool (write operation)
+- [x] `az aks nodepool add` - Add new node pool with VM size
+- [x] `az aks nodepool delete` - Delete node pool with confirmation
 - [ ] `az aks nodepool update` - Update node pool (write operation)
 - [ ] `az aks nodepool upgrade` - Upgrade node pool (write operation)
 - [ ] `az aks nodepool get-upgrades` - Get available node pool upgrades
@@ -119,8 +121,8 @@ We are prioritizing implementation for the following Azure resource types:
 - [x] `az aks addon list` - List cluster addons
 - [x] `az aks addon list-available` - List available addons
 - [x] `az aks addon show` - Show addon details
-- [ ] `az aks addon enable` - Enable addon (write operation)
-- [ ] `az aks addon disable` - Disable addon (write operation)
+- [x] `az aks addon enable` - Enable addon on cluster
+- [x] `az aks addon disable` - Disable addon on cluster
 - [ ] `az aks addon update` - Update addon (write operation)
 
 #### Machine Management (`az aks machine`)
