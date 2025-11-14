@@ -10,6 +10,10 @@
   - Complete CRUD operations for blob storage
   - Upload/download with progress indicators
   - Table output for list, JSON for show
+- ✅ AKS nodepool scale operation
+  - Scale node pools up or down
+  - Long-running operation with polling
+  - Shows current count before scaling
 
 ### Previously Completed (2025-11-11)
 - ✅ All 14 priority resource types have list/show commands
@@ -104,9 +108,9 @@ We are prioritizing implementation for the following Azure resource types:
 #### Node Pool Management (`az aks nodepool`)
 - [x] `az aks nodepool list` - List node pools in cluster
 - [x] `az aks nodepool show` - Show node pool details
+- [x] `az aks nodepool scale` - Scale node pool to target count
 - [ ] `az aks nodepool add` - Add node pool (write operation)
 - [ ] `az aks nodepool delete` - Delete node pool (write operation)
-- [ ] `az aks nodepool scale` - Scale node pool (write operation)
 - [ ] `az aks nodepool update` - Update node pool (write operation)
 - [ ] `az aks nodepool upgrade` - Upgrade node pool (write operation)
 - [ ] `az aks nodepool get-upgrades` - Get available node pool upgrades
