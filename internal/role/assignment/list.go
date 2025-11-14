@@ -18,6 +18,7 @@ func newListCmd() *cobra.Command {
   var scope string
   var assignee string
   var role string
+  var all bool
 
   cmd := &cobra.Command{
     Use:   "list",
@@ -25,7 +26,7 @@ func newListCmd() *cobra.Command {
     Long:  "List Azure RBAC role assignments at a given scope",
     RunE: func(cmd *cobra.Command, args []string) error {
       ctx := context.Background()
-      return listRoleAssignments(ctx, output, scope, assignee, role)
+      return listRoleAssignments(ctx, output, scope, assignee, role, all)
     },
   }
 
@@ -33,11 +34,12 @@ func newListCmd() *cobra.Command {
   cmd.Flags().StringVar(&scope, "scope", "", "Scope to list assignments for (defaults to subscription scope)")
   cmd.Flags().StringVar(&assignee, "assignee", "", "Filter by assignee (user, group, or service principal object ID)")
   cmd.Flags().StringVar(&role, "role", "", "Filter by role name or ID")
+  cmd.Flags().BoolVar(&all, "all", false, "Show all assignments under the current subscription")
 
   return cmd
 }
 
-func listRoleAssignments(ctx context.Context, output, scope, assignee, role string) error {
+func listRoleAssignments(ctx context.Context, output, scope, assignee, role string, all bool) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return fmt.Errorf("failed to get credentials: %w", err)
@@ -62,10 +64,14 @@ func listRoleAssignments(ctx context.Context, output, scope, assignee, role stri
   // Note: Azure API has different filter support depending on scope:
   // - Subscription scope: supports 'principalId eq {value}'
   // - Resource scope: only supports 'atScope()' or no filter
-  // We use atScope() and filter client-side for all scopes to keep it simple.
+  //
+  // When --all is specified, we don't use atScope() to get assignments at all levels.
+  // Otherwise, we use atScope() to only get assignments at the specified scope level.
   var filter *string
-  filterStr := "atScope()"
-  filter = &filterStr
+  if !all {
+    filterStr := "atScope()"
+    filter = &filterStr
+  }
 
   pager := client.NewListForScopePager(scope, &armauthorization.RoleAssignmentsClientListForScopeOptions{
     Filter: filter,
