@@ -28,18 +28,38 @@ type TokenResponse struct {
   WebSocketToken string `json:"websocketToken"`
 }
 
+// BufferConfig contains buffer size configuration for WebSocket tunnels
+type BufferConfig struct {
+  // Connection-level buffer sizes (for underlying network I/O)
+  ConnReadBufferSize  int // Default: 8KB
+  ConnWriteBufferSize int // Default: 8KB
+  // Streaming chunk buffer sizes (for application-level read/write operations)
+  ChunkReadBufferSize  int // Default: 4KB
+  ChunkWriteBufferSize int // Default: 4KB
+}
+
+// DefaultBufferConfig returns conservative defaults that work with Azure Bastion
+func DefaultBufferConfig() BufferConfig {
+  return BufferConfig{
+    ConnReadBufferSize:   8 * 1024,  // 8KB
+    ConnWriteBufferSize:  8 * 1024,  // 8KB
+    ChunkReadBufferSize:  4 * 1024,  // 4KB
+    ChunkWriteBufferSize: 4 * 1024,  // 4KB
+  }
+}
+
 // TunnelSSH opens an SSH tunnel with optional username for AAD authentication
-func TunnelSSH(ctx context.Context, bastionName, resourceGroup, targetResourceID string, localPort int, username string, bufferSize int) error {
-  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, 22, localPort, "tcptunnel", username, bufferSize)
+func TunnelSSH(ctx context.Context, bastionName, resourceGroup, targetResourceID string, localPort int, username string, bufferConfig BufferConfig) error {
+  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, 22, localPort, "tcptunnel", username, bufferConfig)
 }
 
 // Tunnel opens a tunnel to a target resource through Azure Bastion
-func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort, bufferSize int) error {
-  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, resourcePort, localPort, "tcptunnel", "", bufferSize)
+func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int, bufferConfig BufferConfig) error {
+  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, resourcePort, localPort, "tcptunnel", "", bufferConfig)
 }
 
 // tunnelWithProtocol opens a tunnel with specific protocol and optional username
-func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int, protocol, username string, bufferSize int) error {
+func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int, protocol, username string, bufferConfig BufferConfig) error {
   fmt.Printf("Opening tunnel through Bastion %s...\n", bastionName)
   fmt.Printf("Local port: %d\n", localPort)
   fmt.Printf("Target: %s:%d\n", targetResourceID, resourcePort)
@@ -135,7 +155,7 @@ func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetR
     // Update current token for next connection
     currentWSToken = wsToken
 
-    go handleConnection(ctx, conn, bastionEndpoint, wsToken, nodeID, bufferSize)
+    go handleConnection(ctx, conn, bastionEndpoint, wsToken, nodeID, bufferConfig)
   }
 }
 
@@ -232,7 +252,7 @@ func exchangeTokenWithProtocol(bastionEndpoint, accessToken, targetResourceID st
 }
 
 // handleConnection handles a single TCP connection by forwarding it through WebSocket
-func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, wsToken, nodeID string, bufferSize int) {
+func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, wsToken, nodeID string, bufferConfig BufferConfig) {
   defer tcpConn.Close()
 
   logger.Debug("Starting WebSocket connection for %s", tcpConn.RemoteAddr())
@@ -247,9 +267,12 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
       MinVersion: tls.VersionTLS12,
     },
     HandshakeTimeout: 30 * time.Second,
-    ReadBufferSize:   1024 * 1024, // 1MB buffer for large messages (helm charts, etc.)
-    WriteBufferSize:  1024 * 1024, // 1MB buffer for large messages
+    ReadBufferSize:   bufferConfig.ConnReadBufferSize,
+    WriteBufferSize:  bufferConfig.ConnWriteBufferSize,
   }
+
+  logger.Debug("WebSocket Dialer config: ReadBuffer=%d, WriteBuffer=%d",
+    bufferConfig.ConnReadBufferSize, bufferConfig.ConnWriteBufferSize)
 
   logger.Debug("Dialing WebSocket...")
   wsConn, resp, err := dialer.DialContext(ctx, wsURL, nil)
@@ -275,8 +298,9 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 
   // TCP -> WebSocket (streaming with NextWriter for async frame support)
   go func() {
-    buf := make([]byte, bufferSize)
-    logger.Debug("Using buffer size: %d bytes (streaming mode with NextWriter)", bufferSize)
+    buf := make([]byte, bufferConfig.ChunkWriteBufferSize)
+    logger.Debug("TCP->WebSocket: chunk write buffer=%d bytes, conn write buffer=%d bytes",
+      bufferConfig.ChunkWriteBufferSize, bufferConfig.ConnWriteBufferSize)
     for {
       n, err := tcpConn.Read(buf)
       if err != nil {
@@ -316,7 +340,9 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 
   // WebSocket -> TCP (streaming with NextReader for async frame support)
   go func() {
-    buf := make([]byte, bufferSize)
+    buf := make([]byte, bufferConfig.ChunkReadBufferSize)
+    logger.Debug("WebSocket->TCP: chunk read buffer=%d bytes, conn read buffer=%d bytes",
+      bufferConfig.ChunkReadBufferSize, bufferConfig.ConnReadBufferSize)
     for {
       // Use NextReader for streaming reads that support message fragmentation
       messageType, reader, err := wsConn.NextReader()

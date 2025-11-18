@@ -19,14 +19,14 @@ import (
 
 // BastionOptions contains options for the bastion tunnel
 type BastionOptions struct {
-  ClusterName        string
-  ResourceGroup      string
-  BastionResourceID  string
+  ClusterName          string
+  ResourceGroup        string
+  BastionResourceID    string
   SubscriptionOverride string
-  Admin              bool
-  Port               int
-  Command            string // Command to run with KUBECONFIG set (e.g., "k9s" or "kubectl get pods")
-  BufferSize         int    // WebSocket buffer size in bytes
+  Admin                bool
+  Port                 int
+  Command              string // Command to run with KUBECONFIG set (e.g., "k9s" or "kubectl get pods")
+  BufferConfig         bastion.BufferConfig
 }
 
 // Bastion is a convenience wrapper around network bastion tunnel
@@ -110,7 +110,7 @@ func Bastion(ctx context.Context, opts BastionOptions) error {
 
   tunnelErrCh := make(chan error, 1)
   go func() {
-    tunnelErrCh <- bastion.Tunnel(tunnelCtx, bastionName, bastionRG, *cluster.ID, 443, port, opts.BufferSize)
+    tunnelErrCh <- bastion.Tunnel(tunnelCtx, bastionName, bastionRG, *cluster.ID, 443, port, opts.BufferConfig)
   }()
 
   // Wait a moment for tunnel to establish

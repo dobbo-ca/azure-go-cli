@@ -10,6 +10,7 @@ import (
   "github.com/cdobbyn/azure-go-cli/internal/aks/operation"
   "github.com/cdobbyn/azure-go-cli/internal/aks/podidentity"
   "github.com/cdobbyn/azure-go-cli/internal/aks/snapshot"
+  "github.com/cdobbyn/azure-go-cli/internal/network/bastion"
   "github.com/spf13/cobra"
 )
 
@@ -71,7 +72,12 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
       admin, _ := cmd.Flags().GetBool("admin")
       port, _ := cmd.Flags().GetInt("port")
       cmdToRun, _ := cmd.Flags().GetString("cmd")
-      bufferSize, _ := cmd.Flags().GetInt("buffer-size")
+
+      bufferConfig := bastion.DefaultBufferConfig()
+      bufferConfig.ConnReadBufferSize, _ = cmd.Flags().GetInt("conn-read-buffer")
+      bufferConfig.ConnWriteBufferSize, _ = cmd.Flags().GetInt("conn-write-buffer")
+      bufferConfig.ChunkReadBufferSize, _ = cmd.Flags().GetInt("chunk-read-buffer")
+      bufferConfig.ChunkWriteBufferSize, _ = cmd.Flags().GetInt("chunk-write-buffer")
 
       opts := BastionOptions{
         ClusterName:          clusterName,
@@ -81,7 +87,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
         Admin:                admin,
         Port:                 port,
         Command:              cmdToRun,
-        BufferSize:           bufferSize,
+        BufferConfig:         bufferConfig,
       }
 
       return Bastion(context.Background(), opts)
@@ -93,7 +99,10 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
   bastionCmd.Flags().BoolP("admin", "a", false, "Use admin credentials")
   bastionCmd.Flags().IntP("port", "p", 0, "Local port to use for tunnel (0 = random port)")
   bastionCmd.Flags().String("cmd", "", "Command to run with KUBECONFIG set (e.g., 'k9s' or 'kubectl get pods')")
-  bastionCmd.Flags().Int("buffer-size", 32*1024, "WebSocket buffer size in bytes (default 32KB)")
+  bastionCmd.Flags().Int("conn-read-buffer", 8*1024, "Connection-level read buffer size in bytes (default 8KB)")
+  bastionCmd.Flags().Int("conn-write-buffer", 8*1024, "Connection-level write buffer size in bytes (default 8KB)")
+  bastionCmd.Flags().Int("chunk-read-buffer", 4*1024, "Streaming chunk read buffer size in bytes (default 4KB)")
+  bastionCmd.Flags().Int("chunk-write-buffer", 4*1024, "Streaming chunk write buffer size in bytes (default 4KB)")
   bastionCmd.MarkFlagRequired("name")
   bastionCmd.MarkFlagRequired("resource-group")
   bastionCmd.MarkFlagRequired("bastion")
