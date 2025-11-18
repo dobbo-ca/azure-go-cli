@@ -296,55 +296,45 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   var errorCount int
   errorThreshold := 3 // Only display errors after they occur 3 times consecutively
 
-  // TCP -> WebSocket (streaming with NextWriter for async frame support)
+  // TCP -> WebSocket (streaming with io.Copy for continuous data flow)
   go func() {
-    buf := make([]byte, bufferConfig.ChunkWriteBufferSize)
-    logger.Debug("TCP->WebSocket: chunk write buffer=%d bytes, conn write buffer=%d bytes",
-      bufferConfig.ChunkWriteBufferSize, bufferConfig.ConnWriteBufferSize)
-    for {
-      n, err := tcpConn.Read(buf)
-      if err != nil {
-        if err != io.EOF && !strings.Contains(err.Error(), "use of closed network connection") {
-          logger.Debug("TCP read error: %v", err)
-          errChan <- fmt.Errorf("TCP read error: %w", err)
-        }
-        return
+    logger.Debug("TCP->WebSocket: using io.Copy with conn write buffer=%d bytes",
+      bufferConfig.ConnWriteBufferSize)
+
+    // Open a single WebSocket writer for the entire TCP connection lifetime
+    writer, err := wsConn.NextWriter(websocket.BinaryMessage)
+    if err != nil {
+      logger.Debug("WebSocket NextWriter error: %v", err)
+      errChan <- fmt.Errorf("WebSocket write error: %w", err)
+      return
+    }
+
+    // Copy all data from TCP to WebSocket continuously
+    // This maintains HTTP/2 streaming without creating artificial message boundaries
+    n, err := io.Copy(writer, tcpConn)
+    logger.Debug("Copied %d bytes from TCP to WebSocket", n)
+
+    // Close the writer when TCP connection closes
+    if closeErr := writer.Close(); closeErr != nil {
+      logger.Debug("WebSocket writer close error: %v", closeErr)
+      if err == nil {
+        err = closeErr
       }
+    }
 
-      logger.Debug("Read %d bytes from TCP, streaming to WebSocket", n)
-
-      // Use NextWriter for streaming writes that support message fragmentation
-      writer, err := wsConn.NextWriter(websocket.BinaryMessage)
-      if err != nil {
-        logger.Debug("WebSocket NextWriter error: %v", err)
-        errChan <- fmt.Errorf("WebSocket write error: %w", err)
-        return
-      }
-
-      if _, err := writer.Write(buf[:n]); err != nil {
-        logger.Debug("WebSocket writer.Write error: %v", err)
-        writer.Close()
-        errChan <- fmt.Errorf("WebSocket write error: %w", err)
-        return
-      }
-
-      if err := writer.Close(); err != nil {
-        logger.Debug("WebSocket writer.Close error: %v", err)
-        errChan <- fmt.Errorf("WebSocket write error: %w", err)
-        return
-      }
-
-      logger.Debug("Streamed %d bytes to WebSocket", n)
+    if err != nil && err != io.EOF && !strings.Contains(err.Error(), "use of closed network connection") {
+      logger.Debug("TCP->WebSocket copy error: %v", err)
+      errChan <- fmt.Errorf("TCP to WebSocket error: %w", err)
     }
   }()
 
-  // WebSocket -> TCP (streaming with NextReader for async frame support)
+  // WebSocket -> TCP (streaming with io.Copy for continuous data flow)
   go func() {
-    buf := make([]byte, bufferConfig.ChunkReadBufferSize)
-    logger.Debug("WebSocket->TCP: chunk read buffer=%d bytes, conn read buffer=%d bytes",
-      bufferConfig.ChunkReadBufferSize, bufferConfig.ConnReadBufferSize)
+    logger.Debug("WebSocket->TCP: using io.Copy with conn read buffer=%d bytes",
+      bufferConfig.ConnReadBufferSize)
+
     for {
-      // Use NextReader for streaming reads that support message fragmentation
+      // Get the next WebSocket message reader
       messageType, reader, err := wsConn.NextReader()
       if err != nil {
         if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
@@ -359,31 +349,15 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
         continue
       }
 
-      // Stream data from WebSocket to TCP in chunks
-      totalBytes := 0
-      for {
-        n, err := reader.Read(buf)
-        if n > 0 {
-          logger.Debug("Read %d bytes from WebSocket reader, forwarding to TCP", n)
-          if _, writeErr := tcpConn.Write(buf[:n]); writeErr != nil {
-            logger.Debug("TCP write error: %v", writeErr)
-            errChan <- fmt.Errorf("TCP write error: %w", writeErr)
-            return
-          }
-          totalBytes += n
-        }
+      // Copy entire WebSocket message to TCP continuously
+      // This maintains HTTP/2 response streaming without fragmentation
+      n, err := io.Copy(tcpConn, reader)
+      logger.Debug("Copied %d bytes from WebSocket to TCP", n)
 
-        if err == io.EOF {
-          // End of message
-          logger.Debug("Completed streaming %d total bytes from WebSocket to TCP", totalBytes)
-          break
-        }
-
-        if err != nil {
-          logger.Debug("WebSocket reader error: %v", err)
-          errChan <- fmt.Errorf("WebSocket read error: %w", err)
-          return
-        }
+      if err != nil {
+        logger.Debug("WebSocket->TCP copy error: %v", err)
+        errChan <- fmt.Errorf("WebSocket to TCP error: %w", err)
+        return
       }
     }
   }()
