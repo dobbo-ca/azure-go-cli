@@ -273,10 +273,10 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   var errorCount int
   errorThreshold := 3 // Only display errors after they occur 3 times consecutively
 
-  // TCP -> WebSocket
+  // TCP -> WebSocket (streaming with NextWriter for async frame support)
   go func() {
     buf := make([]byte, bufferSize)
-    logger.Debug("Using buffer size: %d bytes", bufferSize)
+    logger.Debug("Using buffer size: %d bytes (streaming mode with NextWriter)", bufferSize)
     for {
       n, err := tcpConn.Read(buf)
       if err != nil {
@@ -287,35 +287,78 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
         return
       }
 
-      logger.Debug("Read %d bytes from TCP, forwarding to WebSocket", n)
-      if err := wsConn.WriteMessage(websocket.BinaryMessage, buf[:n]); err != nil {
-        logger.Debug("WebSocket write error: %v", err)
+      logger.Debug("Read %d bytes from TCP, streaming to WebSocket", n)
+
+      // Use NextWriter for streaming writes that support message fragmentation
+      writer, err := wsConn.NextWriter(websocket.BinaryMessage)
+      if err != nil {
+        logger.Debug("WebSocket NextWriter error: %v", err)
         errChan <- fmt.Errorf("WebSocket write error: %w", err)
         return
       }
-      logger.Debug("Wrote %d bytes to WebSocket", n)
+
+      if _, err := writer.Write(buf[:n]); err != nil {
+        logger.Debug("WebSocket writer.Write error: %v", err)
+        writer.Close()
+        errChan <- fmt.Errorf("WebSocket write error: %w", err)
+        return
+      }
+
+      if err := writer.Close(); err != nil {
+        logger.Debug("WebSocket writer.Close error: %v", err)
+        errChan <- fmt.Errorf("WebSocket write error: %w", err)
+        return
+      }
+
+      logger.Debug("Streamed %d bytes to WebSocket", n)
     }
   }()
 
-  // WebSocket -> TCP
+  // WebSocket -> TCP (streaming with NextReader for async frame support)
   go func() {
+    buf := make([]byte, bufferSize)
     for {
-      _, message, err := wsConn.ReadMessage()
+      // Use NextReader for streaming reads that support message fragmentation
+      messageType, reader, err := wsConn.NextReader()
       if err != nil {
         if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-          logger.Debug("WebSocket read error: %v", err)
+          logger.Debug("WebSocket NextReader error: %v", err)
           errChan <- fmt.Errorf("WebSocket read error: %w", err)
         }
         return
       }
 
-      logger.Debug("Read %d bytes from WebSocket, forwarding to TCP", len(message))
-      if _, err := tcpConn.Write(message); err != nil {
-        logger.Debug("TCP write error: %v", err)
-        errChan <- fmt.Errorf("TCP write error: %w", err)
-        return
+      if messageType != websocket.BinaryMessage && messageType != websocket.TextMessage {
+        logger.Debug("Ignoring non-data message type: %d", messageType)
+        continue
       }
-      logger.Debug("Wrote %d bytes to TCP", len(message))
+
+      // Stream data from WebSocket to TCP in chunks
+      totalBytes := 0
+      for {
+        n, err := reader.Read(buf)
+        if n > 0 {
+          logger.Debug("Read %d bytes from WebSocket reader, forwarding to TCP", n)
+          if _, writeErr := tcpConn.Write(buf[:n]); writeErr != nil {
+            logger.Debug("TCP write error: %v", writeErr)
+            errChan <- fmt.Errorf("TCP write error: %w", writeErr)
+            return
+          }
+          totalBytes += n
+        }
+
+        if err == io.EOF {
+          // End of message
+          logger.Debug("Completed streaming %d total bytes from WebSocket to TCP", totalBytes)
+          break
+        }
+
+        if err != nil {
+          logger.Debug("WebSocket reader error: %v", err)
+          errChan <- fmt.Errorf("WebSocket read error: %w", err)
+          return
+        }
+      }
     }
   }()
 
