@@ -71,6 +71,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
       admin, _ := cmd.Flags().GetBool("admin")
       port, _ := cmd.Flags().GetInt("port")
       cmdToRun, _ := cmd.Flags().GetString("cmd")
+      bufferSize, _ := cmd.Flags().GetInt("buffer-size")
 
       opts := BastionOptions{
         ClusterName:          clusterName,
@@ -80,6 +81,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
         Admin:                admin,
         Port:                 port,
         Command:              cmdToRun,
+        BufferSize:           bufferSize,
       }
 
       return Bastion(context.Background(), opts)
@@ -91,6 +93,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
   bastionCmd.Flags().BoolP("admin", "a", false, "Use admin credentials")
   bastionCmd.Flags().IntP("port", "p", 0, "Local port to use for tunnel (0 = random port)")
   bastionCmd.Flags().String("cmd", "", "Command to run with KUBECONFIG set (e.g., 'k9s' or 'kubectl get pods')")
+  bastionCmd.Flags().Int("buffer-size", 32*1024, "WebSocket buffer size in bytes (default 32KB)")
   bastionCmd.MarkFlagRequired("name")
   bastionCmd.MarkFlagRequired("resource-group")
   bastionCmd.MarkFlagRequired("bastion")

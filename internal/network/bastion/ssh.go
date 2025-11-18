@@ -18,7 +18,7 @@ import (
 )
 
 // SSH opens an SSH session to a VM through Azure Bastion
-func SSH(ctx context.Context, bastionName, resourceGroup, targetResourceID, authType, username string) error {
+func SSH(ctx context.Context, bastionName, resourceGroup, targetResourceID, authType, username string, bufferSize int) error {
   // Use random high port for local tunnel
   rand.Seed(time.Now().UnixNano())
   localPort := 49152 + rand.Intn(16384) // Ephemeral port range: 49152-65535
@@ -33,7 +33,7 @@ func SSH(ctx context.Context, bastionName, resourceGroup, targetResourceID, auth
 
   tunnelErrCh := make(chan error, 1)
   go func() {
-    tunnelErrCh <- TunnelSSH(tunnelCtx, bastionName, resourceGroup, targetResourceID, localPort, username)
+    tunnelErrCh <- TunnelSSH(tunnelCtx, bastionName, resourceGroup, targetResourceID, localPort, username, bufferSize)
   }()
 
   // Wait a moment for tunnel to establish

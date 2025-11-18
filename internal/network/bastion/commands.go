@@ -22,8 +22,9 @@ func NewBastionCommand() *cobra.Command {
       targetResourceID, _ := cmd.Flags().GetString("target-resource-id")
       resourcePort, _ := cmd.Flags().GetInt("resource-port")
       localPort, _ := cmd.Flags().GetInt("port")
+      bufferSize, _ := cmd.Flags().GetInt("buffer-size")
 
-      return Tunnel(context.Background(), bastionName, resourceGroup, targetResourceID, resourcePort, localPort)
+      return Tunnel(context.Background(), bastionName, resourceGroup, targetResourceID, resourcePort, localPort, bufferSize)
     },
   }
   tunnelCmd.Flags().StringP("name", "n", "", "Bastion name")
@@ -31,6 +32,7 @@ func NewBastionCommand() *cobra.Command {
   tunnelCmd.Flags().String("target-resource-id", "", "Target resource ID")
   tunnelCmd.Flags().Int("resource-port", 443, "Target resource port")
   tunnelCmd.Flags().IntP("port", "p", 0, "Local port")
+  tunnelCmd.Flags().Int("buffer-size", 32*1024, "WebSocket buffer size in bytes (default 32KB)")
   tunnelCmd.MarkFlagRequired("name")
   tunnelCmd.MarkFlagRequired("resource-group")
   tunnelCmd.MarkFlagRequired("target-resource-id")
@@ -51,8 +53,9 @@ For AAD authentication, provide your Azure AD username (typically your email or 
       targetResourceID, _ := cmd.Flags().GetString("target-resource-id")
       authType, _ := cmd.Flags().GetString("auth-type")
       username, _ := cmd.Flags().GetString("username")
+      bufferSize, _ := cmd.Flags().GetInt("buffer-size")
 
-      return SSH(context.Background(), bastionName, resourceGroup, targetResourceID, authType, username)
+      return SSH(context.Background(), bastionName, resourceGroup, targetResourceID, authType, username, bufferSize)
     },
   }
   sshCmd.Flags().StringP("name", "n", "", "Bastion name")
@@ -60,6 +63,7 @@ For AAD authentication, provide your Azure AD username (typically your email or 
   sshCmd.Flags().String("target-resource-id", "", "Target VM resource ID")
   sshCmd.Flags().String("auth-type", "AAD", "Authentication type (AAD, password, ssh-key)")
   sshCmd.Flags().StringP("username", "u", "", "SSH username (Azure AD email for AAD auth)")
+  sshCmd.Flags().Int("buffer-size", 32*1024, "WebSocket buffer size in bytes (default 32KB)")
   sshCmd.MarkFlagRequired("name")
   sshCmd.MarkFlagRequired("resource-group")
   sshCmd.MarkFlagRequired("target-resource-id")

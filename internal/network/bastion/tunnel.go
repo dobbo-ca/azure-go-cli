@@ -29,17 +29,17 @@ type TokenResponse struct {
 }
 
 // TunnelSSH opens an SSH tunnel with optional username for AAD authentication
-func TunnelSSH(ctx context.Context, bastionName, resourceGroup, targetResourceID string, localPort int, username string) error {
-  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, 22, localPort, "tcptunnel", username)
+func TunnelSSH(ctx context.Context, bastionName, resourceGroup, targetResourceID string, localPort int, username string, bufferSize int) error {
+  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, 22, localPort, "tcptunnel", username, bufferSize)
 }
 
 // Tunnel opens a tunnel to a target resource through Azure Bastion
-func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int) error {
-  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, resourcePort, localPort, "tcptunnel", "")
+func Tunnel(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort, bufferSize int) error {
+  return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, resourcePort, localPort, "tcptunnel", "", bufferSize)
 }
 
 // tunnelWithProtocol opens a tunnel with specific protocol and optional username
-func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int, protocol, username string) error {
+func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetResourceID string, resourcePort, localPort int, protocol, username string, bufferSize int) error {
   fmt.Printf("Opening tunnel through Bastion %s...\n", bastionName)
   fmt.Printf("Local port: %d\n", localPort)
   fmt.Printf("Target: %s:%d\n", targetResourceID, resourcePort)
@@ -135,7 +135,7 @@ func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetR
     // Update current token for next connection
     currentWSToken = wsToken
 
-    go handleConnection(ctx, conn, bastionEndpoint, wsToken, nodeID)
+    go handleConnection(ctx, conn, bastionEndpoint, wsToken, nodeID, bufferSize)
   }
 }
 
@@ -232,7 +232,7 @@ func exchangeTokenWithProtocol(bastionEndpoint, accessToken, targetResourceID st
 }
 
 // handleConnection handles a single TCP connection by forwarding it through WebSocket
-func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, wsToken, nodeID string) {
+func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, wsToken, nodeID string, bufferSize int) {
   defer tcpConn.Close()
 
   logger.Debug("Starting WebSocket connection for %s", tcpConn.RemoteAddr())
@@ -247,6 +247,8 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
       MinVersion: tls.VersionTLS12,
     },
     HandshakeTimeout: 30 * time.Second,
+    ReadBufferSize:   1024 * 1024, // 1MB buffer for large messages (helm charts, etc.)
+    WriteBufferSize:  1024 * 1024, // 1MB buffer for large messages
   }
 
   logger.Debug("Dialing WebSocket...")
@@ -273,7 +275,8 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 
   // TCP -> WebSocket
   go func() {
-    buf := make([]byte, 32*1024)
+    buf := make([]byte, bufferSize)
+    logger.Debug("Using buffer size: %d bytes", bufferSize)
     for {
       n, err := tcpConn.Read(buf)
       if err != nil {
