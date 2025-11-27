@@ -33,8 +33,8 @@ func Show(ctx context.Context, cmd *cobra.Command, clusterName, resourceGroup st
     return fmt.Errorf("failed to get AKS cluster: %w", err)
   }
 
-  // Use output.PrintJSON to handle query filtering
-  return output.PrintJSON(cmd, cluster)
+  // Return properties directly for easier querying (no need for 'properties.' prefix)
+  return output.PrintJSON(cmd, cluster.Properties)
 }
 
 // Helper function to extract resource group from Azure resource ID
