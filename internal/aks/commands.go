@@ -128,7 +128,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
     RunE: func(cmd *cobra.Command, args []string) error {
       clusterName, _ := cmd.Flags().GetString("name")
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      return Show(context.Background(), clusterName, resourceGroup)
+      return Show(context.Background(), cmd, clusterName, resourceGroup)
     },
   }
   showCmd.Flags().StringP("name", "n", "", "AKS cluster name")

@@ -2,16 +2,17 @@ package aks
 
 import (
   "context"
-  "encoding/json"
   "fmt"
   "strings"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
+  "github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, clusterName, resourceGroup string) error {
+func Show(ctx context.Context, cmd *cobra.Command, clusterName, resourceGroup string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -32,14 +33,8 @@ func Show(ctx context.Context, clusterName, resourceGroup string) error {
     return fmt.Errorf("failed to get AKS cluster: %w", err)
   }
 
-  // Convert to JSON for display
-  data, err := json.MarshalIndent(cluster, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format cluster: %w", err)
-  }
-
-  fmt.Println(string(data))
-  return nil
+  // Use output.PrintJSON to handle query filtering
+  return output.PrintJSON(cmd, cluster)
 }
 
 // Helper function to extract resource group from Azure resource ID
