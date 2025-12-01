@@ -290,6 +290,49 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   defer wsConn.Close()
   logger.Debug("WebSocket connection established")
 
+  // Set up WebSocket keepalive with ping/pong
+  // Azure Bastion requires periodic activity to keep connections alive
+  // Send ping every 30 seconds to prevent 2-hour idle timeout
+  keepaliveCtx, cancelKeepalive := context.WithCancel(ctx)
+  defer cancelKeepalive()
+
+  // Configure pong handler to reset read deadline
+  wsConn.SetPongHandler(func(appData string) error {
+    logger.Debug("Received pong from server")
+    // Reset read deadline on pong receipt - gives us another interval
+    wsConn.SetReadDeadline(time.Now().Add(90 * time.Second))
+    return nil
+  })
+
+  // Start keepalive goroutine
+  go func() {
+    ticker := time.NewTicker(30 * time.Second)
+    defer ticker.Stop()
+
+    for {
+      select {
+      case <-keepaliveCtx.Done():
+        logger.Debug("Keepalive goroutine stopped")
+        return
+      case <-ticker.C:
+        logger.Debug("Sending WebSocket ping keepalive")
+        // Set write deadline for ping
+        if err := wsConn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
+          logger.Debug("Failed to set write deadline for ping: %v", err)
+          return
+        }
+        if err := wsConn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+          logger.Debug("Failed to send ping: %v", err)
+          return
+        }
+        logger.Debug("Ping sent successfully")
+      }
+    }
+  }()
+
+  // Set initial read deadline
+  wsConn.SetReadDeadline(time.Now().Add(90 * time.Second))
+
   // Create channels for errors and error tracking
   errChan := make(chan error, 2)
   var lastError error
