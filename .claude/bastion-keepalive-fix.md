@@ -20,8 +20,8 @@ Implemented WebSocket keepalive using the standard ping/pong mechanism:
 ### Changes Made to `internal/network/bastion/tunnel.go`
 
 1. **Ping Interval**: Send WebSocket ping frames every 30 seconds
-2. **Pong Handler**: Configured to reset read deadline upon receiving pong responses
-3. **Read Deadline**: Set 90-second read deadline, reset on each pong
+2. **Pong Handler**: Configured to acknowledge pong responses from server
+3. **No Deadlines**: Deliberately avoid read/write deadlines to prevent interference with data flow
 4. **Graceful Shutdown**: Keepalive goroutine properly cancels when connection closes
 
 ### Implementation Details
@@ -30,16 +30,17 @@ Implemented WebSocket keepalive using the standard ping/pong mechanism:
 // Keepalive goroutine sends ping every 30 seconds
 ticker := time.NewTicker(30 * time.Second)
 
-// Pong handler resets read deadline
+// Pong handler (simple acknowledgment, no deadline manipulation)
 wsConn.SetPongHandler(func(appData string) error {
-    wsConn.SetReadDeadline(time.Now().Add(90 * time.Second))
+    logger.Debug("Received pong from server")
     return nil
 })
 
-// Send ping with write deadline
-wsConn.SetWriteDeadline(time.Now().Add(10 * time.Second))
-wsConn.WriteMessage(websocket.PingMessage, []byte{})
+// Send ping using WriteControl (doesn't interfere with data flow)
+wsConn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second))
 ```
+
+**Important**: We do NOT set read deadlines on the WebSocket connection. Setting deadlines would interfere with normal data flow and cause operations (like k9s actions) to hang. The ping/pong mechanism alone is sufficient for keepalive.
 
 ### Why This Works
 

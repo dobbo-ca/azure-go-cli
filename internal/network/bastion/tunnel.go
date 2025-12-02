@@ -10,6 +10,8 @@ import (
   "net/http"
   "net/url"
   "strings"
+  "sync"
+  "syscall"
   "time"
 
   "github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -122,10 +124,6 @@ func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetR
   logger.Debug("Tunnel ready at 127.0.0.1:%d", localPort)
   logger.Debug("Tunnel listener ready, waiting for connections...")
 
-  // Track WebSocket token for reuse in subsequent connections
-  // First connection uses empty token, subsequent connections pass previous token
-  var currentWSToken string
-
   // Accept connections and forward them through WebSocket
   for {
     conn, err := listener.Accept()
@@ -140,22 +138,24 @@ func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetR
 
     logger.Debug("Accepted new connection from %s", conn.RemoteAddr())
 
-    // Get fresh WebSocket token for this connection
-    // Pass previous token (empty for first connection)
-    logger.Debug("Exchanging token for WebSocket tunnel token...")
-    wsToken, nodeID, err := exchangeTokenWithProtocol(bastionEndpoint, token, targetResourceID, resourcePort, currentWSToken, protocol, username)
-    if err != nil {
-      logger.Debug("Failed to exchange token: %v", err)
-      conn.Close()
-      continue
-    }
-    logger.Debug("WebSocket token acquired (length: %d)", len(wsToken))
-    logger.Debug("Node ID: %s", nodeID)
+    // Handle each connection in its own goroutine for true concurrency
+    go func(tcpConn net.Conn) {
+      // Get fresh WebSocket token for this connection
+      // IMPORTANT: Always pass empty string to get independent tokens
+      // Passing a previous token causes Azure to link/reuse sessions
+      logger.Debug("Exchanging token for WebSocket tunnel token...")
 
-    // Update current token for next connection
-    currentWSToken = wsToken
+      wsToken, nodeID, err := exchangeTokenWithProtocol(bastionEndpoint, token, targetResourceID, resourcePort, "", protocol, username)
+      if err != nil {
+        logger.Debug("Failed to exchange token: %v", err)
+        tcpConn.Close()
+        return
+      }
+      logger.Debug("WebSocket token acquired (length: %d)", len(wsToken))
+      logger.Debug("Node ID: %s", nodeID)
 
-    go handleConnection(ctx, conn, bastionEndpoint, wsToken, nodeID, bufferConfig)
+      handleConnection(ctx, tcpConn, bastionEndpoint, wsToken, nodeID, bufferConfig)
+    }(conn)
   }
 }
 
@@ -262,7 +262,28 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   wsURL := fmt.Sprintf("wss://%s/webtunnelv2/%s?X-Node-Id=%s", bastionEndpoint, wsToken, nodeID)
   logger.Debug("WebSocket URL: wss://%s/webtunnelv2/<redacted>?X-Node-Id=%s", bastionEndpoint, nodeID)
 
+  // Set TCP_NODELAY on the underlying connection (disable Nagle's algorithm)
+  // This matches Azure CLI behavior for lower latency
+  netDialer := &net.Dialer{
+    Timeout:   30 * time.Second,
+    KeepAlive: 30 * time.Second,
+    Control: func(network, address string, c syscall.RawConn) error {
+      var setErr error
+      err := c.Control(func(fd uintptr) {
+        // Set TCP_NODELAY
+        setErr = syscall.SetsockoptInt(int(fd), syscall.IPPROTO_TCP, syscall.TCP_NODELAY, 1)
+      })
+      if err != nil {
+        return err
+      }
+      return setErr
+    },
+  }
+
   dialer := websocket.Dialer{
+    NetDial: func(network, addr string) (net.Conn, error) {
+      return netDialer.Dial(network, addr)
+    },
     TLSClientConfig: &tls.Config{
       MinVersion: tls.VersionTLS12,
     },
@@ -290,48 +311,13 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
   defer wsConn.Close()
   logger.Debug("WebSocket connection established")
 
-  // Set up WebSocket keepalive with ping/pong
-  // Azure Bastion requires periodic activity to keep connections alive
-  // Send ping every 30 seconds to prevent 2-hour idle timeout
-  keepaliveCtx, cancelKeepalive := context.WithCancel(ctx)
-  defer cancelKeepalive()
+  // NOTE: Azure CLI does NOT implement WebSocket ping/pong keepalive
+  // They rely on the SSH protocol's own traffic to keep the connection alive
+  // Adding explicit pings can interfere with data flow and cause connection resets
 
-  // Configure pong handler to reset read deadline
-  wsConn.SetPongHandler(func(appData string) error {
-    logger.Debug("Received pong from server")
-    // Reset read deadline on pong receipt - gives us another interval
-    wsConn.SetReadDeadline(time.Now().Add(90 * time.Second))
-    return nil
-  })
-
-  // Start keepalive goroutine
-  go func() {
-    ticker := time.NewTicker(30 * time.Second)
-    defer ticker.Stop()
-
-    for {
-      select {
-      case <-keepaliveCtx.Done():
-        logger.Debug("Keepalive goroutine stopped")
-        return
-      case <-ticker.C:
-        logger.Debug("Sending WebSocket ping keepalive")
-        // Set write deadline for ping
-        if err := wsConn.SetWriteDeadline(time.Now().Add(10 * time.Second)); err != nil {
-          logger.Debug("Failed to set write deadline for ping: %v", err)
-          return
-        }
-        if err := wsConn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-          logger.Debug("Failed to send ping: %v", err)
-          return
-        }
-        logger.Debug("Ping sent successfully")
-      }
-    }
-  }()
-
-  // Set initial read deadline
-  wsConn.SetReadDeadline(time.Now().Add(90 * time.Second))
+  // Create write mutex to protect WebSocket writes
+  // gorilla/websocket requires that only one goroutine writes at a time
+  var writeMu sync.Mutex
 
   // Create channels for errors and error tracking
   errChan := make(chan error, 2)
@@ -356,23 +342,14 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 
       logger.Debug("Read %d bytes from TCP, streaming to WebSocket", n)
 
-      // Use NextWriter for each chunk to create message boundaries for HTTP/2
-      writer, err := wsConn.NextWriter(websocket.BinaryMessage)
+      // Lock before writing to WebSocket (required by gorilla/websocket)
+      // Use WriteMessage instead of NextWriter for better performance
+      writeMu.Lock()
+      err = wsConn.WriteMessage(websocket.BinaryMessage, buf[:n])
+      writeMu.Unlock()
+
       if err != nil {
-        logger.Debug("WebSocket NextWriter error: %v", err)
-        errChan <- fmt.Errorf("WebSocket write error: %w", err)
-        return
-      }
-
-      if _, err := writer.Write(buf[:n]); err != nil {
-        logger.Debug("WebSocket writer.Write error: %v", err)
-        writer.Close()
-        errChan <- fmt.Errorf("WebSocket write error: %w", err)
-        return
-      }
-
-      if err := writer.Close(); err != nil {
-        logger.Debug("WebSocket writer.Close error: %v", err)
+        logger.Debug("WebSocket write error: %v", err)
         errChan <- fmt.Errorf("WebSocket write error: %w", err)
         return
       }
