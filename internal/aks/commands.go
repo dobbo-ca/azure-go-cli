@@ -1,183 +1,183 @@
 package aks
 
 import (
-  "context"
+	"context"
 
-  "github.com/cdobbyn/azure-go-cli/internal/aks/addon"
-  "github.com/cdobbyn/azure-go-cli/internal/aks/machine"
-  "github.com/cdobbyn/azure-go-cli/internal/aks/maintenanceconfiguration"
-  "github.com/cdobbyn/azure-go-cli/internal/aks/nodepool"
-  "github.com/cdobbyn/azure-go-cli/internal/aks/operation"
-  "github.com/cdobbyn/azure-go-cli/internal/aks/podidentity"
-  "github.com/cdobbyn/azure-go-cli/internal/aks/snapshot"
-  "github.com/cdobbyn/azure-go-cli/internal/network/bastion"
-  "github.com/spf13/cobra"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/addon"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/machine"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/maintenanceconfiguration"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/nodepool"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/operation"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/podidentity"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/snapshot"
+	"github.com/cdobbyn/azure-go-cli/internal/network/bastion"
+	"github.com/spf13/cobra"
 )
 
 func NewAKSCommand() *cobra.Command {
-  cmd := &cobra.Command{
-    Use:   "aks",
-    Short: "Manage Azure Kubernetes Service",
-    Long:  "Commands to manage Azure Kubernetes Service clusters",
-  }
+	cmd := &cobra.Command{
+		Use:   "aks",
+		Short: "Manage Azure Kubernetes Service",
+		Long:  "Commands to manage Azure Kubernetes Service clusters",
+	}
 
-  getCredsCmd := &cobra.Command{
-    Use:   "get-credentials",
-    Short: "Get access credentials for a managed Kubernetes cluster",
-    Long: `Get access credentials for a managed Kubernetes cluster.
+	getCredsCmd := &cobra.Command{
+		Use:   "get-credentials",
+		Short: "Get access credentials for a managed Kubernetes cluster",
+		Long: `Get access credentials for a managed Kubernetes cluster.
 
 By default, credentials are merged into ~/.kube/config. Use -f to specify a different file,
 or use -f - to output to stdout.`,
-    RunE: func(cmd *cobra.Command, args []string) error {
-      clusterName, _ := cmd.Flags().GetString("name")
-      resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      admin, _ := cmd.Flags().GetBool("admin")
-      file, _ := cmd.Flags().GetString("file")
-      overwrite, _ := cmd.Flags().GetBool("overwrite-existing")
-      contextName, _ := cmd.Flags().GetString("context")
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clusterName, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			admin, _ := cmd.Flags().GetBool("admin")
+			file, _ := cmd.Flags().GetString("file")
+			overwrite, _ := cmd.Flags().GetBool("overwrite-existing")
+			contextName, _ := cmd.Flags().GetString("context")
 
-      opts := GetCredentialsOptions{
-        ClusterName:   clusterName,
-        ResourceGroup: resourceGroup,
-        Admin:         admin,
-        File:          file,
-        Overwrite:     overwrite,
-        Context:       contextName,
-      }
+			opts := GetCredentialsOptions{
+				ClusterName:   clusterName,
+				ResourceGroup: resourceGroup,
+				Admin:         admin,
+				File:          file,
+				Overwrite:     overwrite,
+				Context:       contextName,
+			}
 
-      return GetCredentials(context.Background(), opts)
-    },
-  }
-  getCredsCmd.Flags().StringP("name", "n", "", "AKS cluster name")
-  getCredsCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
-  getCredsCmd.Flags().BoolP("admin", "a", false, "Get admin credentials")
-  getCredsCmd.Flags().StringP("file", "f", "", "Kubeconfig file path (use '-' for stdout, default: ~/.kube/config)")
-  getCredsCmd.Flags().Bool("overwrite-existing", false, "Overwrite kubeconfig file instead of merging")
-  getCredsCmd.Flags().String("context", "", "Set context name (only applicable with -f -)")
-  getCredsCmd.MarkFlagRequired("name")
-  getCredsCmd.MarkFlagRequired("resource-group")
+			return GetCredentials(context.Background(), opts)
+		},
+	}
+	getCredsCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	getCredsCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	getCredsCmd.Flags().BoolP("admin", "a", false, "Get admin credentials")
+	getCredsCmd.Flags().StringP("file", "f", "", "Kubeconfig file path (use '-' for stdout, default: ~/.kube/config)")
+	getCredsCmd.Flags().Bool("overwrite-existing", false, "Overwrite kubeconfig file instead of merging")
+	getCredsCmd.Flags().String("context", "", "Set context name (only applicable with -f -)")
+	getCredsCmd.MarkFlagRequired("name")
+	getCredsCmd.MarkFlagRequired("resource-group")
 
-  bastionCmd := &cobra.Command{
-    Use:   "bastion",
-    Short: "Open tunnel to AKS cluster through Azure Bastion",
-    Long: `Open tunnel to AKS cluster through Azure Bastion.
+	bastionCmd := &cobra.Command{
+		Use:   "bastion",
+		Short: "Open tunnel to AKS cluster through Azure Bastion",
+		Long: `Open tunnel to AKS cluster through Azure Bastion.
 
 Creates a temporary kubeconfig and establishes a secure tunnel to the cluster.
 Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
-    RunE: func(cmd *cobra.Command, args []string) error {
-      clusterName, _ := cmd.Flags().GetString("name")
-      resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      bastionResourceID, _ := cmd.Flags().GetString("bastion")
-      subscription, _ := cmd.Flags().GetString("subscription")
-      admin, _ := cmd.Flags().GetBool("admin")
-      port, _ := cmd.Flags().GetInt("port")
-      cmdToRun, _ := cmd.Flags().GetString("cmd")
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clusterName, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			bastionResourceID, _ := cmd.Flags().GetString("bastion")
+			subscription, _ := cmd.Flags().GetString("subscription")
+			admin, _ := cmd.Flags().GetBool("admin")
+			port, _ := cmd.Flags().GetInt("port")
+			cmdToRun, _ := cmd.Flags().GetString("cmd")
 
-      bufferConfig := bastion.DefaultBufferConfig()
-      connReadKB, _ := cmd.Flags().GetInt("conn-read-buffer")
-      connWriteKB, _ := cmd.Flags().GetInt("conn-write-buffer")
-      chunkReadKB, _ := cmd.Flags().GetInt("chunk-read-buffer")
-      chunkWriteKB, _ := cmd.Flags().GetInt("chunk-write-buffer")
+			bufferConfig := bastion.DefaultBufferConfig()
+			connReadKB, _ := cmd.Flags().GetInt("conn-read-buffer")
+			connWriteKB, _ := cmd.Flags().GetInt("conn-write-buffer")
+			chunkReadKB, _ := cmd.Flags().GetInt("chunk-read-buffer")
+			chunkWriteKB, _ := cmd.Flags().GetInt("chunk-write-buffer")
 
-      bufferConfig.ConnReadBufferSize = connReadKB * 1024
-      bufferConfig.ConnWriteBufferSize = connWriteKB * 1024
-      bufferConfig.ChunkReadBufferSize = chunkReadKB * 1024
-      bufferConfig.ChunkWriteBufferSize = chunkWriteKB * 1024
+			bufferConfig.ConnReadBufferSize = connReadKB * 1024
+			bufferConfig.ConnWriteBufferSize = connWriteKB * 1024
+			bufferConfig.ChunkReadBufferSize = chunkReadKB * 1024
+			bufferConfig.ChunkWriteBufferSize = chunkWriteKB * 1024
 
-      opts := BastionOptions{
-        ClusterName:          clusterName,
-        ResourceGroup:        resourceGroup,
-        BastionResourceID:    bastionResourceID,
-        SubscriptionOverride: subscription,
-        Admin:                admin,
-        Port:                 port,
-        Command:              cmdToRun,
-        BufferConfig:         bufferConfig,
-      }
+			opts := BastionOptions{
+				ClusterName:          clusterName,
+				ResourceGroup:        resourceGroup,
+				BastionResourceID:    bastionResourceID,
+				SubscriptionOverride: subscription,
+				Admin:                admin,
+				Port:                 port,
+				Command:              cmdToRun,
+				BufferConfig:         bufferConfig,
+			}
 
-      return Bastion(context.Background(), opts)
-    },
-  }
-  bastionCmd.Flags().StringP("name", "n", "", "AKS cluster name")
-  bastionCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
-  bastionCmd.Flags().String("bastion", "", "Bastion resource ID")
-  bastionCmd.Flags().BoolP("admin", "a", false, "Use admin credentials")
-  bastionCmd.Flags().IntP("port", "p", 0, "Local port to use for tunnel (0 = random port)")
-  bastionCmd.Flags().String("cmd", "", "Command to run with KUBECONFIG set (e.g., 'k9s' or 'kubectl get pods')")
-  bastionCmd.Flags().Int("conn-read-buffer", 32, "Connection-level read buffer size in KB (default 32)")
-  bastionCmd.Flags().Int("conn-write-buffer", 32, "Connection-level write buffer size in KB (default 32)")
-  bastionCmd.Flags().Int("chunk-read-buffer", 8, "Streaming chunk read buffer size in KB (default 8)")
-  bastionCmd.Flags().Int("chunk-write-buffer", 8, "Streaming chunk write buffer size in KB (default 8)")
-  bastionCmd.MarkFlagRequired("name")
-  bastionCmd.MarkFlagRequired("resource-group")
-  bastionCmd.MarkFlagRequired("bastion")
+			return Bastion(context.Background(), opts)
+		},
+	}
+	bastionCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	bastionCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	bastionCmd.Flags().String("bastion", "", "Bastion resource ID")
+	bastionCmd.Flags().BoolP("admin", "a", false, "Use admin credentials")
+	bastionCmd.Flags().IntP("port", "p", 0, "Local port to use for tunnel (0 = random port)")
+	bastionCmd.Flags().String("cmd", "", "Command to run with KUBECONFIG set (e.g., 'k9s' or 'kubectl get pods')")
+	bastionCmd.Flags().Int("conn-read-buffer", 32, "Connection-level read buffer size in KB (default 32)")
+	bastionCmd.Flags().Int("conn-write-buffer", 32, "Connection-level write buffer size in KB (default 32)")
+	bastionCmd.Flags().Int("chunk-read-buffer", 8, "Streaming chunk read buffer size in KB (default 8)")
+	bastionCmd.Flags().Int("chunk-write-buffer", 8, "Streaming chunk write buffer size in KB (default 8)")
+	bastionCmd.MarkFlagRequired("name")
+	bastionCmd.MarkFlagRequired("resource-group")
+	bastionCmd.MarkFlagRequired("bastion")
 
-  listCmd := &cobra.Command{
-    Use:   "list",
-    Short: "List AKS clusters",
-    RunE: func(cmd *cobra.Command, args []string) error {
-      resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      return List(context.Background(), resourceGroup)
-    },
-  }
-  listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional)")
+	listCmd := &cobra.Command{
+		Use:   "list",
+		Short: "List AKS clusters",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			return List(context.Background(), resourceGroup)
+		},
+	}
+	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional)")
 
-  showCmd := &cobra.Command{
-    Use:   "show",
-    Short: "Show details of an AKS cluster",
-    RunE: func(cmd *cobra.Command, args []string) error {
-      clusterName, _ := cmd.Flags().GetString("name")
-      resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      return Show(context.Background(), cmd, clusterName, resourceGroup)
-    },
-  }
-  showCmd.Flags().StringP("name", "n", "", "AKS cluster name")
-  showCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
-  showCmd.MarkFlagRequired("name")
-  showCmd.MarkFlagRequired("resource-group")
+	showCmd := &cobra.Command{
+		Use:   "show",
+		Short: "Show details of an AKS cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clusterName, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			return Show(context.Background(), cmd, clusterName, resourceGroup)
+		},
+	}
+	showCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	showCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	showCmd.MarkFlagRequired("name")
+	showCmd.MarkFlagRequired("resource-group")
 
-  installCliCmd := &cobra.Command{
-    Use:   "install-cli",
-    Short: "Install kubectl and kubelogin",
-    Long: `Install kubectl and kubelogin to /usr/local/bin.
+	installCliCmd := &cobra.Command{
+		Use:   "install-cli",
+		Short: "Install kubectl and kubelogin",
+		Long: `Install kubectl and kubelogin to /usr/local/bin.
 
 This command requires sudo privileges to install to /usr/local/bin.
 Run with: sudo az aks install-cli`,
-    RunE: func(cmd *cobra.Command, args []string) error {
-      return InstallCLI(context.Background())
-    },
-  }
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return InstallCLI(context.Background())
+		},
+	}
 
-  deleteCmd := &cobra.Command{
-    Use:   "delete",
-    Short: "Delete an AKS cluster",
-    RunE: func(cmd *cobra.Command, args []string) error {
-      name, _ := cmd.Flags().GetString("name")
-      resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      noWait, _ := cmd.Flags().GetBool("no-wait")
-      return Delete(context.Background(), name, resourceGroup, noWait)
-    },
-  }
-  deleteCmd.Flags().StringP("name", "n", "", "AKS cluster name")
-  deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
-  deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
-  deleteCmd.MarkFlagRequired("name")
-  deleteCmd.MarkFlagRequired("resource-group")
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an AKS cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Delete(context.Background(), name, resourceGroup, noWait)
+		},
+	}
+	deleteCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	deleteCmd.MarkFlagRequired("name")
+	deleteCmd.MarkFlagRequired("resource-group")
 
-  cmd.AddCommand(
-    getCredsCmd,
-    bastionCmd,
-    listCmd,
-    showCmd,
-    installCliCmd,
-    deleteCmd,
-    nodepool.NewNodePoolCommand(),
-    addon.NewAddonCommand(),
-    machine.NewMachineCommand(),
-    maintenanceconfiguration.NewMaintenanceConfigurationCommand(),
-    snapshot.NewSnapshotCommand(),
-    operation.NewOperationCommand(),
-    podidentity.NewPodIdentityCommand(),
-  )
-  return cmd
+	cmd.AddCommand(
+		getCredsCmd,
+		bastionCmd,
+		listCmd,
+		showCmd,
+		installCliCmd,
+		deleteCmd,
+		nodepool.NewNodePoolCommand(),
+		addon.NewAddonCommand(),
+		machine.NewMachineCommand(),
+		maintenanceconfiguration.NewMaintenanceConfigurationCommand(),
+		snapshot.NewSnapshotCommand(),
+		operation.NewOperationCommand(),
+		podidentity.NewPodIdentityCommand(),
+	)
+	return cmd
 }

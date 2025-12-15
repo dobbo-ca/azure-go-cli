@@ -1,56 +1,89 @@
 package logger
 
 import (
-  "fmt"
-  "io"
-  "os"
+	"fmt"
+	"io"
+	"log/slog"
+	"os"
 
-  "github.com/Azure/azure-sdk-for-go/sdk/azcore/log"
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/log"
 )
 
 var (
-  // DebugEnabled controls whether debug messages are printed
-  DebugEnabled = false
-  // Output is the writer for debug messages (defaults to stderr)
-  Output io.Writer = os.Stderr
+	// logger is the default slog logger instance
+	logger *slog.Logger
+	// Output is the writer for log messages (defaults to stderr)
+	Output io.Writer = os.Stderr
 )
+
+func init() {
+	// Initialize with default logger (Info level)
+	SetLogLevel(slog.LevelInfo)
+}
+
+// SetLogLevel sets the logging level
+func SetLogLevel(level slog.Level) {
+	handler := slog.NewTextHandler(Output, &slog.HandlerOptions{
+		Level: level,
+	})
+	logger = slog.New(handler)
+}
 
 // EnableDebug enables debug logging for both our logger and Azure SDK
 func EnableDebug() {
-  DebugEnabled = true
+	SetLogLevel(slog.LevelDebug)
 
-  // Enable Azure SDK logging
-  log.SetListener(func(event log.Event, message string) {
-    fmt.Fprintf(Output, "[AZURE-SDK:%s] %s\n", event, message)
-  })
+	// Enable Azure SDK logging
+	log.SetListener(func(event log.Event, message string) {
+		logger.Debug("Azure SDK event", "event", event, "message", message)
+	})
 
-  // Set which Azure SDK events to log
-  log.SetEvents(
-    log.EventRequest,
-    log.EventResponse,
-    log.EventRetryPolicy,
-  )
+	// Set which Azure SDK events to log
+	log.SetEvents(
+		log.EventRequest,
+		log.EventResponse,
+		log.EventRetryPolicy,
+	)
 }
 
-// DisableDebug disables debug logging
+// DisableDebug disables debug logging (sets to Info level)
 func DisableDebug() {
-  DebugEnabled = false
-  log.SetListener(nil)
+	SetLogLevel(slog.LevelInfo)
+	log.SetListener(nil)
 }
 
-// Debug prints a debug message if debug mode is enabled
+// Debug logs a debug message
 func Debug(format string, args ...interface{}) {
-  if DebugEnabled {
-    fmt.Fprintf(Output, "[DEBUG] "+format+"\n", args...)
-  }
+	logger.Debug(fmt.Sprintf(format, args...))
 }
 
-// Info prints an informational message
+// Info logs an informational message
 func Info(format string, args ...interface{}) {
-  fmt.Fprintf(Output, "[INFO] "+format+"\n", args...)
+	logger.Info(fmt.Sprintf(format, args...))
 }
 
-// Error prints an error message
+// Warning logs a warning message
+func Warning(format string, args ...interface{}) {
+	logger.Warn(fmt.Sprintf(format, args...))
+}
+
+// Warn is an alias for Warning
+func Warn(format string, args ...interface{}) {
+	Warning(format, args...)
+}
+
+// Error logs an error message
 func Error(format string, args ...interface{}) {
-  fmt.Fprintf(Output, "[ERROR] "+format+"\n", args...)
+	logger.Error(fmt.Sprintf(format, args...))
+}
+
+// Print writes directly to stdout (for user-facing messages like prompts)
+// This bypasses logging and is always shown
+func Print(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stdout, format, args...)
+}
+
+// Println writes directly to stdout with newline (for user-facing messages)
+func Println(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stdout, format+"\n", args...)
 }
