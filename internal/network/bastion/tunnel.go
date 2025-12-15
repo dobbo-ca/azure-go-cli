@@ -319,21 +319,25 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 	// gorilla/websocket requires that only one goroutine writes at a time
 	var writeMu sync.Mutex
 
-	// Create channels for errors and error tracking
+	// Create channels for error and completion signaling
 	errChan := make(chan error, 2)
-	var lastError error
-	var errorCount int
-	errorThreshold := 3 // Only display errors after they occur 3 times consecutively
+	doneChan := make(chan struct{}, 2) // Signals when a goroutine completes
 
 	// TCP -> WebSocket (streaming with NextWriter, chunked for message boundaries)
 	go func() {
+		defer func() {
+			doneChan <- struct{}{}
+		}()
+
 		buf := make([]byte, bufferConfig.ChunkWriteBufferSize)
 		logger.Debug("TCP->WebSocket: chunk write buffer=%d bytes, conn write buffer=%d bytes",
 			bufferConfig.ChunkWriteBufferSize, bufferConfig.ConnWriteBufferSize)
 		for {
 			n, err := tcpConn.Read(buf)
 			if err != nil {
-				if err != io.EOF && !strings.Contains(err.Error(), "use of closed network connection") {
+				if err == io.EOF || strings.Contains(err.Error(), "use of closed network connection") {
+					logger.Debug("TCP connection closed normally")
+				} else {
 					logger.Debug("TCP read error: %v", err)
 					errChan <- fmt.Errorf("TCP read error: %w", err)
 				}
@@ -360,6 +364,10 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 
 	// WebSocket -> TCP (streaming with NextReader, chunked for message boundaries)
 	go func() {
+		defer func() {
+			doneChan <- struct{}{}
+		}()
+
 		buf := make([]byte, bufferConfig.ChunkReadBufferSize)
 		logger.Debug("WebSocket->TCP: chunk read buffer=%d bytes, conn read buffer=%d bytes",
 			bufferConfig.ChunkReadBufferSize, bufferConfig.ConnReadBufferSize)
@@ -367,7 +375,9 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 			// Use NextReader for streaming reads that support message fragmentation
 			messageType, reader, err := wsConn.NextReader()
 			if err != nil {
-				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					logger.Debug("WebSocket closed normally")
+				} else {
 					logger.Debug("WebSocket NextReader error: %v", err)
 					errChan <- fmt.Errorf("WebSocket read error: %w", err)
 				}
@@ -408,30 +418,28 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 		}
 	}()
 
-	// Wait for either goroutine to finish or context to be cancelled
+	// Wait for either:
+	// 1. An error from either goroutine
+	// 2. Both goroutines to complete
+	// 3. Context to be cancelled
+	completedGoroutines := 0
 	for {
 		select {
 		case err := <-errChan:
-			if err != nil {
-				// Check if this is the same error as before
-				errMsg := err.Error()
-				if lastError != nil && lastError.Error() == errMsg {
-					errorCount++
-				} else {
-					// New error type, reset counter
-					lastError = err
-					errorCount = 1
-				}
-
-				// Only display error if it's persistent (occurred multiple times)
-				if errorCount >= errorThreshold {
-					fmt.Printf("Persistent connection error: %v\n", err)
-					return
-				}
-				// For transient errors, just log debug and continue
-				logger.Debug("Transient error (count: %d/%d): %v", errorCount, errorThreshold, err)
+			// Fatal error occurred, close connection and return
+			logger.Debug("Connection error, closing: %v", err)
+			logger.Info("Connection closed: %v", err)
+			return
+		case <-doneChan:
+			completedGoroutines++
+			logger.Debug("Goroutine completed (%d/2)", completedGoroutines)
+			if completedGoroutines >= 2 {
+				// Both goroutines finished, connection is done
+				logger.Debug("Both goroutines completed, connection closed")
+				return
 			}
 		case <-ctx.Done():
+			logger.Debug("Context cancelled, closing connection")
 			return
 		}
 	}
