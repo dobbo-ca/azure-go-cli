@@ -1,16 +1,16 @@
 package auth
 
 import (
-  "fmt"
+	"fmt"
 
-  "github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/config"
 )
 
 func Logout() error {
-  if err := config.Delete(); err != nil {
-    return err
-  }
+	if err := config.Delete(); err != nil {
+		return err
+	}
 
-  fmt.Println("You have successfully logged out.")
-  return nil
+	fmt.Println("You have successfully logged out.")
+	return nil
 }
