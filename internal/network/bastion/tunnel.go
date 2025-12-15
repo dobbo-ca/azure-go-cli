@@ -311,9 +311,20 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 	defer wsConn.Close()
 	logger.Debug("WebSocket connection established")
 
-	// NOTE: Azure CLI does NOT implement WebSocket ping/pong keepalive
-	// They rely on the SSH protocol's own traffic to keep the connection alive
-	// Adding explicit pings can interfere with data flow and cause connection resets
+	// Set up ping/pong handler to detect dead connections
+	// Despite Azure CLI not using this, it's critical for detecting network failures
+	pongWait := 60 * time.Second
+	pingInterval := (pongWait * 9) / 10 // Send pings at 90% of pong timeout
+
+	// Set initial read deadline
+	wsConn.SetReadDeadline(time.Now().Add(pongWait))
+
+	// Configure pong handler - extends read deadline when pong is received
+	wsConn.SetPongHandler(func(appData string) error {
+		logger.Debug("Received pong from WebSocket")
+		wsConn.SetReadDeadline(time.Now().Add(pongWait))
+		return nil
+	})
 
 	// Create write mutex to protect WebSocket writes
 	// gorilla/websocket requires that only one goroutine writes at a time
@@ -322,6 +333,30 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 	// Create channels for error and completion signaling
 	errChan := make(chan error, 2)
 	doneChan := make(chan struct{}, 2) // Signals when a goroutine completes
+
+	// Start ping goroutine to keep connection alive and detect failures
+	go func() {
+		ticker := time.NewTicker(pingInterval)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				writeMu.Lock()
+				err := wsConn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(10*time.Second))
+				writeMu.Unlock()
+
+				if err != nil {
+					logger.Debug("Failed to send ping: %v", err)
+					errChan <- fmt.Errorf("connection health check failed: %w", err)
+					return
+				}
+				logger.Debug("Sent ping to WebSocket")
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
 
 	// TCP -> WebSocket (streaming with NextWriter, chunked for message boundaries)
 	go func() {
@@ -377,12 +412,18 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 			if err != nil {
 				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
 					logger.Debug("WebSocket closed normally")
+				} else if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+					logger.Debug("WebSocket read timeout - connection appears dead")
+					errChan <- fmt.Errorf("connection timeout - network may be disconnected")
 				} else {
 					logger.Debug("WebSocket NextReader error: %v", err)
 					errChan <- fmt.Errorf("WebSocket read error: %w", err)
 				}
 				return
 			}
+
+			// Extend read deadline on successful read
+			wsConn.SetReadDeadline(time.Now().Add(pongWait))
 
 			if messageType != websocket.BinaryMessage && messageType != websocket.TextMessage {
 				logger.Debug("Ignoring non-data message type: %d", messageType)
