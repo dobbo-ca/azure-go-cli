@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 	"sync"
 	"syscall"
@@ -124,38 +125,105 @@ func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetR
 	logger.Debug("Tunnel ready at 127.0.0.1:%d", localPort)
 	logger.Debug("Tunnel listener ready, waiting for connections...")
 
-	// Accept connections and forward them through WebSocket
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			if ctx.Err() != nil {
-				logger.Debug("Context cancelled, stopping listener")
-				return nil
-			}
-			logger.Debug("Error accepting connection: %v", err)
-			continue
-		}
+	// Start health check goroutine to detect network failures even when tunnel is idle
+	healthCheckInterval := 5 * time.Second
+	healthCheckTimeout := 3 * time.Second
+	healthErrCh := make(chan error, 1)
 
-		logger.Debug("Accepted new connection from %s", conn.RemoteAddr())
+	go func() {
+		ticker := time.NewTicker(healthCheckInterval)
+		defer ticker.Stop()
 
-		// Handle each connection in its own goroutine for true concurrency
-		go func(tcpConn net.Conn) {
-			// Get fresh WebSocket token for this connection
-			// IMPORTANT: Always pass empty string to get independent tokens
-			// Passing a previous token causes Azure to link/reuse sessions
-			logger.Debug("Exchanging token for WebSocket tunnel token...")
+		consecutiveFailures := 0
+		maxFailures := 2 // Fail after 2 consecutive health check failures (~11 seconds)
 
-			wsToken, nodeID, err := exchangeTokenWithProtocol(bastionEndpoint, token, targetResourceID, resourcePort, "", protocol, username)
-			if err != nil {
-				logger.Debug("Failed to exchange token: %v", err)
-				tcpConn.Close()
+		for {
+			select {
+			case <-ticker.C:
+				// Health check: try to reach the bastion endpoint via HTTPS
+				logger.Debug("Running health check to bastion endpoint...")
+				healthURL := fmt.Sprintf("https://%s/api/health", bastionEndpoint)
+
+				client := &http.Client{
+					Timeout: healthCheckTimeout,
+				}
+				resp, err := client.Get(healthURL)
+				if err != nil {
+					consecutiveFailures++
+					logger.Debug("Health check failed (%d/%d): %v", consecutiveFailures, maxFailures, err)
+					if consecutiveFailures >= maxFailures {
+						healthErrCh <- fmt.Errorf("network connectivity lost - unable to reach Azure Bastion after %d attempts", consecutiveFailures)
+						return
+					}
+				} else {
+					resp.Body.Close()
+					if consecutiveFailures > 0 {
+						logger.Debug("Health check succeeded after %d previous failure(s)", consecutiveFailures)
+					} else {
+						logger.Debug("Health check succeeded")
+					}
+					consecutiveFailures = 0
+				}
+
+			case <-ctx.Done():
 				return
 			}
-			logger.Debug("WebSocket token acquired (length: %d)", len(wsToken))
-			logger.Debug("Node ID: %s", nodeID)
+		}
+	}()
 
-			handleConnection(ctx, tcpConn, bastionEndpoint, wsToken, nodeID, bufferConfig)
-		}(conn)
+	// Accept connections and forward them through WebSocket
+	connAcceptCh := make(chan net.Conn, 1)
+	connErrCh := make(chan error, 1)
+
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				if ctx.Err() != nil {
+					logger.Debug("Context cancelled, stopping listener")
+					return
+				}
+				logger.Debug("Error accepting connection: %v", err)
+				connErrCh <- err
+				return
+			}
+			connAcceptCh <- conn
+		}
+	}()
+
+	// Main loop: handle connections and health checks
+	for {
+		select {
+		case err := <-healthErrCh:
+			logger.Debug("Health check failure: %v", err)
+			logger.Println("\nConnection to Azure Bastion lost - network disconnected")
+			os.Exit(1)
+
+		case err := <-connErrCh:
+			return err
+
+		case conn := <-connAcceptCh:
+			logger.Debug("Accepted new connection from %s", conn.RemoteAddr())
+
+			// Handle each connection in its own goroutine for true concurrency
+			go func(tcpConn net.Conn) {
+				// Get fresh WebSocket token for this connection
+				// IMPORTANT: Always pass empty string to get independent tokens
+				// Passing a previous token causes Azure to link/reuse sessions
+				logger.Debug("Exchanging token for WebSocket tunnel token...")
+
+				wsToken, nodeID, err := exchangeTokenWithProtocol(bastionEndpoint, token, targetResourceID, resourcePort, "", protocol, username)
+				if err != nil {
+					logger.Debug("Failed to exchange token: %v", err)
+					tcpConn.Close()
+					return
+				}
+				logger.Debug("WebSocket token acquired (length: %d)", len(wsToken))
+				logger.Debug("Node ID: %s", nodeID)
+
+				handleConnection(ctx, tcpConn, bastionEndpoint, wsToken, nodeID, bufferConfig)
+			}(conn)
+		}
 	}
 }
 
@@ -262,11 +330,9 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 	wsURL := fmt.Sprintf("wss://%s/webtunnelv2/%s?X-Node-Id=%s", bastionEndpoint, wsToken, nodeID)
 	logger.Debug("WebSocket URL: wss://%s/webtunnelv2/<redacted>?X-Node-Id=%s", bastionEndpoint, nodeID)
 
-	// Set TCP_NODELAY on the underlying connection (disable Nagle's algorithm)
-	// This matches Azure CLI behavior for lower latency
+	// Set TCP_NODELAY on the underlying connection
 	netDialer := &net.Dialer{
-		Timeout:   30 * time.Second,
-		KeepAlive: 30 * time.Second,
+		Timeout: 30 * time.Second,
 		Control: func(network, address string, c syscall.RawConn) error {
 			var setErr error
 			err := c.Control(func(fd uintptr) {
@@ -311,29 +377,29 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 	defer wsConn.Close()
 	logger.Debug("WebSocket connection established")
 
-	// NOTE: Azure CLI does NOT implement WebSocket ping/pong keepalive
-	// They rely on the SSH protocol's own traffic to keep the connection alive
-	// Adding explicit pings can interfere with data flow and cause connection resets
-
 	// Create write mutex to protect WebSocket writes
 	// gorilla/websocket requires that only one goroutine writes at a time
 	var writeMu sync.Mutex
 
-	// Create channels for errors and error tracking
-	errChan := make(chan error, 2)
-	var lastError error
-	var errorCount int
-	errorThreshold := 3 // Only display errors after they occur 3 times consecutively
+	// Create channels for error and completion signaling
+	errChan := make(chan error, 3)
+	doneChan := make(chan struct{}, 2) // Signals when a goroutine completes
 
 	// TCP -> WebSocket (streaming with NextWriter, chunked for message boundaries)
 	go func() {
+		defer func() {
+			doneChan <- struct{}{}
+		}()
+
 		buf := make([]byte, bufferConfig.ChunkWriteBufferSize)
 		logger.Debug("TCP->WebSocket: chunk write buffer=%d bytes, conn write buffer=%d bytes",
 			bufferConfig.ChunkWriteBufferSize, bufferConfig.ConnWriteBufferSize)
 		for {
 			n, err := tcpConn.Read(buf)
 			if err != nil {
-				if err != io.EOF && !strings.Contains(err.Error(), "use of closed network connection") {
+				if err == io.EOF || strings.Contains(err.Error(), "use of closed network connection") {
+					logger.Debug("TCP connection closed normally")
+				} else {
 					logger.Debug("TCP read error: %v", err)
 					errChan <- fmt.Errorf("TCP read error: %w", err)
 				}
@@ -360,6 +426,10 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 
 	// WebSocket -> TCP (streaming with NextReader, chunked for message boundaries)
 	go func() {
+		defer func() {
+			doneChan <- struct{}{}
+		}()
+
 		buf := make([]byte, bufferConfig.ChunkReadBufferSize)
 		logger.Debug("WebSocket->TCP: chunk read buffer=%d bytes, conn read buffer=%d bytes",
 			bufferConfig.ChunkReadBufferSize, bufferConfig.ConnReadBufferSize)
@@ -367,7 +437,9 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 			// Use NextReader for streaming reads that support message fragmentation
 			messageType, reader, err := wsConn.NextReader()
 			if err != nil {
-				if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					logger.Debug("WebSocket closed normally")
+				} else {
 					logger.Debug("WebSocket NextReader error: %v", err)
 					errChan <- fmt.Errorf("WebSocket read error: %w", err)
 				}
@@ -408,30 +480,28 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 		}
 	}()
 
-	// Wait for either goroutine to finish or context to be cancelled
+	// Wait for either:
+	// 1. An error from either goroutine
+	// 2. Both goroutines to complete
+	// 3. Context to be cancelled
+	completedGoroutines := 0
 	for {
 		select {
 		case err := <-errChan:
-			if err != nil {
-				// Check if this is the same error as before
-				errMsg := err.Error()
-				if lastError != nil && lastError.Error() == errMsg {
-					errorCount++
-				} else {
-					// New error type, reset counter
-					lastError = err
-					errorCount = 1
-				}
-
-				// Only display error if it's persistent (occurred multiple times)
-				if errorCount >= errorThreshold {
-					fmt.Printf("Persistent connection error: %v\n", err)
-					return
-				}
-				// For transient errors, just log debug and continue
-				logger.Debug("Transient error (count: %d/%d): %v", errorCount, errorThreshold, err)
+			// Fatal error occurred, close connection and return
+			logger.Debug("Connection error, closing: %v", err)
+			logger.Info("Connection closed: %v", err)
+			return
+		case <-doneChan:
+			completedGoroutines++
+			logger.Debug("Goroutine completed (%d/2)", completedGoroutines)
+			if completedGoroutines >= 2 {
+				// Both goroutines finished, connection is done
+				logger.Debug("Both goroutines completed, connection closed")
+				return
 			}
 		case <-ctx.Done():
+			logger.Debug("Context cancelled, closing connection")
 			return
 		}
 	}

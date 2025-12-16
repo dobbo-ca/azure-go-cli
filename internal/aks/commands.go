@@ -64,6 +64,7 @@ or use -f - to output to stdout.`,
 
 Creates a temporary kubeconfig and establishes a secure tunnel to the cluster.
 Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
+		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusterName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
