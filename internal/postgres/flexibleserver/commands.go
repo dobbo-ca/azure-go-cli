@@ -86,6 +86,17 @@ func NewFlexibleServerCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	listSkusCmd := &cobra.Command{
+		Use:   "list-skus",
+		Short: "List available SKUs for PostgreSQL flexible servers in a location",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			location, _ := cmd.Flags().GetString("location")
+			return ListSKUs(context.Background(), location)
+		},
+	}
+	listSkusCmd.Flags().StringP("location", "l", "", "Azure location (e.g., eastus, westus2)")
+	listSkusCmd.MarkFlagRequired("location")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, listSkusCmd)
 	return cmd
 }
