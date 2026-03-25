@@ -2,6 +2,7 @@ package azure
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -10,6 +11,7 @@ import (
 
 // GetSharedMSALCache returns a shared file-based MSAL cache
 // This ensures all credentials (base and tenant-specific) use the same token cache
+// When AZ_SESSION is set, uses a session-specific cache file to avoid clobbering other sessions
 func GetSharedMSALCache() (cache.ExportReplace, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -21,7 +23,12 @@ func GetSharedMSALCache() (cache.ExportReplace, error) {
 		return nil, err
 	}
 
-	cacheFile := filepath.Join(cacheDir, "msal_token_cache.json")
+	cacheFilename := "msal_token_cache.json"
+	if session := os.Getenv("AZ_SESSION"); session != "" {
+		cacheFilename = fmt.Sprintf("msal_token_cache-%s.json", session)
+	}
+
+	cacheFile := filepath.Join(cacheDir, cacheFilename)
 
 	return &fileMSALCache{path: cacheFile}, nil
 }
