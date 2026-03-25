@@ -445,7 +445,7 @@ func promptForSubscriptionFlatWithMFA(ctx context.Context, activeTenants []azure
 
 	selected := items[idx]
 
-	// If the user selected an MFA tenant, authenticate and show its subscriptions
+	// If the user selected an MFA tenant, authenticate and re-render the full list
 	if selected.IsMFA {
 		mfaTenant := findMFATenant(mfaTenants, selected.TenantID)
 		if mfaTenant == nil {
@@ -461,12 +461,15 @@ func promptForSubscriptionFlatWithMFA(ctx context.Context, activeTenants []azure
 			return nil, fmt.Errorf("no subscriptions found in tenant '%s' after authentication", selected.TenantName)
 		}
 
-		// Let the user pick from the newly discovered subscriptions
-		sub, err := promptForSubscriptionInTenant(resolvedTenant)
-		if err != nil {
-			return nil, err
+		// Move resolved tenant from mfaTenants to activeTenants and re-render full list
+		var remainingMFA []azure.TenantInfo
+		for _, t := range mfaTenants {
+			if t.TenantID != selected.TenantID {
+				remainingMFA = append(remainingMFA, t)
+			}
 		}
-		return sub, nil
+
+		return promptForSubscriptionFlatWithMFA(ctx, append(activeTenants, *resolvedTenant), remainingMFA)
 	}
 
 	// Regular subscription selected
