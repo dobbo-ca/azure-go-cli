@@ -43,7 +43,13 @@ func GetConfigPath() (string, error) {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
 
-	configPath := filepath.Join(home, ConfigDir, ConfigFile)
+	filename := ConfigFile
+	if session := os.Getenv("AZ_SESSION"); session != "" {
+		// Session-specific profile: azureProfile-<session>.json
+		filename = fmt.Sprintf("azureProfile-%s.json", session)
+	}
+
+	configPath := filepath.Join(home, ConfigDir, filename)
 	return configPath, nil
 }
 
@@ -188,8 +194,12 @@ func Delete() error {
 	if err == nil {
 		azureDir := filepath.Join(home, ConfigDir)
 
-		// Remove MSAL token cache
-		msalTokenCache := filepath.Join(azureDir, "msal_token_cache.json")
+		// Remove MSAL token cache (session-aware)
+		msalCacheFilename := "msal_token_cache.json"
+		if session := os.Getenv("AZ_SESSION"); session != "" {
+			msalCacheFilename = fmt.Sprintf("msal_token_cache-%s.json", session)
+		}
+		msalTokenCache := filepath.Join(azureDir, msalCacheFilename)
 		if _, err := os.Stat(msalTokenCache); err == nil {
 			_ = os.Remove(msalTokenCache) // Ignore errors, best effort
 		}
