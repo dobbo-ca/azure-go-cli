@@ -7,6 +7,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/account"
 	"github.com/cdobbyn/azure-go-cli/internal/aks"
 	"github.com/cdobbyn/azure-go-cli/internal/auth"
+	"github.com/cdobbyn/azure-go-cli/internal/dataprotection"
 	"github.com/cdobbyn/azure-go-cli/internal/disk"
 	"github.com/cdobbyn/azure-go-cli/internal/disk/encryptionset"
 	"github.com/cdobbyn/azure-go-cli/internal/feature"
@@ -49,6 +50,7 @@ func main() {
 		auth.NewLogoutCommand(),
 		account.NewAccountCommand(),
 		aks.NewAKSCommand(),
+		dataprotection.NewDataProtectionCommand(),
 		disk.NewDiskCommand(),
 		encryptionset.NewEncryptionSetCommand(),
 		feature.NewFeatureCommand(),
