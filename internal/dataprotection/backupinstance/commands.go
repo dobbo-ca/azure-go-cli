@@ -13,7 +13,19 @@ func NewBackupInstanceCommand() *cobra.Command {
 
   restoreCmd := newRestoreCommand()
 
-  cmd.AddCommand(restoreCmd)
+  cmd.AddCommand(
+    restoreCmd,
+    newValidateForRestoreCommand(),
+    newAdhocBackupCommand(),
+    newCreateCommand(),
+    newShowCommand(),
+    newListCommand(),
+    newDeleteCommand(),
+    newValidateForBackupCommand(),
+    newStopProtectionCommand(),
+    newSuspendBackupCommand(),
+    newResumeProtectionCommand(),
+  )
   return cmd
 }
 
