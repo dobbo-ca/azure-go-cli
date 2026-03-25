@@ -43,13 +43,24 @@ func Login(ctx context.Context, forceTenantSelection bool) error {
 		return fmt.Errorf("failed to discover subscriptions: %w", err)
 	}
 
-	if len(tenantInfos) == 0 {
+	// Separate tenants with subscriptions from MFA-blocked tenants
+	var activeTenants []azure.TenantInfo
+	var mfaTenants []azure.TenantInfo
+	for _, t := range tenantInfos {
+		if t.NeedsMFA {
+			mfaTenants = append(mfaTenants, t)
+		} else if len(t.Subscriptions) > 0 {
+			activeTenants = append(activeTenants, t)
+		}
+	}
+
+	if len(activeTenants) == 0 && len(mfaTenants) == 0 {
 		return fmt.Errorf("no tenants with subscriptions found")
 	}
 
 	// Get all subscriptions for counting
-	allSubscriptions := azure.GetAllSubscriptions(tenantInfos)
-	if len(allSubscriptions) == 0 {
+	allSubscriptions := azure.GetAllSubscriptions(activeTenants)
+	if len(allSubscriptions) == 0 && len(mfaTenants) == 0 {
 		return fmt.Errorf("no subscriptions found")
 	}
 
@@ -66,16 +77,39 @@ func Login(ctx context.Context, forceTenantSelection bool) error {
 			return fmt.Errorf("failed to select tenant: %w", err)
 		}
 
+		// If the selected tenant needs MFA, authenticate interactively
+		if selectedTenant.NeedsMFA {
+			selectedTenant, err = authenticateMFATenant(ctx, selectedTenant)
+			if err != nil {
+				return fmt.Errorf("failed to authenticate for tenant '%s': %w", selectedTenant.DisplayName, err)
+			}
+			// Add newly discovered subscriptions to allSubscriptions
+			allSubscriptions = append(allSubscriptions, selectedTenant.Subscriptions...)
+		}
+
 		selectedSub, err = promptForSubscriptionInTenant(selectedTenant)
 		if err != nil {
 			return fmt.Errorf("failed to select subscription: %w", err)
 		}
 	} else {
-		// Single-step: flat list of all subscriptions
+		// Single-step: flat list of all subscriptions + MFA tenants
 		logger.Debug("Using flat selection (%d subscriptions <= threshold of %d)", len(allSubscriptions), subscriptionThreshold)
-		selectedSub, err = promptForSubscriptionFlat(tenantInfos)
+		selectedSub, err = promptForSubscriptionFlatWithMFA(ctx, activeTenants, mfaTenants)
 		if err != nil {
 			return fmt.Errorf("failed to select subscription: %w", err)
+		}
+		// Refresh allSubscriptions in case MFA tenant was selected
+		allSubscriptions = azure.GetAllSubscriptions(activeTenants)
+		// Ensure the selected sub is in the list
+		found := false
+		for _, s := range allSubscriptions {
+			if s.ID == selectedSub.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			allSubscriptions = append(allSubscriptions, *selectedSub)
 		}
 	}
 
@@ -109,16 +143,21 @@ func promptForTenant(tenantInfos []azure.TenantInfo) (*azure.TenantInfo, error) 
 	logger.Println("")
 
 	templates := &promptui.SelectTemplates{
-		Label:    "{{ . }}",
-		Active:   "\U0001F449 {{ .DisplayName | cyan }} ({{ .Subscriptions | len }} subscriptions)",
-		Inactive: "  {{ .DisplayName | cyan }} ({{ .Subscriptions | len }} subscriptions)",
+		Label: "{{ . }}",
+		Active: `{{ if .NeedsMFA }}` + "\U0001F449 \U0001F510 {{ .DisplayName | yellow }} (requires sign-in)" + `{{ else }}` + "\U0001F449 {{ .DisplayName | cyan }} ({{ .Subscriptions | len }} subscriptions)" + `{{ end }}`,
+		Inactive: `{{ if .NeedsMFA }}  ` + "\U0001F510 {{ .DisplayName | yellow }} (requires sign-in)" + `{{ else }}  {{ .DisplayName | cyan }} ({{ .Subscriptions | len }} subscriptions){{ end }}`,
 		Selected: "\U0001F449 {{ .DisplayName | green }}",
-		Details: `
+		Details: `{{ if .NeedsMFA }}
 --------- Tenant Details ----------
 {{ "Name:" | faint }}	{{ .DisplayName }}
 {{ "Domain:" | faint }}	{{ .DefaultDomain }}
 {{ "ID:" | faint }}	{{ .TenantID }}
-{{ "Subscriptions:" | faint }}	{{ .Subscriptions | len }}`,
+{{ "Status:" | faint }}	Requires additional authentication (MFA){{ else }}
+--------- Tenant Details ----------
+{{ "Name:" | faint }}	{{ .DisplayName }}
+{{ "Domain:" | faint }}	{{ .DefaultDomain }}
+{{ "ID:" | faint }}	{{ .TenantID }}
+{{ "Subscriptions:" | faint }}	{{ .Subscriptions | len }}{{ end }}`,
 	}
 
 	// Create display items with proper tenant names
@@ -270,4 +309,186 @@ func promptForSubscriptionFlat(tenantInfos []azure.TenantInfo) (*config.Subscrip
 
 	result := items[idx].Subscription
 	return &result, nil
+}
+
+// authenticateMFATenant performs interactive auth for an MFA-blocked tenant and returns updated TenantInfo
+func authenticateMFATenant(ctx context.Context, tenant *azure.TenantInfo) (*azure.TenantInfo, error) {
+	tenantName := tenant.DisplayName
+	if tenantName == "" {
+		tenantName = tenant.TenantID
+	}
+
+	logger.Println("")
+	logger.Println("Tenant '%s' requires additional authentication (MFA).", tenantName)
+	logger.Println("Opening browser for authentication...")
+	logger.Println("")
+
+	cred, err := azure.AuthenticateForTenant(ctx, tenant.TenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	subs, err := azure.DiscoverTenantSubscriptions(ctx, tenant.TenantID, cred)
+	if err != nil {
+		return nil, err
+	}
+
+	logger.Info("Found %d subscription(s) in tenant '%s'", len(subs), tenantName)
+
+	return &azure.TenantInfo{
+		TenantID:      tenant.TenantID,
+		DisplayName:   tenant.DisplayName,
+		DefaultDomain: tenant.DefaultDomain,
+		Subscriptions: subs,
+		NeedsMFA:      false,
+	}, nil
+}
+
+// promptForSubscriptionFlatWithMFA shows a flat subscription list with MFA-blocked tenants at the bottom
+func promptForSubscriptionFlatWithMFA(ctx context.Context, activeTenants []azure.TenantInfo, mfaTenants []azure.TenantInfo) (*config.Subscription, error) {
+	logger.Println("")
+	logger.Println("[Subscription selection]")
+	logger.Println("")
+
+	type selectableItem struct {
+		Name       string
+		ID         string
+		State      string
+		TenantID   string
+		TenantName string
+		IsMFA      bool // True for MFA tenant placeholder items
+	}
+
+	var items []selectableItem
+
+	// Add regular subscriptions
+	for _, tenant := range activeTenants {
+		tenantName := tenant.DisplayName
+		if tenantName == "" {
+			tenantName = tenant.DefaultDomain
+		}
+		if tenantName == "" {
+			tenantName = tenant.TenantID
+		}
+
+		for _, sub := range tenant.Subscriptions {
+			items = append(items, selectableItem{
+				Name:       sub.Name,
+				ID:         sub.ID,
+				State:      sub.State,
+				TenantID:   sub.TenantID,
+				TenantName: tenantName,
+				IsMFA:      false,
+			})
+		}
+	}
+
+	// Add MFA tenant placeholders
+	for _, tenant := range mfaTenants {
+		tenantName := tenant.DisplayName
+		if tenantName == "" {
+			tenantName = tenant.DefaultDomain
+		}
+		if tenantName == "" {
+			tenantName = tenant.TenantID
+		}
+
+		items = append(items, selectableItem{
+			Name:       tenantName + " (requires sign-in to view subscriptions)",
+			ID:         "",
+			TenantID:   tenant.TenantID,
+			TenantName: tenantName,
+			IsMFA:      true,
+		})
+	}
+
+	templates := &promptui.SelectTemplates{
+		Label:  "{{ . }}",
+		Active: `{{ if .IsMFA }}` + "\U0001F449 \U0001F510 {{ .Name | yellow }}" + `{{ else }}` + "\U0001F449 {{ .Name | cyan }} ({{ .TenantName | faint }})" + `{{ end }}`,
+		Inactive: `{{ if .IsMFA }}  ` + "\U0001F510 {{ .Name | yellow }}" + `{{ else }}  {{ .Name }} ({{ .TenantName | faint }}){{ end }}`,
+		Selected: "\U0001F449 {{ .Name | green }}",
+		Details: `{{ if .IsMFA }}
+--------- Tenant Details ----------
+{{ "Tenant:" | faint }}	{{ .TenantName }}
+{{ "Tenant ID:" | faint }}	{{ .TenantID }}
+{{ "Status:" | faint }}	Requires additional authentication (MFA)
+{{ "Action:" | faint }}	Select to sign in and view subscriptions{{ else }}
+--------- Subscription Details ----------
+{{ "Name:" | faint }}	{{ .Name }}
+{{ "ID:" | faint }}	{{ .ID }}
+{{ "State:" | faint }}	{{ .State }}
+{{ "Tenant:" | faint }}	{{ .TenantName }}
+{{ "Tenant ID:" | faint }}	{{ .TenantID }}{{ end }}`,
+	}
+
+	searcher := func(input string, index int) bool {
+		item := items[index]
+		name := strings.Replace(strings.ToLower(item.Name), " ", "", -1)
+		tenant := strings.Replace(strings.ToLower(item.TenantName), " ", "", -1)
+		input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+		return strings.Contains(name, input) || strings.Contains(tenant, input)
+	}
+
+	prompt := promptui.Select{
+		Label:     "Select Subscription",
+		Items:     items,
+		Templates: templates,
+		Size:      10,
+		Searcher:  searcher,
+	}
+
+	idx, _, err := prompt.Run()
+	if err != nil {
+		return nil, err
+	}
+
+	selected := items[idx]
+
+	// If the user selected an MFA tenant, authenticate and re-render the full list
+	if selected.IsMFA {
+		mfaTenant := findMFATenant(mfaTenants, selected.TenantID)
+		if mfaTenant == nil {
+			return nil, fmt.Errorf("tenant %s not found", selected.TenantID)
+		}
+
+		resolvedTenant, err := authenticateMFATenant(ctx, mfaTenant)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(resolvedTenant.Subscriptions) == 0 {
+			return nil, fmt.Errorf("no subscriptions found in tenant '%s' after authentication", selected.TenantName)
+		}
+
+		// Move resolved tenant from mfaTenants to activeTenants and re-render full list
+		var remainingMFA []azure.TenantInfo
+		for _, t := range mfaTenants {
+			if t.TenantID != selected.TenantID {
+				remainingMFA = append(remainingMFA, t)
+			}
+		}
+
+		return promptForSubscriptionFlatWithMFA(ctx, append(activeTenants, *resolvedTenant), remainingMFA)
+	}
+
+	// Regular subscription selected
+	result := config.Subscription{
+		ID:              selected.ID,
+		Name:            selected.Name,
+		State:           selected.State,
+		TenantID:        selected.TenantID,
+		EnvironmentName: "AzureCloud",
+		IsDefault:       false,
+	}
+	return &result, nil
+}
+
+func findMFATenant(mfaTenants []azure.TenantInfo, tenantID string) *azure.TenantInfo {
+	for i := range mfaTenants {
+		if mfaTenants[i].TenantID == tenantID {
+			return &mfaTenants[i]
+		}
+	}
+	return nil
 }

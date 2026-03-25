@@ -3,10 +3,12 @@ package azure
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions"
+	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
@@ -17,6 +19,7 @@ type TenantInfo struct {
 	DisplayName   string
 	DefaultDomain string
 	Subscriptions []config.Subscription
+	NeedsMFA      bool // True if tenant requires interactive auth (e.g., Conditional Access MFA)
 }
 
 // DiscoverAllSubscriptionsWithAuth discovers subscriptions across all tenants
@@ -112,13 +115,19 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 
 		// List subscriptions in this tenant
 		var tenantSubs []config.Subscription
+		mfaRequired := false
 		subsPager := subsClient.NewListPager(nil)
 		for subsPager.More() {
 			subsPage, err := subsPager.NextPage(ctx)
 			if err != nil {
-				// Don't fail entire operation - just log and continue
-				logger.Warning("Failed to list subscriptions for tenant '%s' (%s): %v", tenantDisplay, tenantID, err)
-				logger.Info("You may not have sufficient permissions in this tenant")
+				// Check if this is an MFA/Conditional Access error (AADSTS50076)
+				if isMFARequiredError(err) {
+					logger.Debug("Tenant '%s' requires MFA - will offer interactive auth if selected", tenantDisplay)
+					mfaRequired = true
+				} else {
+					logger.Warning("Failed to list subscriptions for tenant '%s' (%s): %v", tenantDisplay, tenantID, err)
+					logger.Info("You may not have sufficient permissions in this tenant")
+				}
 				break
 			}
 
@@ -148,7 +157,15 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 			}
 		}
 
-		if len(tenantSubs) > 0 {
+		if mfaRequired {
+			// Include MFA-blocked tenant so the user can choose to authenticate
+			tenantInfos = append(tenantInfos, TenantInfo{
+				TenantID:      tenantID,
+				DisplayName:   tenantDisplay,
+				DefaultDomain: GetStringValue(tenant.DefaultDomain),
+				NeedsMFA:      true,
+			})
+		} else if len(tenantSubs) > 0 {
 			logger.Debug("Found %d subscription(s) in tenant '%s'", len(tenantSubs), tenantDisplay)
 			tenantInfos = append(tenantInfos, TenantInfo{
 				TenantID:      tenantID,
@@ -298,4 +315,88 @@ func DiscoverAllSubscriptionsFromCache(ctx context.Context) ([]TenantInfo, error
 	}
 
 	return tenantInfos, nil
+}
+
+// isMFARequiredError checks if an error is an AADSTS50076 (MFA required) error
+func isMFARequiredError(err error) bool {
+	if err == nil {
+		return false
+	}
+	errStr := err.Error()
+	return strings.Contains(errStr, "AADSTS50076") || strings.Contains(errStr, "50076")
+}
+
+// AuthenticateForTenant performs interactive browser authentication targeting a specific tenant
+// Used when a tenant requires MFA that wasn't satisfied by the initial login
+func AuthenticateForTenant(ctx context.Context, tenantID string) (azcore.TokenCredential, error) {
+	authority := fmt.Sprintf("https://login.microsoftonline.com/%s", tenantID)
+
+	cacheAccessor, err := GetSharedMSALCache()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create cache: %w", err)
+	}
+
+	client, err := public.New(
+		"04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+		public.WithAuthority(authority),
+		public.WithCache(cacheAccessor),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create MSAL client for tenant: %w", err)
+	}
+
+	scopes := []string{"https://management.azure.com/.default"}
+
+	// Interactive auth targeting this specific tenant — will trigger MFA
+	result, err := client.AcquireTokenInteractive(ctx, scopes)
+	if err != nil {
+		return nil, fmt.Errorf("interactive authentication failed for tenant %s: %w", tenantID, err)
+	}
+
+	// Create a silent credential from the now-cached token
+	account := result.Account
+	authRecord := azidentity.AuthenticationRecord{
+		Authority:     account.Environment,
+		HomeAccountID: account.HomeAccountID,
+		TenantID:      account.Realm,
+		Username:      account.PreferredUsername,
+		ClientID:      "04b07795-8ddb-461a-bbee-02f9e1bf7b46",
+		Version:       "1.0",
+	}
+
+	return NewMSALSilentCredential(tenantID, authRecord)
+}
+
+// DiscoverTenantSubscriptions lists subscriptions for a single tenant using the provided credential
+func DiscoverTenantSubscriptions(ctx context.Context, tenantID string, cred azcore.TokenCredential) ([]config.Subscription, error) {
+	subsClient, err := armsubscriptions.NewClient(cred, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create subscriptions client: %w", err)
+	}
+
+	var subs []config.Subscription
+	pager := subsClient.NewListPager(nil)
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("failed to list subscriptions: %w", err)
+		}
+
+		for _, sub := range page.Value {
+			if sub.SubscriptionID == nil || sub.DisplayName == nil {
+				continue
+			}
+
+			subs = append(subs, config.Subscription{
+				ID:              *sub.SubscriptionID,
+				Name:            *sub.DisplayName,
+				State:           string(*sub.State),
+				TenantID:        tenantID,
+				EnvironmentName: "AzureCloud",
+				IsDefault:       false,
+			})
+		}
+	}
+
+	return subs, nil
 }
