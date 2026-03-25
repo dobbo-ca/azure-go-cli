@@ -45,13 +45,15 @@ jobs:
       - name: Run Uplift
         id: uplift
         run: |
+          BEFORE_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
           uplift release --fetch-all --skip-changelog
+          AFTER_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
 
-          NEW_VERSION=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          if [ -n "$NEW_VERSION" ]; then
-            echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          if [ -n "$AFTER_TAG" ] && [ "$AFTER_TAG" != "$BEFORE_TAG" ]; then
+            echo "new_version=$AFTER_TAG" >> $GITHUB_OUTPUT
             echo "version_changed=true" >> $GITHUB_OUTPUT
           else
+            echo "No version change, skipping release"
             echo "version_changed=false" >> $GITHUB_OUTPUT
           fi
 
