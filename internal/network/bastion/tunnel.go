@@ -4,12 +4,12 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"syscall"
@@ -196,8 +196,7 @@ func tunnelWithProtocol(ctx context.Context, bastionName, resourceGroup, targetR
 		select {
 		case err := <-healthErrCh:
 			logger.Debug("Health check failure: %v", err)
-			logger.Println("\nConnection to Azure Bastion lost - network disconnected")
-			os.Exit(1)
+			return fmt.Errorf("connection to Azure Bastion lost - network disconnected")
 
 		case err := <-connErrCh:
 			return err
@@ -319,6 +318,16 @@ func exchangeTokenWithProtocol(bastionEndpoint, accessToken, targetResourceID st
 	return tokenResp.WebSocketToken, tokenResp.NodeID, nil
 }
 
+// isBrokenPipe returns true if the error is a broken pipe (EPIPE) or connection reset,
+// which are expected during normal tunnel operation and should not be displayed to the user.
+func isBrokenPipe(err error) bool {
+	if errors.Is(err, syscall.EPIPE) {
+		return true
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "broken pipe") || strings.Contains(msg, "connection reset by peer")
+}
+
 // handleConnection handles a single TCP connection by forwarding it through WebSocket
 func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, wsToken, nodeID string, bufferConfig BufferConfig) {
 	defer tcpConn.Close()
@@ -371,7 +380,7 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 			logger.Debug("HTTP Response Body: %s", string(body))
 			resp.Body.Close()
 		}
-		fmt.Printf("Failed to establish WebSocket connection: %v\n", err)
+		logger.Debug("Failed to establish WebSocket connection: %v", err)
 		return
 	}
 	defer wsConn.Close()
@@ -397,7 +406,7 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 		for {
 			n, err := tcpConn.Read(buf)
 			if err != nil {
-				if err == io.EOF || strings.Contains(err.Error(), "use of closed network connection") {
+				if err == io.EOF || strings.Contains(err.Error(), "use of closed network connection") || isBrokenPipe(err) {
 					logger.Debug("TCP connection closed normally")
 				} else {
 					logger.Debug("TCP read error: %v", err)
@@ -415,8 +424,12 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 			writeMu.Unlock()
 
 			if err != nil {
-				logger.Debug("WebSocket write error: %v", err)
-				errChan <- fmt.Errorf("WebSocket write error: %w", err)
+				if isBrokenPipe(err) {
+					logger.Debug("WebSocket write closed (broken pipe)")
+				} else {
+					logger.Debug("WebSocket write error: %v", err)
+					errChan <- fmt.Errorf("WebSocket write error: %w", err)
+				}
 				return
 			}
 
@@ -458,8 +471,12 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 				if n > 0 {
 					logger.Debug("Read %d bytes from WebSocket reader, forwarding to TCP", n)
 					if _, writeErr := tcpConn.Write(buf[:n]); writeErr != nil {
-						logger.Debug("TCP write error: %v", writeErr)
-						errChan <- fmt.Errorf("TCP write error: %w", writeErr)
+						if isBrokenPipe(writeErr) {
+							logger.Debug("TCP write closed (broken pipe)")
+						} else {
+							logger.Debug("TCP write error: %v", writeErr)
+							errChan <- fmt.Errorf("TCP write error: %w", writeErr)
+						}
 						return
 					}
 					totalBytes += n
@@ -488,9 +505,9 @@ func handleConnection(ctx context.Context, tcpConn net.Conn, bastionEndpoint, ws
 	for {
 		select {
 		case err := <-errChan:
-			// Fatal error occurred, close connection and return
+			// Connection error occurred, close and return
+			// Demoted to Debug to avoid corrupting TUI output (e.g., k9s)
 			logger.Debug("Connection error, closing: %v", err)
-			logger.Info("Connection closed: %v", err)
 			return
 		case <-doneChan:
 			completedGoroutines++
