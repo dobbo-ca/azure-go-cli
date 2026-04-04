@@ -20,12 +20,13 @@ type TokenResponse struct {
 	TokenType    string `json:"tokenType"`
 }
 
-// GetAccessToken retrieves an access token for a specific resource
-func GetAccessToken(resource, subscriptionID string) error {
+// GetAccessToken retrieves an access token for a specific resource or scope
+func GetAccessToken(resource string, scopes []string, subscriptionID string) error {
 	ctx := context.Background()
 
 	logger.Debug("get-access-token called")
 	logger.Debug("  resource: %s", resource)
+	logger.Debug("  scopes: %v", scopes)
 	logger.Debug("  subscription: %s", subscriptionID)
 
 	// Get credentials
@@ -44,18 +45,21 @@ func GetAccessToken(resource, subscriptionID string) error {
 		logger.Debug("Using subscription: %s", subscriptionID)
 	}
 
-	// Construct scope from resource
-	// Azure resource format: https://management.azure.com/.default
-	// K8s server ID: 6dae42f8-4368-4678-94ff-3960e28e3630
-	scope := resource
-	if resource != "" && resource[len(resource)-1] != '/' {
-		scope = resource + "/.default"
+	// Resolve scopes: --scope takes precedence, then --resource, then default ARM
+	var tokenScopes []string
+	if len(scopes) > 0 {
+		tokenScopes = scopes
+	} else if resource != "" {
+		scope := resource + "/.default"
+		tokenScopes = []string{scope}
+	} else {
+		tokenScopes = []string{"https://management.azure.com/.default"}
 	}
-	logger.Debug("Requesting token with scope: %s", scope)
+	logger.Debug("Requesting token with scopes: %v", tokenScopes)
 
 	// Get access token
 	token, err := cred.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{scope},
+		Scopes: tokenScopes,
 	})
 	if err != nil {
 		logger.Debug("Failed to get token: %v", err)

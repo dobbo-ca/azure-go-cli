@@ -52,11 +52,13 @@ func NewAccountCommand() *cobra.Command {
 		Long:  "Get an AAD token to access Azure resources. This command is used by kubelogin for AKS authentication.",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resource, _ := cmd.Flags().GetString("resource")
+			scopes, _ := cmd.Flags().GetStringSlice("scope")
 			subscription, _ := cmd.Flags().GetString("subscription")
-			return GetAccessToken(resource, subscription)
+			return GetAccessToken(resource, scopes, subscription)
 		},
 	}
-	getAccessTokenCmd.Flags().String("resource", "", "Azure resource ID to get token for")
+	getAccessTokenCmd.Flags().String("resource", "", "Azure resource endpoint in Microsoft Entra v1.0")
+	getAccessTokenCmd.Flags().StringSlice("scope", nil, "Space-separated scopes in Microsoft Entra v2.0")
 	getAccessTokenCmd.Flags().StringP("subscription", "s", "", "Subscription ID (optional)")
 
 	cmd.AddCommand(listCmd, showCmd, setCmd, clearCmd, getAccessTokenCmd)
