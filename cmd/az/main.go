@@ -24,6 +24,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Set via ldflags at build time
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
+
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "az",
@@ -43,6 +50,19 @@ func main() {
 	rootCmd.PersistentFlags().String("subscription", "", "Subscription ID or name (overrides default)")
 	rootCmd.PersistentFlags().StringP("output", "o", "json", "Output format (json, table, tsv, yaml, none)")
 	rootCmd.PersistentFlags().String("query", "", "JMESPath query string to filter output")
+
+	// Add version command (required by Terraform azurerm provider)
+	// The azurerm provider parses "azure-cli" and enforces a minimum version,
+	// so we report a compatible version while exposing our real version separately.
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Show the version of the Azure CLI",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			fmt.Printf(`{"azure-cli": "2.67.0", "azure-cli-go": "%s", "azure-cli-go-commit": "%s", "azure-cli-go-build-date": "%s"}`, version, commit, date)
+			fmt.Println()
+			return nil
+		},
+	})
 
 	// Add all domain commands
 	rootCmd.AddCommand(
