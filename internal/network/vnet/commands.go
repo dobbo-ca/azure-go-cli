@@ -3,6 +3,7 @@ package vnet
 import (
 	"context"
 
+	"github.com/cdobbyn/azure-go-cli/internal/network/subnet"
 	"github.com/spf13/cobra"
 )
 
@@ -75,6 +76,6 @@ func NewVNetCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, subnet.NewSubnetCommand())
 	return cmd
 }
