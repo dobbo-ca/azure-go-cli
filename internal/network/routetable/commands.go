@@ -3,6 +3,7 @@ package routetable
 import (
 	"context"
 
+	"github.com/cdobbyn/azure-go-cli/internal/network/routetable/route"
 	"github.com/spf13/cobra"
 )
 
@@ -74,6 +75,6 @@ func NewRouteTableCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, route.NewRouteCommand())
 	return cmd
 }
