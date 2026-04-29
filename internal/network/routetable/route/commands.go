@@ -78,6 +78,25 @@ func NewRouteCommand() *cobra.Command {
 	createCmd.MarkFlagRequired("address-prefix")
 	createCmd.MarkFlagRequired("next-hop-type")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd)
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete a route from a route table",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			routeTableName, _ := cmd.Flags().GetString("route-table-name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Delete(context.Background(), name, routeTableName, resourceGroup, noWait)
+		},
+	}
+	deleteCmd.Flags().StringP("name", "n", "", "Route name")
+	deleteCmd.Flags().String("route-table-name", "", "Route table name")
+	deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the long-running operation to finish")
+	deleteCmd.MarkFlagRequired("name")
+	deleteCmd.MarkFlagRequired("route-table-name")
+	deleteCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
 	return cmd
 }
