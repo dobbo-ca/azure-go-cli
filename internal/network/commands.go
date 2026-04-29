@@ -9,6 +9,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/network/peering"
 	"github.com/cdobbyn/azure-go-cli/internal/network/privateendpoint"
 	"github.com/cdobbyn/azure-go-cli/internal/network/publicip"
+	"github.com/cdobbyn/azure-go-cli/internal/network/routetable"
 	"github.com/cdobbyn/azure-go-cli/internal/network/subnet"
 	"github.com/cdobbyn/azure-go-cli/internal/network/vnet"
 	"github.com/cdobbyn/azure-go-cli/internal/network/vpngateway"
@@ -27,6 +28,7 @@ func NewNetworkCommand() *cobra.Command {
 		vnet.NewVNetCommand(),
 		subnet.NewSubnetCommand(),
 		peering.NewPeeringCommand(),
+		routetable.NewRouteTableCommand(),
 		natgateway.NewNatGatewayCommand(),
 		vpngateway.NewVpnGatewayCommand(),
 		lb.NewLoadBalancerCommand(),
