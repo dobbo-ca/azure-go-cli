@@ -2,6 +2,7 @@ package route
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/spf13/cobra"
 )
@@ -44,6 +45,39 @@ func NewRouteCommand() *cobra.Command {
 	showCmd.MarkFlagRequired("route-table-name")
 	showCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd)
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a route in a route table",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			routeTableName, _ := cmd.Flags().GetString("route-table-name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			addressPrefix, _ := cmd.Flags().GetString("address-prefix")
+			nextHopType, _ := cmd.Flags().GetString("next-hop-type")
+			nextHopIP, _ := cmd.Flags().GetString("next-hop-ip-address")
+
+			if err := ValidateNextHopType(nextHopType); err != nil {
+				return err
+			}
+			if nextHopType == "VirtualAppliance" && nextHopIP == "" {
+				return fmt.Errorf("--next-hop-ip-address is required when --next-hop-type is VirtualAppliance")
+			}
+
+			return Create(context.Background(), cmd, name, routeTableName, resourceGroup, addressPrefix, nextHopType, nextHopIP)
+		},
+	}
+	createCmd.Flags().StringP("name", "n", "", "Route name")
+	createCmd.Flags().String("route-table-name", "", "Route table name")
+	createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	createCmd.Flags().String("address-prefix", "", "Destination address prefix in CIDR format (e.g., 10.0.0.0/24)")
+	createCmd.Flags().String("next-hop-type", "", "Next hop type: VirtualNetworkGateway, VnetLocal, Internet, VirtualAppliance, None")
+	createCmd.Flags().String("next-hop-ip-address", "", "Next hop IP address (required when --next-hop-type is VirtualAppliance)")
+	createCmd.MarkFlagRequired("name")
+	createCmd.MarkFlagRequired("route-table-name")
+	createCmd.MarkFlagRequired("resource-group")
+	createCmd.MarkFlagRequired("address-prefix")
+	createCmd.MarkFlagRequired("next-hop-type")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd)
 	return cmd
 }
