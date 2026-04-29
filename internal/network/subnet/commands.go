@@ -19,7 +19,7 @@ func NewSubnetCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			vnetName, _ := cmd.Flags().GetString("vnet-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), vnetName, resourceGroup)
+			return List(context.Background(), cmd, vnetName, resourceGroup)
 		},
 	}
 	listCmd.Flags().String("vnet-name", "", "Virtual network name")
