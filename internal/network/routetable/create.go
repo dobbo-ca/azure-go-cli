@@ -30,7 +30,6 @@ func Create(ctx context.Context, cmd *cobra.Command, name, resourceGroup, locati
 
 	tagPtrs := make(map[string]*string, len(tags))
 	for k, v := range tags {
-		v := v
 		tagPtrs[k] = &v
 	}
 
