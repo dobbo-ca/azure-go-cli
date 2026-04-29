@@ -37,6 +37,27 @@ func NewRouteTableCommand() *cobra.Command {
 	showCmd.MarkFlagRequired("name")
 	showCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd)
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Create a route table",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			location, _ := cmd.Flags().GetString("location")
+			disableBGP, _ := cmd.Flags().GetBool("disable-bgp-route-propagation")
+			tags, _ := cmd.Flags().GetStringToString("tags")
+			return Create(context.Background(), cmd, name, resourceGroup, location, disableBGP, tags)
+		},
+	}
+	createCmd.Flags().StringP("name", "n", "", "Route table name")
+	createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	createCmd.Flags().StringP("location", "l", "", "Location (e.g., eastus, westus2)")
+	createCmd.Flags().Bool("disable-bgp-route-propagation", false, "Disable BGP route propagation from the virtual network gateway")
+	createCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
+	createCmd.MarkFlagRequired("name")
+	createCmd.MarkFlagRequired("resource-group")
+	createCmd.MarkFlagRequired("location")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd)
 	return cmd
 }
