@@ -34,7 +34,7 @@ func NewSubnetCommand() *cobra.Command {
 			vnetName, _ := cmd.Flags().GetString("vnet-name")
 			subnetName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), vnetName, subnetName, resourceGroup)
+			return Show(context.Background(), cmd, vnetName, subnetName, resourceGroup)
 		},
 	}
 	showCmd.Flags().String("vnet-name", "", "Virtual network name")
