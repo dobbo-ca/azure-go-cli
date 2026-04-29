@@ -83,6 +83,30 @@ func NewSubnetCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("resource-group")
 	deleteCmd.MarkFlagRequired("vnet-name")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	updateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update a subnet (attach/detach NSG, route table, NAT gateway, service endpoints, delegations)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			vnetName, _ := cmd.Flags().GetString("vnet-name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Update(context.Background(), cmd, name, vnetName, resourceGroup, noWait)
+		},
+	}
+	updateCmd.Flags().StringP("name", "n", "", "Subnet name")
+	updateCmd.Flags().String("vnet-name", "", "Virtual network name")
+	updateCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	updateCmd.Flags().String("network-security-group", "", "NSG resource ID or name (empty string clears)")
+	updateCmd.Flags().String("route-table", "", "Route table resource ID or name (empty string clears)")
+	updateCmd.Flags().String("nat-gateway", "", "NAT gateway resource ID or name (empty string clears)")
+	updateCmd.Flags().String("service-endpoints", "", "Comma-separated service endpoints (e.g., Microsoft.Storage,Microsoft.KeyVault); empty string clears")
+	updateCmd.Flags().String("delegations", "", "Comma-separated service delegations (e.g., Microsoft.ContainerInstance/containerGroups); empty string clears")
+	updateCmd.Flags().Bool("no-wait", false, "Do not wait for the long-running operation to finish")
+	updateCmd.MarkFlagRequired("name")
+	updateCmd.MarkFlagRequired("vnet-name")
+	updateCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, updateCmd)
 	return cmd
 }
