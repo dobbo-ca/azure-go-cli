@@ -58,6 +58,22 @@ func NewRouteTableCommand() *cobra.Command {
 	createCmd.MarkFlagRequired("resource-group")
 	createCmd.MarkFlagRequired("location")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd)
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete a route table",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Delete(context.Background(), name, resourceGroup, noWait)
+		},
+	}
+	deleteCmd.Flags().StringP("name", "n", "", "Route table name")
+	deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the long-running operation to finish")
+	deleteCmd.MarkFlagRequired("name")
+	deleteCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
 	return cmd
 }
