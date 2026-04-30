@@ -1,4 +1,4 @@
-package subnet
+package routetable
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, cmd *cobra.Command, vnetName, subnetName, resourceGroup string) error {
+func Show(ctx context.Context, cmd *cobra.Command, name, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -22,15 +22,15 @@ func Show(ctx context.Context, cmd *cobra.Command, vnetName, subnetName, resourc
 		return err
 	}
 
-	client, err := armnetwork.NewSubnetsClient(subscriptionID, cred, nil)
+	client, err := armnetwork.NewRouteTablesClient(subscriptionID, cred, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create subnets client: %w", err)
+		return fmt.Errorf("failed to create route tables client: %w", err)
 	}
 
-	resp, err := client.Get(ctx, resourceGroup, vnetName, subnetName, nil)
+	resp, err := client.Get(ctx, resourceGroup, name, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get subnet: %w", err)
+		return fmt.Errorf("failed to get route table: %w", err)
 	}
 
-	return output.PrintJSON(cmd, resp.Subnet)
+	return output.PrintJSON(cmd, resp.RouteTable)
 }

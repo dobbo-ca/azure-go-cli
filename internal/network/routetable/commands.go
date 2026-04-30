@@ -1,60 +1,59 @@
-package vnet
+package routetable
 
 import (
 	"context"
 
-	"github.com/cdobbyn/azure-go-cli/internal/network/subnet"
+	"github.com/cdobbyn/azure-go-cli/internal/network/routetable/route"
 	"github.com/spf13/cobra"
 )
 
-func NewVNetCommand() *cobra.Command {
+func NewRouteTableCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "vnet",
-		Short: "Manage Azure virtual networks",
-		Long:  "Commands to manage Azure virtual networks (VNets)",
+		Use:   "route-table",
+		Short: "Manage route tables",
+		Long:  "Commands to manage Azure route tables and their routes",
 	}
 
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List virtual networks",
+		Short: "List route tables",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")
 
 	showCmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show details of a virtual network",
+		Short: "Show details of a route table",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			vnetName, _ := cmd.Flags().GetString("name")
+			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), vnetName, resourceGroup)
+			return Show(context.Background(), cmd, name, resourceGroup)
 		},
 	}
-	showCmd.Flags().StringP("name", "n", "", "Virtual network name")
+	showCmd.Flags().StringP("name", "n", "", "Route table name")
 	showCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
 	showCmd.MarkFlagRequired("name")
 	showCmd.MarkFlagRequired("resource-group")
 
 	createCmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a virtual network",
+		Short: "Create a route table",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			location, _ := cmd.Flags().GetString("location")
-			addressPrefixesStr, _ := cmd.Flags().GetString("address-prefixes")
+			disableBGP, _ := cmd.Flags().GetBool("disable-bgp-route-propagation")
 			tags, _ := cmd.Flags().GetStringToString("tags")
-			addressPrefixes := ParseAddressPrefixes(addressPrefixesStr)
-			return Create(context.Background(), cmd, name, resourceGroup, location, addressPrefixes, tags)
+			return Create(context.Background(), cmd, name, resourceGroup, location, disableBGP, tags)
 		},
 	}
-	createCmd.Flags().StringP("name", "n", "", "Virtual network name")
+	createCmd.Flags().StringP("name", "n", "", "Route table name")
 	createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
 	createCmd.Flags().StringP("location", "l", "", "Location (e.g., eastus, westus2)")
-	createCmd.Flags().String("address-prefixes", "10.0.0.0/16", "Comma-separated list of IP address prefixes (e.g., 10.0.0.0/16,10.1.0.0/16)")
+	createCmd.Flags().Bool("disable-bgp-route-propagation", false, "Disable BGP route propagation from the virtual network gateway")
 	createCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
 	createCmd.MarkFlagRequired("name")
 	createCmd.MarkFlagRequired("resource-group")
@@ -62,20 +61,20 @@ func NewVNetCommand() *cobra.Command {
 
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete a virtual network",
+		Short: "Delete a route table",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			vnetName, _ := cmd.Flags().GetString("name")
+			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			noWait, _ := cmd.Flags().GetBool("no-wait")
-			return Delete(context.Background(), vnetName, resourceGroup, noWait)
+			return Delete(context.Background(), name, resourceGroup, noWait)
 		},
 	}
-	deleteCmd.Flags().StringP("name", "n", "", "Virtual network name")
+	deleteCmd.Flags().StringP("name", "n", "", "Route table name")
 	deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
 	deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the long-running operation to finish")
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, subnet.NewSubnetCommand())
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, route.NewRouteCommand())
 	return cmd
 }
