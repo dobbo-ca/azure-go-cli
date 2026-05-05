@@ -157,6 +157,91 @@ func setAtPath(root map[string]interface{}, segs []segment, value interface{}) e
   return nil
 }
 
-// stubs filled in Task 7
-func applyAdd(obj map[string]interface{}, path, value string) error    { return fmt.Errorf("not implemented") }
-func applyRemove(obj map[string]interface{}, path, value string) error { return fmt.Errorf("not implemented") }
+func applyAdd(obj map[string]interface{}, path, value string) error {
+  segs, err := parsePath(path)
+  if err != nil {
+    return err
+  }
+  parent, last, err := navigateToParent(obj, segs)
+  if err != nil {
+    return err
+  }
+  // last must point at a list inside parent.
+  if last.isIndex {
+    return fmt.Errorf("--add path must end at a map key, not an index")
+  }
+  m, ok := parent.(map[string]interface{})
+  if !ok {
+    return fmt.Errorf("expected map at parent of %q", last.key)
+  }
+  cur, ok := m[last.key].([]interface{})
+  if !ok {
+    return fmt.Errorf("path %q does not refer to a list", last.key)
+  }
+  m[last.key] = append(cur, parseValue(value))
+  return nil
+}
+
+func applyRemove(obj map[string]interface{}, path, value string) error {
+  segs, err := parsePath(path)
+  if err != nil {
+    return err
+  }
+  parent, last, err := navigateToParent(obj, segs)
+  if err != nil {
+    return err
+  }
+  if last.isIndex {
+    return fmt.Errorf("--remove path must end at a key (use 'list_path INDEX' to remove an element)")
+  }
+  m, ok := parent.(map[string]interface{})
+  if !ok {
+    return fmt.Errorf("expected map at parent of %q", last.key)
+  }
+  // If value is a numeric index, treat path as a list and remove that index.
+  if value != "" {
+    idx, err := strconv.Atoi(value)
+    if err != nil {
+      return fmt.Errorf("--remove value must be a list index, got %q", value)
+    }
+    list, ok := m[last.key].([]interface{})
+    if !ok {
+      return fmt.Errorf("path %q does not refer to a list", last.key)
+    }
+    if idx < 0 || idx >= len(list) {
+      return fmt.Errorf("index %d out of range", idx)
+    }
+    m[last.key] = append(list[:idx], list[idx+1:]...)
+    return nil
+  }
+  delete(m, last.key)
+  return nil
+}
+
+// navigateToParent walks segs[:-1] and returns the parent value plus the last segment.
+func navigateToParent(root map[string]interface{}, segs []segment) (interface{}, segment, error) {
+  if len(segs) == 0 {
+    return nil, segment{}, fmt.Errorf("empty path")
+  }
+  var cursor interface{} = root
+  for i := 0; i < len(segs)-1; i++ {
+    seg := segs[i]
+    if seg.isIndex {
+      list, ok := cursor.([]interface{})
+      if !ok {
+        return nil, segment{}, fmt.Errorf("expected list at index %d", seg.index)
+      }
+      if seg.index < 0 || seg.index >= len(list) {
+        return nil, segment{}, fmt.Errorf("index %d out of range", seg.index)
+      }
+      cursor = list[seg.index]
+      continue
+    }
+    m, ok := cursor.(map[string]interface{})
+    if !ok {
+      return nil, segment{}, fmt.Errorf("expected map at key %q", seg.key)
+    }
+    cursor = m[seg.key]
+  }
+  return cursor, segs[len(segs)-1], nil
+}

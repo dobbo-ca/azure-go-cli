@@ -62,3 +62,53 @@ func TestApplySet(t *testing.T) {
     }
   })
 }
+
+func TestApplyAdd(t *testing.T) {
+  t.Run("append JSON object to list", func(t *testing.T) {
+    obj := mustJSON(`{"properties":{"subnets":[{"name":"a"}]}}`)
+    err := Apply(obj, []Op{{Kind: Add, Path: "properties.subnets", Value: `{"name":"b"}`}})
+    if err != nil {
+      t.Fatal(err)
+    }
+    list := obj["properties"].(map[string]interface{})["subnets"].([]interface{})
+    if len(list) != 2 {
+      t.Fatalf("len %d", len(list))
+    }
+    if list[1].(map[string]interface{})["name"] != "b" {
+      t.Errorf("got %v", list[1])
+    }
+  })
+
+  t.Run("append to non-list errors", func(t *testing.T) {
+    obj := mustJSON(`{"properties":{"name":"foo"}}`)
+    err := Apply(obj, []Op{{Kind: Add, Path: "properties.name", Value: `"x"`}})
+    if err == nil {
+      t.Error("expected error")
+    }
+  })
+}
+
+func TestApplyRemove(t *testing.T) {
+  t.Run("remove map key", func(t *testing.T) {
+    obj := mustJSON(`{"tags":{"a":"1","b":"2"}}`)
+    err := Apply(obj, []Op{{Kind: Remove, Path: "tags.a"}})
+    if err != nil {
+      t.Fatal(err)
+    }
+    if _, ok := obj["tags"].(map[string]interface{})["a"]; ok {
+      t.Error("a should be removed")
+    }
+  })
+
+  t.Run("remove list index", func(t *testing.T) {
+    obj := mustJSON(`{"items":[1,2,3]}`)
+    err := Apply(obj, []Op{{Kind: Remove, Path: "items", Value: "1"}})
+    if err != nil {
+      t.Fatal(err)
+    }
+    list := obj["items"].([]interface{})
+    if len(list) != 2 || list[0].(float64) != 1 || list[1].(float64) != 3 {
+      t.Errorf("got %v", list)
+    }
+  })
+}
