@@ -67,3 +67,49 @@ func TestParseResourceID(t *testing.T) {
     })
   }
 }
+
+func TestBuildResourceID(t *testing.T) {
+  tests := []struct {
+    name         string
+    sub, group   string
+    namespace    string
+    resourceType string
+    parent       string
+    rname        string
+    want         string
+    wantErr      bool
+  }{
+    {
+      name:         "qualified type, no parent",
+      sub:          "abc", group: "rg1", namespace: "", resourceType: "Microsoft.Network/virtualNetworks", rname: "vnet1",
+      want: "/subscriptions/abc/resourceGroups/rg1/providers/Microsoft.Network/virtualNetworks/vnet1",
+    },
+    {
+      name:         "unqualified type with namespace",
+      sub:          "abc", group: "rg1", namespace: "Microsoft.Network", resourceType: "virtualNetworks", rname: "vnet1",
+      want: "/subscriptions/abc/resourceGroups/rg1/providers/Microsoft.Network/virtualNetworks/vnet1",
+    },
+    {
+      name:         "with parent",
+      sub:          "abc", group: "rg1", namespace: "Microsoft.Network", resourceType: "subnets", parent: "virtualNetworks/vnet1", rname: "sub1",
+      want: "/subscriptions/abc/resourceGroups/rg1/providers/Microsoft.Network/virtualNetworks/vnet1/subnets/sub1",
+    },
+    {
+      name:         "missing namespace and unqualified type",
+      sub:          "abc", group: "rg1", namespace: "", resourceType: "virtualNetworks", rname: "vnet1",
+      wantErr: true,
+    },
+  }
+
+  for _, tt := range tests {
+    t.Run(tt.name, func(t *testing.T) {
+      got, err := BuildResourceID(tt.sub, tt.group, tt.namespace, tt.resourceType, tt.parent, tt.rname)
+      if (err != nil) != tt.wantErr {
+        t.Fatalf("err=%v wantErr=%v", err, tt.wantErr)
+      }
+      if !tt.wantErr && got != tt.want {
+        t.Errorf("got %s want %s", got, tt.want)
+      }
+    })
+  }
+}

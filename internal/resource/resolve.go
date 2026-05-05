@@ -28,3 +28,32 @@ func ParseResourceID(id string) (sub, group, namespace string, types, names []st
   }
   return sub, group, namespace, types, names, nil
 }
+
+// BuildResourceID assembles an ARM resource ID from name-mode flag inputs.
+// resourceType may be qualified ("Microsoft.X/y") or unqualified ("y") if namespace is given.
+// parent is an optional "type/name[/type/name...]" prefix for child resources.
+func BuildResourceID(sub, group, namespace, resourceType, parent, name string) (string, error) {
+  if sub == "" || group == "" || resourceType == "" || name == "" {
+    return "", fmt.Errorf("subscription, resource group, resource type, and name are all required")
+  }
+
+  ns := namespace
+  rt := resourceType
+  if strings.Contains(resourceType, "/") {
+    // qualified: split first segment as namespace
+    idx := strings.Index(resourceType, "/")
+    ns = resourceType[:idx]
+    rt = resourceType[idx+1:]
+  }
+  if ns == "" {
+    return "", fmt.Errorf("namespace required when --resource-type is unqualified")
+  }
+
+  parentPart := ""
+  if parent != "" {
+    parentPart = "/" + strings.Trim(parent, "/")
+  }
+
+  return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/%s%s/%s/%s",
+    sub, group, ns, parentPart, rt, name), nil
+}
