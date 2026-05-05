@@ -3,6 +3,9 @@ package resource
 import (
   "fmt"
   "strings"
+
+  "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/spf13/cobra"
 )
 
 // ParseResourceID splits an ARM resource ID into its components.
@@ -56,4 +59,59 @@ func BuildResourceID(sub, group, namespace, resourceType, parent, name string) (
 
   return fmt.Sprintf("/subscriptions/%s/resourceGroups/%s/providers/%s%s/%s/%s",
     sub, group, ns, parentPart, rt, name), nil
+}
+
+// AddSelectorFlags registers the resource-selector flag set on cmd.
+// Used by every subcommand that operates on a specific resource.
+func AddSelectorFlags(cmd *cobra.Command) {
+  cmd.Flags().StringSlice("ids", nil, "One or more resource IDs (space- or comma-separated). If supplied, no other resource arguments should be specified.")
+  cmd.Flags().StringP("name", "n", "", "Resource name. Required when --ids is not given.")
+  cmd.Flags().StringP("resource-group", "g", "", "Resource group. Required when --ids is not given.")
+  cmd.Flags().String("resource-type", "", "Resource type, qualified (Microsoft.Foo/bar) or unqualified with --namespace.")
+  cmd.Flags().String("namespace", "", "Provider namespace, e.g. Microsoft.Network.")
+  cmd.Flags().String("parent", "", "Parent path for child resources (e.g. virtualNetworks/myvnet).")
+}
+
+// ResolveSelector returns the resource IDs implied by the flags on cmd.
+// Returns multiple IDs only when --ids was used.
+func ResolveSelector(cmd *cobra.Command) ([]string, error) {
+  ids, _ := cmd.Flags().GetStringSlice("ids")
+  name, _ := cmd.Flags().GetString("name")
+  group, _ := cmd.Flags().GetString("resource-group")
+  rtype, _ := cmd.Flags().GetString("resource-type")
+  namespace, _ := cmd.Flags().GetString("namespace")
+  parent, _ := cmd.Flags().GetString("parent")
+
+  hasIDs := len(ids) > 0
+  hasName := name != "" || group != "" || rtype != ""
+
+  if hasIDs && hasName {
+    return nil, fmt.Errorf("cannot mix --ids with -g/--resource-type/-n")
+  }
+  if !hasIDs && !hasName {
+    return nil, fmt.Errorf("please specify either --ids or both -g and resource info")
+  }
+
+  if hasIDs {
+    return ids, nil
+  }
+
+  if name == "" || group == "" || rtype == "" {
+    return nil, fmt.Errorf("--resource-group, --resource-type, and --name are all required when --ids is not given")
+  }
+
+  sub, _ := cmd.Flags().GetString("subscription")
+  if sub == "" {
+    var err error
+    sub, err = config.GetDefaultSubscription()
+    if err != nil {
+      return nil, err
+    }
+  }
+
+  id, err := BuildResourceID(sub, group, namespace, rtype, parent, name)
+  if err != nil {
+    return nil, err
+  }
+  return []string{id}, nil
 }

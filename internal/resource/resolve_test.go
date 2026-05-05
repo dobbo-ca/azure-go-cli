@@ -3,6 +3,8 @@ package resource
 import (
   "reflect"
   "testing"
+
+  "github.com/spf13/cobra"
 )
 
 func TestParseResourceID(t *testing.T) {
@@ -112,4 +114,53 @@ func TestBuildResourceID(t *testing.T) {
       }
     })
   }
+}
+
+func newSelectorCmd() *cobra.Command {
+  c := &cobra.Command{Use: "x"}
+  AddSelectorFlags(c)
+  c.PersistentFlags().String("subscription", "test-sub", "")
+  return c
+}
+
+func TestResolveSelector(t *testing.T) {
+  t.Run("ids mode multiple", func(t *testing.T) {
+    c := newSelectorCmd()
+    c.ParseFlags([]string{"--ids", "/subscriptions/a/resourceGroups/r/providers/Microsoft.Foo/bar/n1", "--ids", "/subscriptions/a/resourceGroups/r/providers/Microsoft.Foo/bar/n2"})
+    ids, err := ResolveSelector(c)
+    if err != nil {
+      t.Fatal(err)
+    }
+    if len(ids) != 2 {
+      t.Errorf("want 2 ids, got %d", len(ids))
+    }
+  })
+
+  t.Run("name mode qualified", func(t *testing.T) {
+    c := newSelectorCmd()
+    c.ParseFlags([]string{"-g", "rg1", "--resource-type", "Microsoft.Foo/bar", "-n", "name1"})
+    ids, err := ResolveSelector(c)
+    if err != nil {
+      t.Fatal(err)
+    }
+    if len(ids) != 1 || ids[0] != "/subscriptions/test-sub/resourceGroups/rg1/providers/Microsoft.Foo/bar/name1" {
+      t.Errorf("got %v", ids)
+    }
+  })
+
+  t.Run("neither mode", func(t *testing.T) {
+    c := newSelectorCmd()
+    c.ParseFlags([]string{})
+    if _, err := ResolveSelector(c); err == nil {
+      t.Error("expected error")
+    }
+  })
+
+  t.Run("both modes", func(t *testing.T) {
+    c := newSelectorCmd()
+    c.ParseFlags([]string{"--ids", "/subscriptions/a/resourceGroups/r/providers/Microsoft.Foo/bar/n1", "-g", "rg1"})
+    if _, err := ResolveSelector(c); err == nil {
+      t.Error("expected error")
+    }
+  })
 }
