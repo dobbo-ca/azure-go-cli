@@ -14,6 +14,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
+func newClusterActionCmd(use, short string, action func(context.Context, string, string, bool) error) *cobra.Command {
+	c := &cobra.Command{
+		Use:   use,
+		Short: short,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return action(context.Background(), name, resourceGroup, noWait)
+		},
+	}
+	c.Flags().StringP("name", "n", "", "AKS cluster name")
+	c.Flags().StringP("resource-group", "g", "", "Resource group name")
+	c.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	c.MarkFlagRequired("name")
+	c.MarkFlagRequired("resource-group")
+	return c
+}
+
 func NewAKSCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "aks",
@@ -168,6 +187,27 @@ Run with: sudo az aks install-cli`,
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
+	startCmd := newClusterActionCmd(
+		"start",
+		"Start a stopped AKS cluster",
+		Start,
+	)
+	stopCmd := newClusterActionCmd(
+		"stop",
+		"Stop a running AKS cluster (VMSS-backed clusters only)",
+		Stop,
+	)
+	abortCmd := newClusterActionCmd(
+		"operation-abort",
+		"Abort the latest running operation on an AKS cluster",
+		OperationAbort,
+	)
+	reconcileCmd := newClusterActionCmd(
+		"reconcile",
+		"Reconcile an AKS cluster (re-applies current configuration)",
+		Reconcile,
+	)
+
 	cmd.AddCommand(
 		getCredsCmd,
 		bastionCmd,
@@ -175,6 +215,10 @@ Run with: sudo az aks install-cli`,
 		showCmd,
 		installCliCmd,
 		deleteCmd,
+		startCmd,
+		stopCmd,
+		abortCmd,
+		reconcileCmd,
 		nodepool.NewNodePoolCommand(),
 		addon.NewAddonCommand(),
 		machine.NewMachineCommand(),
