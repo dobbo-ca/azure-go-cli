@@ -29,7 +29,6 @@ func CheckDependencies() (missing []string) {
 
 // CreateTempKubeconfig creates a temporary kubeconfig file for bastion tunnel
 func CreateTempKubeconfig(ctx context.Context, clusterName, server string, port int) (string, error) {
-	// Create temp directory
 	tmpDir, err := os.MkdirTemp("", "az-aks-bastion-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
@@ -41,26 +40,30 @@ func CreateTempKubeconfig(ctx context.Context, clusterName, server string, port 
 	}
 
 	kubeconfigPath := filepath.Join(kubeconfigDir, "config")
+	if err := WriteKubeconfig(kubeconfigPath, clusterName, server, port); err != nil {
+		return "", err
+	}
+	return kubeconfigPath, nil
+}
 
-	// Generate kubeconfig pointing to localhost tunnel
+// WriteKubeconfig writes a kubeconfig pointing at the local bastion tunnel to path.
+// The parent directory must already exist.
+func WriteKubeconfig(path, clusterName, server string, port int) error {
 	localServer := fmt.Sprintf("https://127.0.0.1:%d", port)
 
 	// Get path to our az binary to ensure it's used instead of Python CLI
 	exePath, err := os.Executable()
 	if err != nil {
-		return "", fmt.Errorf("failed to get executable path: %w", err)
+		return fmt.Errorf("failed to get executable path: %w", err)
 	}
 	exeDir := filepath.Dir(exePath)
 	currentPath := os.Getenv("PATH")
 	customPath := fmt.Sprintf("%s:%s", exeDir, currentPath)
 
-	logger.Debug("Creating temporary kubeconfig at: %s", kubeconfigPath)
+	logger.Debug("Writing kubeconfig at: %s", path)
 	logger.Debug("Server URL: %s", localServer)
 	logger.Debug("Using az binary from: %s", exeDir)
 
-	// Basic kubeconfig structure with devicecode authentication
-	// This uses OAuth device code flow directly, matching Python Azure CLI behavior
-	// PATH is set to ensure our Go az binary is used instead of Python CLI
 	kubeconfig := fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:
@@ -93,12 +96,12 @@ users:
       provideClusterInfo: false
 `, localServer, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, customPath)
 
-	if err := os.WriteFile(kubeconfigPath, []byte(kubeconfig), 0600); err != nil {
-		return "", fmt.Errorf("failed to write kubeconfig: %w", err)
+	if err := os.WriteFile(path, []byte(kubeconfig), 0600); err != nil {
+		return fmt.Errorf("failed to write kubeconfig: %w", err)
 	}
 
 	logger.Debug("Kubeconfig created successfully")
-	return kubeconfigPath, nil
+	return nil
 }
 
 // AuthenticateKubeconfig performs initial authentication for kubeconfig

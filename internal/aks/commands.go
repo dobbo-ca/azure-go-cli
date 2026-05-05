@@ -73,6 +73,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 			admin, _ := cmd.Flags().GetBool("admin")
 			port, _ := cmd.Flags().GetInt("port")
 			cmdToRun, _ := cmd.Flags().GetString("cmd")
+			kubeconfigPath, _ := cmd.Flags().GetString("kubeconfig")
 
 			bufferConfig := bastion.DefaultBufferConfig()
 			connReadKB, _ := cmd.Flags().GetInt("conn-read-buffer")
@@ -93,6 +94,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 				Admin:                admin,
 				Port:                 port,
 				Command:              cmdToRun,
+				KubeconfigPath:       kubeconfigPath,
 				BufferConfig:         bufferConfig,
 			}
 
@@ -105,6 +107,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 	bastionCmd.Flags().BoolP("admin", "a", false, "Use admin credentials")
 	bastionCmd.Flags().IntP("port", "p", 0, "Local port to use for tunnel (0 = random port)")
 	bastionCmd.Flags().String("cmd", "", "Command to run with KUBECONFIG set (e.g., 'k9s' or 'kubectl get pods')")
+	bastionCmd.Flags().StringP("kubeconfig", "f", "", "Path to write kubeconfig (default: temporary file, deleted on exit)")
 	bastionCmd.Flags().Int("conn-read-buffer", 32, "Connection-level read buffer size in KB (default 32)")
 	bastionCmd.Flags().Int("conn-write-buffer", 32, "Connection-level write buffer size in KB (default 32)")
 	bastionCmd.Flags().Int("chunk-read-buffer", 8, "Streaming chunk read buffer size in KB (default 8)")
