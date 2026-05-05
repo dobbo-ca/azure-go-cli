@@ -64,6 +64,14 @@ func WriteKubeconfig(path, clusterName, server string, port int) error {
 	logger.Debug("Server URL: %s", localServer)
 	logger.Debug("Using az binary from: %s", exeDir)
 
+	// Pin AZ_SESSION into the kubeconfig so kubelogin's subprocess `az` reads
+	// the right profile/MSAL cache regardless of the shell that launches kubectl.
+	envBlock := fmt.Sprintf("      - name: PATH\n        value: %s\n", customPath)
+	if session := os.Getenv("AZ_SESSION"); session != "" {
+		logger.Debug("Pinning AZ_SESSION=%s into kubeconfig", session)
+		envBlock += fmt.Sprintf("      - name: AZ_SESSION\n        value: %q\n", session)
+	}
+
 	kubeconfig := fmt.Sprintf(`apiVersion: v1
 kind: Config
 clusters:
@@ -90,11 +98,9 @@ users:
       - --server-id
       - 6dae42f8-4368-4678-94ff-3960e28e3630
       env:
-      - name: PATH
-        value: %s
-      interactiveMode: IfAvailable
+%s      interactiveMode: IfAvailable
       provideClusterInfo: false
-`, localServer, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, customPath)
+`, localServer, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, envBlock)
 
 	if err := os.WriteFile(path, []byte(kubeconfig), 0600); err != nil {
 		return fmt.Errorf("failed to write kubeconfig: %w", err)
