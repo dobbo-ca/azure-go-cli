@@ -26,6 +26,7 @@ type BastionOptions struct {
 	Admin                bool
 	Port                 int
 	Command              string // Command to run with KUBECONFIG set (e.g., "k9s" or "kubectl get pods")
+	KubeconfigPath       string // If set, write kubeconfig to this path instead of a temp file (and don't delete it on exit)
 	BufferConfig         bastion.BufferConfig
 }
 
@@ -81,17 +82,30 @@ func Bastion(ctx context.Context, opts BastionOptions) error {
 		clusterFQDN = *cluster.Properties.Fqdn
 	}
 
-	// Create temporary kubeconfig
-	kubeconfigPath, err := CreateTempKubeconfig(ctx, clusterName, clusterFQDN, port)
-	if err != nil {
-		return fmt.Errorf("failed to create temporary kubeconfig: %w", err)
+	// Create kubeconfig (user-specified path or temporary)
+	var kubeconfigPath string
+	if opts.KubeconfigPath != "" {
+		kubeconfigPath, err = filepath.Abs(opts.KubeconfigPath)
+		if err != nil {
+			return fmt.Errorf("failed to resolve kubeconfig path: %w", err)
+		}
+		if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0700); err != nil {
+			return fmt.Errorf("failed to create kubeconfig directory: %w", err)
+		}
+		if err := WriteKubeconfig(kubeconfigPath, clusterName, clusterFQDN, port); err != nil {
+			return fmt.Errorf("failed to write kubeconfig: %w", err)
+		}
+	} else {
+		kubeconfigPath, err = CreateTempKubeconfig(ctx, clusterName, clusterFQDN, port)
+		if err != nil {
+			return fmt.Errorf("failed to create temporary kubeconfig: %w", err)
+		}
+		defer func() {
+			tmpDir := filepath.Dir(filepath.Dir(kubeconfigPath))
+			logger.Debug("Cleaning up temporary directory: %s", tmpDir)
+			os.RemoveAll(tmpDir)
+		}()
 	}
-	defer func() {
-		// Clean up temp directory
-		tmpDir := filepath.Dir(filepath.Dir(kubeconfigPath))
-		logger.Debug("Cleaning up temporary directory: %s", tmpDir)
-		os.RemoveAll(tmpDir)
-	}()
 
 	fmt.Printf("Merged \"%s\" as current context in %s\n", clusterName, kubeconfigPath)
 	fmt.Println("Converted kubeconfig to use Azure CLI authentication.")
