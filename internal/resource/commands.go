@@ -1,8 +1,6 @@
 package resource
 
 import (
-  "fmt"
-
   "github.com/spf13/cobra"
 )
 
@@ -26,11 +24,4 @@ func NewResourceCommand() *cobra.Command {
     newInvokeActionCmd(),
   )
   return cmd
-}
-
-// stub helper used by the per-subcommand files until each is implemented.
-func notImplemented(name string) func(cmd *cobra.Command, args []string) error {
-  return func(cmd *cobra.Command, args []string) error {
-    return fmt.Errorf("az resource %s: not yet implemented", name)
-  }
 }

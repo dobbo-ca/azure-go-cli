@@ -101,6 +101,17 @@ func runInvokeAction(cmd *cobra.Command, args []string) error {
   }
 
   if len(data) == 0 {
+    if resp.StatusCode == http.StatusAccepted {
+      asyncURL := resp.Header.Get("Azure-AsyncOperation")
+      if asyncURL == "" {
+        asyncURL = resp.Header.Get("Location")
+      }
+      fmt.Fprintf(cmd.OutOrStdout(), "Action %s accepted (status %s); operation may still be running\n", action, resp.Status)
+      if asyncURL != "" {
+        fmt.Fprintf(cmd.OutOrStdout(), "Async operation: %s\n", asyncURL)
+      }
+      return nil
+    }
     fmt.Fprintf(cmd.OutOrStdout(), "Action %s completed (status %s)\n", action, resp.Status)
     return nil
   }
