@@ -17,6 +17,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/network"
 	"github.com/cdobbyn/azure-go-cli/internal/postgres"
 	"github.com/cdobbyn/azure-go-cli/internal/quota"
+	"github.com/cdobbyn/azure-go-cli/internal/resource"
 	"github.com/cdobbyn/azure-go-cli/internal/role"
 	"github.com/cdobbyn/azure-go-cli/internal/storage"
 	"github.com/cdobbyn/azure-go-cli/internal/vm"
@@ -81,6 +82,7 @@ func main() {
 		postgres.NewPostgresCommand(),
 		keyvault.NewKeyVaultCommand(),
 		quota.NewQuotaCommand(),
+		resource.NewResourceCommand(),
 		role.NewRoleCmd(),
 		vm.NewVMCommand(),
 	)
