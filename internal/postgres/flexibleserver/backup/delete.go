@@ -7,9 +7,11 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/postgresql/armpostgresqlflexibleservers/v4"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func Delete(ctx context.Context, resourceGroup, serverName, backupName string, noWait bool) error {
+func Delete(ctx context.Context, cmd *cobra.Command, resourceGroup, serverName, backupName string, noWait bool) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -31,13 +33,11 @@ func Delete(ctx context.Context, resourceGroup, serverName, backupName string, n
 	}
 
 	if noWait {
-		fmt.Println(`{"status": "Backup delete started."}`)
-		return nil
+		return output.PrintJSON(cmd, map[string]string{"status": "Backup delete started."})
 	}
 
 	if _, err := poller.PollUntilDone(ctx, nil); err != nil {
 		return fmt.Errorf("backup delete failed: %w", err)
 	}
-	fmt.Printf(`{"status": "Backup '%s' deleted."}`+"\n", backupName)
-	return nil
+	return output.PrintJSON(cmd, map[string]string{"status": fmt.Sprintf("Backup '%s' deleted.", backupName)})
 }

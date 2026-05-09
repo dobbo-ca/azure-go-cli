@@ -2,15 +2,16 @@ package backup
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/postgresql/armpostgresqlflexibleservers/v4"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, resourceGroup, serverName, backupName string) error {
+func Show(ctx context.Context, cmd *cobra.Command, resourceGroup, serverName, backupName string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -31,10 +32,5 @@ func Show(ctx context.Context, resourceGroup, serverName, backupName string) err
 		return fmt.Errorf("failed to get backup: %w", err)
 	}
 
-	data, err := json.MarshalIndent(resp.ServerBackup, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format backup: %w", err)
-	}
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, resp.ServerBackup)
 }

@@ -19,7 +19,7 @@ func NewBackupCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			rg, _ := cmd.Flags().GetString("resource-group")
 			server, _ := cmd.Flags().GetString("server-name")
-			return List(context.Background(), rg, server)
+			return List(context.Background(), cmd, rg, server)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
@@ -34,7 +34,7 @@ func NewBackupCommand() *cobra.Command {
 			rg, _ := cmd.Flags().GetString("resource-group")
 			server, _ := cmd.Flags().GetString("server-name")
 			name, _ := cmd.Flags().GetString("name")
-			return Show(context.Background(), rg, server, name)
+			return Show(context.Background(), cmd, rg, server, name)
 		},
 	}
 	showCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
@@ -52,7 +52,7 @@ func NewBackupCommand() *cobra.Command {
 			server, _ := cmd.Flags().GetString("server-name")
 			name, _ := cmd.Flags().GetString("name")
 			noWait, _ := cmd.Flags().GetBool("no-wait")
-			return Create(context.Background(), rg, server, name, noWait)
+			return Create(context.Background(), cmd, rg, server, name, noWait)
 		},
 	}
 	createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
@@ -71,7 +71,7 @@ func NewBackupCommand() *cobra.Command {
 			server, _ := cmd.Flags().GetString("server-name")
 			name, _ := cmd.Flags().GetString("name")
 			noWait, _ := cmd.Flags().GetBool("no-wait")
-			return Delete(context.Background(), rg, server, name, noWait)
+			return Delete(context.Background(), cmd, rg, server, name, noWait)
 		},
 	}
 	deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")

@@ -19,7 +19,7 @@ func NewFlexibleServerCommand() *cobra.Command {
 		Short: "List PostgreSQL flexible servers",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")
@@ -30,7 +30,7 @@ func NewFlexibleServerCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			serverName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), serverName, resourceGroup)
+			return Show(context.Background(), cmd, serverName, resourceGroup)
 		},
 	}
 	showCmd.Flags().StringP("name", "n", "", "Server name")
@@ -96,7 +96,7 @@ func NewFlexibleServerCommand() *cobra.Command {
 		Short: "List available SKUs for PostgreSQL flexible servers in a location",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			location, _ := cmd.Flags().GetString("location")
-			return ListSKUs(context.Background(), location)
+			return ListSKUs(context.Background(), cmd, location)
 		},
 	}
 	listSkusCmd.Flags().StringP("location", "l", "", "Azure location (e.g., eastus, westus2)")
