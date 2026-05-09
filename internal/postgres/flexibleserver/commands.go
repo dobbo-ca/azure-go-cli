@@ -97,6 +97,32 @@ func NewFlexibleServerCommand() *cobra.Command {
 	listSkusCmd.Flags().StringP("location", "l", "", "Azure location (e.g., eastus, westus2)")
 	listSkusCmd.MarkFlagRequired("location")
 
+	restoreCmd := &cobra.Command{
+		Use:   "restore",
+		Short: "Point-in-time restore a PostgreSQL flexible server to a new server",
+		Long:  "Creates a new PostgreSQL flexible server by performing a point-in-time restore from an existing source server. The source server must be running and within the configured backup retention window.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			rg, _ := cmd.Flags().GetString("resource-group")
+			location, _ := cmd.Flags().GetString("location")
+			sourceID, _ := cmd.Flags().GetString("source-server")
+			restoreTime, _ := cmd.Flags().GetString("restore-time")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Restore(context.Background(), cmd, name, rg, location, sourceID, restoreTime, noWait)
+		},
+	}
+	restoreCmd.Flags().StringP("name", "n", "", "Name of the new restored server")
+	restoreCmd.Flags().StringP("resource-group", "g", "", "Resource group for the new server")
+	restoreCmd.Flags().StringP("location", "l", "", "Location of the new server (must match source for PITR)")
+	restoreCmd.Flags().String("source-server", "", "Full Azure resource ID of the source flexible server")
+	restoreCmd.Flags().String("restore-time", "", "Point-in-time UTC, RFC3339 (e.g. 2026-05-08T14:30:00Z)")
+	restoreCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	restoreCmd.MarkFlagRequired("name")
+	restoreCmd.MarkFlagRequired("resource-group")
+	restoreCmd.MarkFlagRequired("location")
+	restoreCmd.MarkFlagRequired("source-server")
+	restoreCmd.MarkFlagRequired("restore-time")
+
 	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, listSkusCmd)
 	return cmd
 }
