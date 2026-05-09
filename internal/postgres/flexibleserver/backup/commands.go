@@ -63,6 +63,25 @@ func NewBackupCommand() *cobra.Command {
 	createCmd.MarkFlagRequired("server-name")
 	createCmd.MarkFlagRequired("name")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd)
+	deleteCmd := &cobra.Command{
+		Use:   "delete",
+		Short: "Delete an on-demand backup for a PostgreSQL flexible server",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			server, _ := cmd.Flags().GetString("server-name")
+			name, _ := cmd.Flags().GetString("name")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Delete(context.Background(), rg, server, name, noWait)
+		},
+	}
+	deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	deleteCmd.Flags().String("server-name", "", "Flexible server name")
+	deleteCmd.Flags().StringP("name", "n", "", "Backup name")
+	deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	deleteCmd.MarkFlagRequired("resource-group")
+	deleteCmd.MarkFlagRequired("server-name")
+	deleteCmd.MarkFlagRequired("name")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
 	return cmd
 }
