@@ -1,4 +1,4 @@
-package flexibleserver
+package backup
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, cmd *cobra.Command, serverName, resourceGroup string) error {
+func Show(ctx context.Context, cmd *cobra.Command, resourceGroup, serverName, backupName string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -22,15 +22,15 @@ func Show(ctx context.Context, cmd *cobra.Command, serverName, resourceGroup str
 		return err
 	}
 
-	client, err := armpostgresqlflexibleservers.NewServersClient(subscriptionID, cred, nil)
+	client, err := armpostgresqlflexibleservers.NewBackupsClient(subscriptionID, cred, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create postgresql flexible servers client: %w", err)
+		return fmt.Errorf("failed to create backups client: %w", err)
 	}
 
-	server, err := client.Get(ctx, resourceGroup, serverName, nil)
+	resp, err := client.Get(ctx, resourceGroup, serverName, backupName, nil)
 	if err != nil {
-		return fmt.Errorf("failed to get postgresql flexible server: %w", err)
+		return fmt.Errorf("failed to get backup: %w", err)
 	}
 
-	return output.PrintJSON(cmd, server.Server)
+	return output.PrintJSON(cmd, resp.ServerBackup)
 }

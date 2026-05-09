@@ -2,15 +2,16 @@ package flexibleserver
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/postgresql/armpostgresqlflexibleservers/v4"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func ListSKUs(ctx context.Context, location string) error {
+func ListSKUs(ctx context.Context, cmd *cobra.Command, location string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -48,13 +49,7 @@ func ListSKUs(ctx context.Context, location string) error {
 		}
 	}
 
-	data, err := json.MarshalIndent(skus, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format SKUs: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, skus)
 }
 
 func formatSKU(sku *armpostgresqlflexibleservers.ServerSKUCapability, edition *armpostgresqlflexibleservers.FlexibleServerEditionCapability, versions []*armpostgresqlflexibleservers.ServerVersionCapability) map[string]interface{} {
