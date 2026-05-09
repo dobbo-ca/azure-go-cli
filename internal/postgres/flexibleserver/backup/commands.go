@@ -44,6 +44,25 @@ func NewBackupCommand() *cobra.Command {
 	showCmd.MarkFlagRequired("server-name")
 	showCmd.MarkFlagRequired("name")
 
-	cmd.AddCommand(listCmd, showCmd)
+	createCmd := &cobra.Command{
+		Use:   "create",
+		Short: "Trigger an on-demand backup for a PostgreSQL flexible server",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			server, _ := cmd.Flags().GetString("server-name")
+			name, _ := cmd.Flags().GetString("name")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Create(context.Background(), rg, server, name, noWait)
+		},
+	}
+	createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	createCmd.Flags().String("server-name", "", "Flexible server name")
+	createCmd.Flags().StringP("name", "n", "", "Backup name")
+	createCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	createCmd.MarkFlagRequired("resource-group")
+	createCmd.MarkFlagRequired("server-name")
+	createCmd.MarkFlagRequired("name")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd)
 	return cmd
 }
