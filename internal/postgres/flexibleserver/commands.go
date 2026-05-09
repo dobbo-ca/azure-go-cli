@@ -3,6 +3,7 @@ package flexibleserver
 import (
 	"context"
 
+	"github.com/cdobbyn/azure-go-cli/internal/postgres/flexibleserver/backup"
 	"github.com/spf13/cobra"
 )
 
@@ -148,6 +149,6 @@ func NewFlexibleServerCommand() *cobra.Command {
 	geoRestoreCmd.MarkFlagRequired("location")
 	geoRestoreCmd.MarkFlagRequired("source-server")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, listSkusCmd)
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, listSkusCmd, restoreCmd, geoRestoreCmd, backup.NewBackupCommand())
 	return cmd
 }
