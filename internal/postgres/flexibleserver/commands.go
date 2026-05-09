@@ -123,6 +123,31 @@ func NewFlexibleServerCommand() *cobra.Command {
 	restoreCmd.MarkFlagRequired("source-server")
 	restoreCmd.MarkFlagRequired("restore-time")
 
+	geoRestoreCmd := &cobra.Command{
+		Use:   "geo-restore",
+		Short: "Geo-restore a PostgreSQL flexible server to a paired region",
+		Long:  "Creates a new PostgreSQL flexible server in a paired region from the source server's geo-redundant backup. Source server must have geo-redundant backup enabled.",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			rg, _ := cmd.Flags().GetString("resource-group")
+			location, _ := cmd.Flags().GetString("location")
+			sourceID, _ := cmd.Flags().GetString("source-server")
+			restoreTime, _ := cmd.Flags().GetString("restore-time")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return GeoRestore(context.Background(), cmd, name, rg, location, sourceID, restoreTime, noWait)
+		},
+	}
+	geoRestoreCmd.Flags().StringP("name", "n", "", "Name of the new restored server")
+	geoRestoreCmd.Flags().StringP("resource-group", "g", "", "Resource group for the new server")
+	geoRestoreCmd.Flags().StringP("location", "l", "", "Target location (paired region)")
+	geoRestoreCmd.Flags().String("source-server", "", "Full Azure resource ID of the source flexible server")
+	geoRestoreCmd.Flags().String("restore-time", "", "Optional point-in-time UTC RFC3339; defaults to latest available geo backup")
+	geoRestoreCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	geoRestoreCmd.MarkFlagRequired("name")
+	geoRestoreCmd.MarkFlagRequired("resource-group")
+	geoRestoreCmd.MarkFlagRequired("location")
+	geoRestoreCmd.MarkFlagRequired("source-server")
+
 	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, listSkusCmd)
 	return cmd
 }
