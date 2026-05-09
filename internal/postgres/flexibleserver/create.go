@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func Create(ctx context.Context, cmd *cobra.Command, name, resourceGroup, location, adminUser, adminPassword, version, tier, sku string, storageSizeGB int32, tags map[string]string) error {
+func Create(ctx context.Context, cmd *cobra.Command, name, resourceGroup, location, adminUser, adminPassword, version, tier, sku string, storageSizeGB, backupRetentionDays int32, geoRedundantBackup bool, tags map[string]string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -66,6 +66,11 @@ func Create(ctx context.Context, cmd *cobra.Command, name, resourceGroup, locati
 		serverVersion = armpostgresqlflexibleservers.ServerVersionSixteen
 	}
 
+	geoRedundancy := armpostgresqlflexibleservers.GeoRedundantBackupEnumDisabled
+	if geoRedundantBackup {
+		geoRedundancy = armpostgresqlflexibleservers.GeoRedundantBackupEnumEnabled
+	}
+
 	parameters := armpostgresqlflexibleservers.Server{
 		Location: to.Ptr(location),
 		Tags:     azureTags,
@@ -81,8 +86,8 @@ func Create(ctx context.Context, cmd *cobra.Command, name, resourceGroup, locati
 				StorageSizeGB: to.Ptr(storageSizeGB),
 			},
 			Backup: &armpostgresqlflexibleservers.Backup{
-				BackupRetentionDays: to.Ptr[int32](7),
-				GeoRedundantBackup:  to.Ptr(armpostgresqlflexibleservers.GeoRedundantBackupEnumDisabled),
+				BackupRetentionDays: to.Ptr(backupRetentionDays),
+				GeoRedundantBackup:  to.Ptr(geoRedundancy),
 			},
 			HighAvailability: &armpostgresqlflexibleservers.HighAvailability{
 				Mode: to.Ptr(armpostgresqlflexibleservers.HighAvailabilityModeDisabled),

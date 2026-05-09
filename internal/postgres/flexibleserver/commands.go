@@ -51,8 +51,10 @@ func NewFlexibleServerCommand() *cobra.Command {
 			tier, _ := cmd.Flags().GetString("tier")
 			sku, _ := cmd.Flags().GetString("sku-name")
 			storageSizeGB, _ := cmd.Flags().GetInt32("storage-size")
+			backupRetention, _ := cmd.Flags().GetInt32("backup-retention")
+			geoRedundant, _ := cmd.Flags().GetBool("geo-redundant-backup")
 			tags, _ := cmd.Flags().GetStringToString("tags")
-			return Create(context.Background(), cmd, name, resourceGroup, location, adminUser, adminPassword, version, tier, sku, storageSizeGB, tags)
+			return Create(context.Background(), cmd, name, resourceGroup, location, adminUser, adminPassword, version, tier, sku, storageSizeGB, backupRetention, geoRedundant, tags)
 		},
 	}
 	createCmd.Flags().StringP("name", "n", "", "Server name")
@@ -65,6 +67,8 @@ func NewFlexibleServerCommand() *cobra.Command {
 	createCmd.Flags().String("sku-name", "Standard_B1ms", "SKU name (e.g., Standard_B1ms, Standard_D2s_v3)")
 	createCmd.Flags().Int32("storage-size", 32, "Storage size in GB")
 	createCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
+	createCmd.Flags().Int32("backup-retention", 7, "Backup retention in days (7-35)")
+	createCmd.Flags().Bool("geo-redundant-backup", false, "Enable geo-redundant backup (required for geo-restore)")
 	createCmd.MarkFlagRequired("name")
 	createCmd.MarkFlagRequired("resource-group")
 	createCmd.MarkFlagRequired("location")
