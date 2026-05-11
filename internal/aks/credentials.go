@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
@@ -13,12 +14,14 @@ import (
 )
 
 type GetCredentialsOptions struct {
-	ClusterName   string
-	ResourceGroup string
-	Admin         bool
-	File          string
-	Overwrite     bool
-	Context       string
+	ClusterName        string
+	ResourceGroup      string
+	Admin              bool
+	File               string
+	Overwrite          bool
+	Context            string
+	ContextRegex       *regexp.Regexp
+	ContextReplacement string
 }
 
 func GetCredentials(ctx context.Context, opts GetCredentialsOptions) error {
@@ -64,8 +67,14 @@ func GetCredentials(ctx context.Context, opts GetCredentialsOptions) error {
 		return fmt.Errorf("no kubeconfig data returned")
 	}
 
-	// If context is specified but file is "-", output to stdout with context name updated
-	if opts.Context != "" && opts.File == "-" {
+	// Apply context renaming before any output branch so stdout, write, and
+	// merge all observe the renamed identifiers.
+	if opts.ContextRegex != nil {
+		kubeConfig, err = kubeconfig.RenameByRegex(kubeConfig, opts.ContextRegex, opts.ContextReplacement)
+		if err != nil {
+			return fmt.Errorf("failed to apply context regex: %w", err)
+		}
+	} else if opts.Context != "" {
 		kubeConfig, err = kubeconfig.UpdateContext(kubeConfig, opts.Context)
 		if err != nil {
 			return fmt.Errorf("failed to update context: %w", err)
