@@ -55,13 +55,20 @@ or use -f - to output to stdout.`,
 			overwrite, _ := cmd.Flags().GetBool("overwrite-existing")
 			contextName, _ := cmd.Flags().GetString("context")
 
+			contextRegex, contextReplacement, err := parseContextRegexFlags(cmd, contextName)
+			if err != nil {
+				return err
+			}
+
 			opts := GetCredentialsOptions{
-				ClusterName:   clusterName,
-				ResourceGroup: resourceGroup,
-				Admin:         admin,
-				File:          file,
-				Overwrite:     overwrite,
-				Context:       contextName,
+				ClusterName:        clusterName,
+				ResourceGroup:      resourceGroup,
+				Admin:              admin,
+				File:               file,
+				Overwrite:          overwrite,
+				Context:            contextName,
+				ContextRegex:       contextRegex,
+				ContextReplacement: contextReplacement,
 			}
 
 			return GetCredentials(context.Background(), opts)
@@ -72,7 +79,8 @@ or use -f - to output to stdout.`,
 	getCredsCmd.Flags().BoolP("admin", "a", false, "Get admin credentials")
 	getCredsCmd.Flags().StringP("file", "f", "", "Kubeconfig file path (use '-' for stdout, default: ~/.kube/config)")
 	getCredsCmd.Flags().Bool("overwrite-existing", false, "Overwrite kubeconfig file instead of merging")
-	getCredsCmd.Flags().String("context", "", "Set context name (only applicable with -f -)")
+	getCredsCmd.Flags().String("context", "", "Set context name (literal rename of all identifiers)")
+	addContextRegexFlags(getCredsCmd)
 	getCredsCmd.MarkFlagRequired("name")
 	getCredsCmd.MarkFlagRequired("resource-group")
 
@@ -94,6 +102,11 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 			cmdToRun, _ := cmd.Flags().GetString("cmd")
 			kubeconfigPath, _ := cmd.Flags().GetString("kubeconfig")
 
+			contextRegex, contextReplacement, err := parseContextRegexFlags(cmd, "")
+			if err != nil {
+				return err
+			}
+
 			bufferConfig := bastion.DefaultBufferConfig()
 			connReadKB, _ := cmd.Flags().GetInt("conn-read-buffer")
 			connWriteKB, _ := cmd.Flags().GetInt("conn-write-buffer")
@@ -114,6 +127,8 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 				Port:                 port,
 				Command:              cmdToRun,
 				KubeconfigPath:       kubeconfigPath,
+				ContextRegex:         contextRegex,
+				ContextReplacement:   contextReplacement,
 				BufferConfig:         bufferConfig,
 			}
 
@@ -131,6 +146,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 	bastionCmd.Flags().Int("conn-write-buffer", 32, "Connection-level write buffer size in KB (default 32)")
 	bastionCmd.Flags().Int("chunk-read-buffer", 8, "Streaming chunk read buffer size in KB (default 8)")
 	bastionCmd.Flags().Int("chunk-write-buffer", 8, "Streaming chunk write buffer size in KB (default 8)")
+	addContextRegexFlags(bastionCmd)
 	bastionCmd.MarkFlagRequired("name")
 	bastionCmd.MarkFlagRequired("resource-group")
 	bastionCmd.MarkFlagRequired("bastion")
