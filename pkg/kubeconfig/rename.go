@@ -24,7 +24,7 @@ func RenameByRegex(kubeConfig []byte, pattern *regexp.Regexp, replacement string
 
 	var cfg map[string]interface{}
 	if err := yaml.Unmarshal(kubeConfig, &cfg); err != nil {
-		return nil, fmt.Errorf("parse kubeconfig: %w", err)
+		return nil, fmt.Errorf("failed to parse kubeconfig: %w", err)
 	}
 
 	clusters, _ := cfg["clusters"].([]interface{})
@@ -73,7 +73,7 @@ func RenameByRegex(kubeConfig []byte, pattern *regexp.Regexp, replacement string
 
 	out, err := yaml.Marshal(cfg)
 	if err != nil {
-		return nil, fmt.Errorf("marshal kubeconfig: %w", err)
+		return nil, fmt.Errorf("failed to marshal kubeconfig: %w", err)
 	}
 	return out, nil
 }
