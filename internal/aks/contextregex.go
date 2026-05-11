@@ -36,6 +36,10 @@ func parseContextRegexFlags(cmd *cobra.Command, literalContext string) (*regexp.
 		return nil, "", fmt.Errorf("--context is mutually exclusive with --context-regex")
 	}
 
+	if pattern == "" {
+		return nil, "", fmt.Errorf("--context-regex cannot be empty")
+	}
+
 	compiled, err := regexp.Compile(pattern)
 	if err != nil {
 		return nil, "", fmt.Errorf("invalid --context-regex: %w", err)
