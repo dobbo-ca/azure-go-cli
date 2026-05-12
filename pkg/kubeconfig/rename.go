@@ -42,6 +42,20 @@ func RenameByRegex(kubeConfig []byte, pattern *regexp.Regexp, replacement string
 		return kubeConfig, nil
 	}
 
+	renameClusterIdentifier(cfg, oldName, newName)
+
+	out, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal kubeconfig: %w", err)
+	}
+	return out, nil
+}
+
+// renameClusterIdentifier substring-replaces every occurrence of oldName with
+// newName across the kubeconfig identifier fields: current-context,
+// clusters[].name, contexts[].name, contexts[].context.cluster,
+// contexts[].context.user, users[].name. The input cfg map is mutated in place.
+func renameClusterIdentifier(cfg map[string]interface{}, oldName, newName string) {
 	replace := func(s string) string {
 		return strings.ReplaceAll(s, oldName, newName)
 	}
@@ -70,10 +84,4 @@ func RenameByRegex(kubeConfig []byte, pattern *regexp.Regexp, replacement string
 			}
 		}
 	}
-
-	out, err := yaml.Marshal(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal kubeconfig: %w", err)
-	}
-	return out, nil
 }

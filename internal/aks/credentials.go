@@ -69,16 +69,19 @@ func GetCredentials(ctx context.Context, opts GetCredentialsOptions) error {
 
 	// Apply context renaming before any output branch so stdout, write, and
 	// merge all observe the renamed identifiers.
+	effectiveContext := opts.ClusterName
 	if opts.ContextRegex != nil {
 		kubeConfig, err = kubeconfig.RenameByRegex(kubeConfig, opts.ContextRegex, opts.ContextReplacement)
 		if err != nil {
 			return fmt.Errorf("failed to apply context regex: %w", err)
 		}
+		effectiveContext = opts.ContextRegex.ReplaceAllString(opts.ClusterName, opts.ContextReplacement)
 	} else if opts.Context != "" {
 		kubeConfig, err = kubeconfig.UpdateContext(kubeConfig, opts.Context)
 		if err != nil {
 			return fmt.Errorf("failed to update context: %w", err)
 		}
+		effectiveContext = opts.Context
 	}
 
 	// Output to stdout
@@ -107,7 +110,7 @@ func GetCredentials(ctx context.Context, opts GetCredentialsOptions) error {
 		if err := kubeconfig.Merge(file, kubeConfig); err != nil {
 			return fmt.Errorf("failed to merge kubeconfig: %w", err)
 		}
-		fmt.Fprintf(os.Stderr, "Merged \"%s\" as current context in %s\n", opts.ClusterName, file)
+		fmt.Fprintf(os.Stderr, "Merged \"%s\" as current context in %s\n", effectiveContext, file)
 	}
 
 	return nil
