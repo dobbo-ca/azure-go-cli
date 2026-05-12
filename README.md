@@ -88,6 +88,30 @@ az account set --subscription "My Subscription"
 az account show
 ```
 
+#### Isolated sessions with `AZ_SESSION`
+
+Set the `AZ_SESSION` environment variable to scope the CLI's profile and
+MSAL token cache to a session-specific file, allowing multiple
+authenticated sessions to coexist without overwriting each other:
+
+```bash
+export AZ_SESSION=customer-a
+az login                          # writes ~/.azure/azureProfile-customer-a.json
+                                  #     and ~/.azure/msal_token_cache-customer-a.json
+
+# In another terminal, a separate session
+export AZ_SESSION=customer-b
+az login                          # uses its own profile and token cache
+```
+
+When unset, the standard `~/.azure/azureProfile.json` and
+`~/.azure/msal_token_cache.json` are used.
+
+`az aks bastion` pins the active `AZ_SESSION` into the generated
+kubeconfig's `kubelogin` exec env block, so `kubectl` subprocesses
+launched from any shell continue to use the right session profile/cache
+without needing the env var re-exported.
+
 ### Virtual Machines
 
 ```bash
