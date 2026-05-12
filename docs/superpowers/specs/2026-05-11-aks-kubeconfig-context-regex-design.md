@@ -6,7 +6,7 @@
 
 ## Motivation
 
-Customer clusters deployed on customer infrastructure are all named identically (e.g., `proscia-prod-usw2-k8s-20251209`) so customers see a consistent product name. Internal support staff manage many of these clusters and cannot tell them apart from the kubeconfig identifiers alone. They need a way to rewrite the cluster's identifiers into a disambiguating form (e.g., `acme-prod-usw2-k8s-20251209`) at kubeconfig generation time.
+Customer clusters deployed on customer infrastructure are all named identically (e.g., `appcluster-prod-usw2-k8s-20251209`) so customers see a consistent product name. Internal support staff manage many of these clusters and cannot tell them apart from the kubeconfig identifiers alone. They need a way to rewrite the cluster's identifiers into a disambiguating form (e.g., `acme-prod-usw2-k8s-20251209`) at kubeconfig generation time.
 
 A literal `--context <name>` flag already exists on `get-credentials`, but it only takes effect when output is `-f -` (stdout). It does not apply to write or merge modes, where support staff actually consume the kubeconfig. The new regex flags fix that and add pattern-based rewriting.
 
@@ -34,8 +34,8 @@ Available on both `az aks get-credentials` and `az aks bastion`:
 
 ```
 az aks get-credentials \
-  -n proscia-prod-usw2-k8s-20251209 -g rg \
-  --context-regex '^proscia-(.+)$' \
+  -n appcluster-prod-usw2-k8s-20251209 -g rg \
+  --context-regex '^appcluster-(.+)$' \
   --context-replacement 'acme-$1'
 ```
 
@@ -60,8 +60,8 @@ The regex is anchored on the **cluster name**, not applied independently to ever
 
 Per-field regex application has two failure modes that anchoring avoids:
 
-- **Anchored patterns break:** A user pattern like `^proscia-prod-usw2-k8s-20251209$` only matches when applied to the bare cluster name. Applied independently to `clusterUser_proscia-prod-usw2-k8s-20251209`, it would not match (the field doesn't equal the cluster name), leaving the user entry untouched and the kubeconfig internally inconsistent.
-- **User name prefixes:** `clusterUser_<name>` and `clusterAdmin_<name>` carry a fixed prefix. Anchoring on the cluster name and then substring-replacing across fields preserves the prefix automatically: `clusterUser_proscia-...` → `clusterUser_acme-...` without the user having to write a regex aware of the prefix.
+- **Anchored patterns break:** A user pattern like `^appcluster-prod-usw2-k8s-20251209$` only matches when applied to the bare cluster name. Applied independently to `clusterUser_appcluster-prod-usw2-k8s-20251209`, it would not match (the field doesn't equal the cluster name), leaving the user entry untouched and the kubeconfig internally inconsistent.
+- **User name prefixes:** `clusterUser_<name>` and `clusterAdmin_<name>` carry a fixed prefix. Anchoring on the cluster name and then substring-replacing across fields preserves the prefix automatically: `clusterUser_appcluster-...` → `clusterUser_acme-...` without the user having to write a regex aware of the prefix.
 
 The cost of anchoring is that the regex must match somewhere in the cluster name to do anything. That is the intended UX — the user is renaming a cluster, not arbitrarily rewriting kubeconfig YAML.
 

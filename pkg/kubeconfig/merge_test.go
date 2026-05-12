@@ -24,7 +24,7 @@ func TestUpdateContext_RenamesAllIdentifiers(t *testing.T) {
 			t.Errorf("UpdateContext: expected %q in output\n--- got ---\n%s", s, got)
 		}
 	}
-	if strings.Contains(got, "proscia-prod-usw2-k8s-20251209") {
+	if strings.Contains(got, "appcluster-prod-usw2-k8s-20251209") {
 		t.Errorf("UpdateContext: expected old cluster name to be fully replaced\n--- got ---\n%s", got)
 	}
 }

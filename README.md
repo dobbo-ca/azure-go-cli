@@ -135,6 +135,46 @@ az storage container create --name my-container \
   --account-name mystorageacct --resource-group my-rg
 ```
 
+### Kubernetes (AKS)
+
+```bash
+# Merge cluster credentials into ~/.kube/config
+az aks get-credentials --name my-cluster --resource-group my-rg
+
+# Open a tunnel to a private AKS cluster through Azure Bastion
+az aks bastion --name my-cluster --resource-group my-rg \
+  --bastion /subscriptions/.../bastionHosts/my-bastion
+```
+
+#### Renaming kubeconfig identifiers
+
+When several clusters share the same name (e.g., customer deployments
+called `appcluster-prod-usw2-k8s-20251209`) the context name is ambiguous
+for internal staff. Two flags rewrite every identifier in the kubeconfig
+(`current-context`, `clusters[].name`, `contexts[].name`,
+`contexts[].context.cluster`, `contexts[].context.user`, `users[].name`)
+on both `az aks get-credentials` and `az aks bastion`:
+
+```bash
+# Literal rename — replaces the cluster name throughout the kubeconfig
+az aks get-credentials -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
+  --context acme-prod
+
+# Regex rename — pattern is matched against the cluster name; the
+# replacement (with $1, $2 capture group support) is propagated to
+# every identifier field.
+az aks get-credentials -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
+  --context-regex '^appcluster-(.+)$' --context-replacement 'acme-$1'
+# → context becomes acme-prod-usw2-k8s-20251209
+
+az aks bastion -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
+  --bastion /subscriptions/.../bastionHosts/my-bastion \
+  --context-regex '^appcluster' --context-replacement 'acme'
+```
+
+`--context-regex` and `--context-replacement` must be supplied together
+and cannot be combined with `--context`.
+
 ### Key Vault Secrets
 
 ```bash

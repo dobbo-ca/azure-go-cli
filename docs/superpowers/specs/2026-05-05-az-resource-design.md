@@ -12,7 +12,7 @@ The user encountered the following command, which our Go CLI does not yet implem
 
 ```
 az resource list \
-  --resource-group proscia-prod-base-network \
+  --resource-group appcluster-prod-base-network \
   --resource-type Microsoft.Network/privateDnsZones \
   --query "[].{name:name, id:id}" -o table
 ```
@@ -219,7 +219,7 @@ Each command reads the global `--subscription` flag; falls back to `config.GetDe
 A smoke checklist run against a real subscription:
 
 1. The user's original command:
-   `az resource list -g proscia-prod-base-network --resource-type Microsoft.Network/privateDnsZones`
+   `az resource list -g appcluster-prod-base-network --resource-type Microsoft.Network/privateDnsZones`
 2. `az resource show --ids <id>` for one of the listed zones
 3. `az resource tag --ids <id> --tags owner=test`
 4. `az resource update --ids <id> --set tags.env=staging`
