@@ -1382,7 +1382,7 @@ Expected: help text includes `-g`, `--resource-type`, `--name`, `--namespace`, `
 
 If logged in, run the user's original example:
 ```
-./bin/az/az resource list -g proscia-prod-base-network --resource-type Microsoft.Network/privateDnsZones --query "[].{name:name, id:id}"
+./bin/az/az resource list -g appcluster-prod-base-network --resource-type Microsoft.Network/privateDnsZones --query "[].{name:name, id:id}"
 ```
 Expected: JSON array of `{name, id}` objects, one per private DNS zone.
 
@@ -2481,7 +2481,7 @@ git commit -m "feat(resource): implement invoke-action subcommand"
 
 Run:
 ```
-./bin/az/az resource list -g proscia-prod-base-network --resource-type Microsoft.Network/privateDnsZones --query "[].{name:name, id:id}"
+./bin/az/az resource list -g appcluster-prod-base-network --resource-type Microsoft.Network/privateDnsZones --query "[].{name:name, id:id}"
 ```
 Expected: JSON array of `{name, id}` pairs for each private DNS zone in the group.
 

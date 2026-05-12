@@ -8,25 +8,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// UpdateContext renames the cluster across every kubeconfig identifier field
+// (current-context, clusters[].name, contexts[].name, contexts[].context.cluster,
+// contexts[].context.user, users[].name) by substring-replacing the existing
+// cluster name with contextName. Returns the input unchanged if the kubeconfig
+// has no cluster or the requested name already matches.
 func UpdateContext(kubeConfig []byte, contextName string) ([]byte, error) {
 	var config map[string]interface{}
 	if err := yaml.Unmarshal(kubeConfig, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse kubeconfig: %w", err)
 	}
 
-	// Update context name
-	config["current-context"] = contextName
-
-	// Update context in contexts list
-	if contexts, ok := config["contexts"].([]interface{}); ok {
-		for _, ctx := range contexts {
-			if ctxMap, ok := ctx.(map[string]interface{}); ok {
-				ctxMap["name"] = contextName
-			}
-		}
+	clusters, _ := config["clusters"].([]interface{})
+	if len(clusters) == 0 {
+		return kubeConfig, nil
+	}
+	firstCluster, _ := clusters[0].(map[string]interface{})
+	oldName, _ := firstCluster["name"].(string)
+	if oldName == "" || oldName == contextName {
+		return kubeConfig, nil
 	}
 
-	// Marshal back
+	renameClusterIdentifier(config, oldName, contextName)
+
 	updated, err := yaml.Marshal(config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal kubeconfig: %w", err)

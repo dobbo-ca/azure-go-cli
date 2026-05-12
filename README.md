@@ -88,6 +88,30 @@ az account set --subscription "My Subscription"
 az account show
 ```
 
+#### Isolated sessions with `AZ_SESSION`
+
+Set the `AZ_SESSION` environment variable to scope the CLI's profile and
+MSAL token cache to a session-specific file, allowing multiple
+authenticated sessions to coexist without overwriting each other:
+
+```bash
+export AZ_SESSION=customer-a
+az login                          # writes ~/.azure/azureProfile-customer-a.json
+                                  #     and ~/.azure/msal_token_cache-customer-a.json
+
+# In another terminal, a separate session
+export AZ_SESSION=customer-b
+az login                          # uses its own profile and token cache
+```
+
+When unset, the standard `~/.azure/azureProfile.json` and
+`~/.azure/msal_token_cache.json` are used.
+
+`az aks bastion` pins the active `AZ_SESSION` into the generated
+kubeconfig's `kubelogin` exec env block, so `kubectl` subprocesses
+launched from any shell continue to use the right session profile/cache
+without needing the env var re-exported.
+
 ### Virtual Machines
 
 ```bash
@@ -134,6 +158,46 @@ az storage account create --name mystorageacct \
 az storage container create --name my-container \
   --account-name mystorageacct --resource-group my-rg
 ```
+
+### Kubernetes (AKS)
+
+```bash
+# Merge cluster credentials into ~/.kube/config
+az aks get-credentials --name my-cluster --resource-group my-rg
+
+# Open a tunnel to a private AKS cluster through Azure Bastion
+az aks bastion --name my-cluster --resource-group my-rg \
+  --bastion /subscriptions/.../bastionHosts/my-bastion
+```
+
+#### Renaming kubeconfig identifiers
+
+When several clusters share the same name (e.g., customer deployments
+called `appcluster-prod-usw2-k8s-20251209`) the context name is ambiguous
+for internal staff. Two flags rewrite every identifier in the kubeconfig
+(`current-context`, `clusters[].name`, `contexts[].name`,
+`contexts[].context.cluster`, `contexts[].context.user`, `users[].name`)
+on both `az aks get-credentials` and `az aks bastion`:
+
+```bash
+# Literal rename — replaces the cluster name throughout the kubeconfig
+az aks get-credentials -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
+  --context acme-prod
+
+# Regex rename — pattern is matched against the cluster name; the
+# replacement (with $1, $2 capture group support) is propagated to
+# every identifier field.
+az aks get-credentials -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
+  --context-regex '^appcluster-(.+)$' --context-replacement 'acme-$1'
+# → context becomes acme-prod-usw2-k8s-20251209
+
+az aks bastion -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
+  --bastion /subscriptions/.../bastionHosts/my-bastion \
+  --context-regex '^appcluster' --context-replacement 'acme'
+```
+
+`--context-regex` and `--context-replacement` must be supplied together
+and cannot be combined with `--context`.
 
 ### Key Vault Secrets
 
