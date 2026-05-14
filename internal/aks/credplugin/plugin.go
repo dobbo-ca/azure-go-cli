@@ -3,6 +3,9 @@ package credplugin
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 )
 
 // DetermineAPIVersion inspects the KUBERNETES_EXEC_INFO env value kubectl
@@ -25,4 +28,22 @@ func DetermineAPIVersion(execInfoEnv string) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported KUBERNETES_EXEC_INFO apiVersion: %s", env.APIVersion)
 	}
+}
+
+// RenderExecCredential writes the ExecCredential JSON envelope kubectl expects
+// to w. apiVersion is whatever DetermineAPIVersion returned.
+func RenderExecCredential(token azcore.AccessToken, apiVersion string, w io.Writer) error {
+	cred := ExecCredential{
+		Kind:       "ExecCredential",
+		APIVersion: apiVersion,
+		Status: ExecCredentialStatus{
+			Token:               token.Token,
+			ExpirationTimestamp: token.ExpiresOn,
+		},
+	}
+	enc := json.NewEncoder(w)
+	if err := enc.Encode(&cred); err != nil {
+		return fmt.Errorf("failed to encode ExecCredential: %w", err)
+	}
+	return nil
 }
