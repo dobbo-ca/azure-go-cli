@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Config
+clusters:
+- cluster:
+    server: https://example.hcp.eastus.azmk8s.io
+    certificate-authority-data: REDACTED
+  name: example
+contexts:
+- context:
+    cluster: example
+    user: clusterUser_rg_example
+  name: example
+current-context: example
+users:
+- name: clusterUser_rg_example
+  user:
+    auth-provider:
+      name: azure
+      config:
+        apiserver-id: 6dae42f8-4368-4678-94ff-3960e28e3630
+        client-id: 80faf920-1908-4b52-b5ef-a8e7bedfc67a
+        tenant-id: contoso-tenant-id
+        environment: AzurePublicCloud
+        config-mode: "1"
