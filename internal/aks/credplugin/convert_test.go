@@ -3,6 +3,7 @@ package credplugin
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -94,5 +95,26 @@ func TestConvert_MalformedYAML(t *testing.T) {
 	_, _, err := Convert([]byte("not: valid: yaml: ::"), ConvertOptions{})
 	if err == nil {
 		t.Fatal("want parse error, got nil")
+	}
+}
+
+func TestConvert_AbsolutePath(t *testing.T) {
+	in := loadFixture(t, "legacy_azure_input.yaml")
+	exe, err := os.Executable()
+	if err != nil {
+		t.Fatalf("os.Executable: %v", err)
+	}
+	got, changed, err := Convert(in, ConvertOptions{AbsolutePath: true})
+	if err != nil {
+		t.Fatalf("Convert: %v", err)
+	}
+	if !changed {
+		t.Fatal("changed=false, want true")
+	}
+	if !strings.Contains(string(got), "command: "+exe) {
+		t.Errorf("absolute-path output should contain %q\noutput:\n%s", "command: "+exe, got)
+	}
+	if strings.Contains(string(got), "command: az\n") {
+		t.Errorf("absolute-path output should not contain bare `command: az`\noutput:\n%s", got)
 	}
 }
