@@ -55,6 +55,8 @@ or use -f - to output to stdout.`,
 			overwrite, _ := cmd.Flags().GetBool("overwrite-existing")
 			contextName, _ := cmd.Flags().GetString("context")
 
+			absolutePath, _ := cmd.Flags().GetBool("absolute-path")
+
 			contextRegex, contextReplacement, err := parseContextRegexFlags(cmd, contextName)
 			if err != nil {
 				return err
@@ -69,6 +71,7 @@ or use -f - to output to stdout.`,
 				Context:            contextName,
 				ContextRegex:       contextRegex,
 				ContextReplacement: contextReplacement,
+				AbsolutePath:       absolutePath,
 			}
 
 			return GetCredentials(context.Background(), opts)
@@ -80,6 +83,7 @@ or use -f - to output to stdout.`,
 	getCredsCmd.Flags().StringP("file", "f", "", "Kubeconfig file path (use '-' for stdout, default: ~/.kube/config)")
 	getCredsCmd.Flags().Bool("overwrite-existing", false, "Overwrite kubeconfig file instead of merging")
 	getCredsCmd.Flags().String("context", "", "Set context name (literal rename of all identifiers)")
+	getCredsCmd.Flags().Bool("absolute-path", false, "Embed the absolute path to this binary in the kubeconfig exec entry instead of the bare command 'az'")
 	addContextRegexFlags(getCredsCmd)
 	getCredsCmd.MarkFlagRequired("name")
 	getCredsCmd.MarkFlagRequired("resource-group")
