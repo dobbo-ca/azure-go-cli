@@ -43,6 +43,9 @@ func Convert(kubeConfig []byte, opts ConvertOptions) ([]byte, bool, error) {
 		if rewriteLegacyAuthProvider(userMap, command) {
 			changed = true
 		}
+		if rewriteKubeloginExec(userMap, command) {
+			changed = true
+		}
 	}
 
 	if !changed {
@@ -90,6 +93,45 @@ func rewriteLegacyAuthProvider(userMap map[string]interface{}, command string) b
 	delete(userMap, "auth-provider")
 	userMap["exec"] = buildExecEntry(command, serverID, tenantID, clientID)
 	return true
+}
+
+// rewriteKubeloginExec replaces a `user.exec` block whose command is literally
+// "kubelogin" with one pointing at this binary, carrying forward server/tenant/
+// client IDs from the original args. Returns true if the user was rewritten.
+func rewriteKubeloginExec(userMap map[string]interface{}, command string) bool {
+	exec, _ := userMap["exec"].(map[string]interface{})
+	if exec == nil {
+		return false
+	}
+	if cmd, _ := exec["command"].(string); cmd != "kubelogin" {
+		return false
+	}
+	serverID, tenantID, clientID := extractIDsFromArgs(exec["args"])
+	if serverID == "" {
+		serverID = AKSServerIDDefault
+	}
+	userMap["exec"] = buildExecEntry(command, serverID, tenantID, clientID)
+	return true
+}
+
+// extractIDsFromArgs scans an args list (typed as []interface{} by yaml.v3) for
+// --server-id / --tenant-id / --client-id and returns their values. Missing
+// flags yield empty strings.
+func extractIDsFromArgs(argsAny interface{}) (serverID, tenantID, clientID string) {
+	args, _ := argsAny.([]interface{})
+	for i := 0; i+1 < len(args); i++ {
+		flag, _ := args[i].(string)
+		val, _ := args[i+1].(string)
+		switch flag {
+		case "--server-id":
+			serverID = val
+		case "--tenant-id":
+			tenantID = val
+		case "--client-id":
+			clientID = val
+		}
+	}
+	return
 }
 
 // buildExecEntry constructs the standard exec entry pointing at this binary.
