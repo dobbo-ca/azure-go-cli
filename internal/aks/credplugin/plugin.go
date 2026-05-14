@@ -57,10 +57,14 @@ func RenderExecCredential(token azcore.AccessToken, apiVersion string, w io.Writ
 type GetTokenOptions struct {
 	ServerID string
 	TenantID string
+	// ClientID is accepted for symmetry with the --client-id flag surface
+	// (see Task 9). The credential chain consumes AZURE_CLIENT_ID from the
+	// environment rather than this field directly.
 	ClientID string
 
 	// CredentialFactory returns the TokenCredential used to mint the access
-	// token. Defaults to azure.GetCredential().
+	// token. Required: callers must pass azure.GetCredential or a stub. The
+	// Cobra wrapper in gettoken.go (Task 9) wires the production default.
 	CredentialFactory func() (azcore.TokenCredential, error)
 
 	// Stdout is where the ExecCredential JSON is written. Defaults to os.Stdout.

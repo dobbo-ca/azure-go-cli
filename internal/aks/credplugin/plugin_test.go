@@ -136,6 +136,7 @@ func TestGetToken_RequiresServerID(t *testing.T) {
 func TestGetToken_CredentialFactoryError(t *testing.T) {
 	err := GetToken(context.Background(), GetTokenOptions{
 		ServerID:          "x",
+		ExecInfoEnv:       `{"apiVersion":"client.authentication.k8s.io/v1beta1"}`,
 		CredentialFactory: func() (azcore.TokenCredential, error) { return nil, fmt.Errorf("boom") },
 	})
 	if err == nil || !strings.Contains(err.Error(), "boom") {
@@ -147,6 +148,7 @@ func TestGetToken_MintError(t *testing.T) {
 	cred := &fakeCred{err: fmt.Errorf("mint failed")}
 	err := GetToken(context.Background(), GetTokenOptions{
 		ServerID:          "x",
+		ExecInfoEnv:       `{"apiVersion":"client.authentication.k8s.io/v1beta1"}`,
 		CredentialFactory: func() (azcore.TokenCredential, error) { return cred, nil },
 	})
 	if err == nil || !strings.Contains(err.Error(), "mint failed") {
