@@ -17,14 +17,12 @@ import (
 
 // CheckDependencies checks if required CLI tools are installed
 func CheckDependencies() (missing []string) {
-	deps := []string{"kubectl", "kubelogin"}
-
+	deps := []string{"kubectl"}
 	for _, dep := range deps {
 		if _, err := exec.LookPath(dep); err != nil {
 			missing = append(missing, dep)
 		}
 	}
-
 	return missing
 }
 

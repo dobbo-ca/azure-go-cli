@@ -94,7 +94,7 @@ or use -f - to output to stdout.`,
 		Long: `Open tunnel to AKS cluster through Azure Bastion.
 
 Creates a temporary kubeconfig and establishes a secure tunnel to the cluster.
-Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
+Dependencies: kubectl (install with: sudo az aks install-cli)`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusterName, _ := cmd.Flags().GetString("name")
@@ -105,6 +105,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 			port, _ := cmd.Flags().GetInt("port")
 			cmdToRun, _ := cmd.Flags().GetString("cmd")
 			kubeconfigPath, _ := cmd.Flags().GetString("kubeconfig")
+			absolutePath, _ := cmd.Flags().GetBool("absolute-path")
 
 			contextRegex, contextReplacement, err := parseContextRegexFlags(cmd, "")
 			if err != nil {
@@ -133,6 +134,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 				KubeconfigPath:       kubeconfigPath,
 				ContextRegex:         contextRegex,
 				ContextReplacement:   contextReplacement,
+				AbsolutePath:         absolutePath,
 				BufferConfig:         bufferConfig,
 			}
 
@@ -150,6 +152,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 	bastionCmd.Flags().Int("conn-write-buffer", 32, "Connection-level write buffer size in KB (default 32)")
 	bastionCmd.Flags().Int("chunk-read-buffer", 8, "Streaming chunk read buffer size in KB (default 8)")
 	bastionCmd.Flags().Int("chunk-write-buffer", 8, "Streaming chunk write buffer size in KB (default 8)")
+	bastionCmd.Flags().Bool("absolute-path", false, "Embed the absolute path to this binary in the temp kubeconfig exec entry")
 	addContextRegexFlags(bastionCmd)
 	bastionCmd.MarkFlagRequired("name")
 	bastionCmd.MarkFlagRequired("resource-group")
