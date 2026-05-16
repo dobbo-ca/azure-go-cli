@@ -184,8 +184,8 @@ Dependencies: kubectl (install with: sudo az aks install-cli)`,
 
 	installCliCmd := &cobra.Command{
 		Use:   "install-cli",
-		Short: "Install kubectl and kubelogin",
-		Long: `Install kubectl and kubelogin to /usr/local/bin.
+		Short: "Install kubectl",
+		Long: `Install kubectl to /usr/local/bin.
 
 This command requires sudo privileges to install to /usr/local/bin.
 Run with: sudo az aks install-cli`,
