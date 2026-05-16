@@ -108,7 +108,7 @@ When unset, the standard `~/.azure/azureProfile.json` and
 `~/.azure/msal_token_cache.json` are used.
 
 `az aks bastion` pins the active `AZ_SESSION` into the generated
-kubeconfig's `kubelogin` exec env block, so `kubectl` subprocesses
+kubeconfig's `az aks get-token` exec env block, so `kubectl` subprocesses
 launched from any shell continue to use the right session profile/cache
 without needing the env var re-exported.
 

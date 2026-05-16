@@ -2,7 +2,6 @@ package aks
 
 import (
   "context"
-  "fmt"
   "os"
 
   "github.com/Azure/azure-sdk-for-go/sdk/azcore"
@@ -24,10 +23,9 @@ and writes a kubectl ExecCredential JSON object to stdout.
 
 You normally invoke this through kubectl, not directly. See the exec entry
 in the kubeconfig produced by 'az aks get-credentials'.`,
-    // SilenceErrors so cobra doesn't print the error again with its
-    // `Error: ` prefix — kubectl shows whatever lands on stderr.
-    SilenceUsage:  true,
-    SilenceErrors: true,
+    // SilenceUsage so cobra doesn't dump usage on every error. main.go
+    // formats the final stderr line for kubectl.
+    SilenceUsage: true,
     RunE: func(cmd *cobra.Command, args []string) error {
       serverID, _ := cmd.Flags().GetString("server-id")
       tenantID, _ := cmd.Flags().GetString("tenant-id")
@@ -42,9 +40,6 @@ in the kubeconfig produced by 'az aks get-credentials'.`,
         },
         Stdout: os.Stdout,
       })
-      if err != nil {
-        fmt.Fprintf(os.Stderr, "error: %v\n", err)
-      }
       return err
     },
   }

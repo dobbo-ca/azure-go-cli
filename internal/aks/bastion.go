@@ -115,7 +115,7 @@ func Bastion(ctx context.Context, opts BastionOptions) error {
 	}
 
 	fmt.Printf("Merged \"%s\" as current context in %s\n", effectiveName, kubeconfigPath)
-	fmt.Println("Converted kubeconfig to use Azure CLI authentication.")
+	fmt.Println("Created kubeconfig using Azure CLI authentication.")
 
 	fmt.Printf("Opening tunnel to AKS cluster %s through Bastion...\n", clusterName)
 
