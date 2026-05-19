@@ -5,7 +5,6 @@ package pimvendor
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,38 +14,6 @@ import (
 type mockClient struct{ mock.Mock }
 
 func newMockClient() *mockClient { return &mockClient{} }
-
-func (m *mockClient) GetAccessToken(scope string) string {
-	args := m.Called(scope)
-	return args.String(0)
-}
-
-func TestGetAccessToken(t *testing.T) {
-	m := newMockClient()
-
-	m.On("GetAccessToken", ARM_GLOBAL_BASE_URL).Return(TEST_DUMMY_JWT)
-
-	token := GetAccessToken(ARM_GLOBAL_BASE_URL, m)
-
-	if !strings.HasPrefix(token, "ey") {
-		t.Errorf("expected token to start with 'ey', got %s", token)
-	}
-
-	m.AssertCalled(t, "GetAccessToken", ARM_GLOBAL_BASE_URL)
-}
-
-func TestGetUserInfo(t *testing.T) {
-	m := newMockClient()
-
-	m.On("GetAccessToken", ARM_GLOBAL_BASE_URL).Return(TEST_DUMMY_JWT)
-
-	token := GetAccessToken(ARM_GLOBAL_BASE_URL, m)
-	userInfo := GetUserInfo(token)
-
-	if userInfo.Email != TEST_DUMMY_PRINCIPAL_EMAIL {
-		t.Errorf("unexpected value for userInfo.Email, got %s", userInfo.Email)
-	}
-}
 
 func (m *mockClient) GetEligibleResourceAssignments(token string) *ResourceAssignmentResponse {
 	args := m.Called(token)

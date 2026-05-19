@@ -9,8 +9,6 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"github.com/netr0m/az-pim-cli/pkg/common"
 )
 
 func IsResourceAssignmentRequestFailed(requestResponse *ResourceAssignmentRequestResponse) bool {
@@ -71,7 +69,7 @@ func IsGovernanceRoleType(roleType string) bool {
 
 func (response *ResourceAssignmentRequestResponse) CheckResourceAssignmentResult(request *ResourceAssignmentRequestRequest) bool {
 	if IsResourceAssignmentRequestFailed(response) {
-		_error := common.Error{
+		_error := Error{
 			Operation: "CheckResourceAssignmentResult",
 			Message:   "The role assignment validation failed",
 			Status:    response.Properties.Status,
@@ -96,7 +94,7 @@ func (response *ResourceAssignmentRequestResponse) CheckResourceAssignmentResult
 
 func (response *GovernanceRoleAssignmentRequestResponse) CheckGovernanceRoleAssignmentResult(request *GovernanceRoleAssignmentRequest) bool {
 	if IsGovernanceRoleAssignmentRequestFailed(response) {
-		_error := common.Error{
+		_error := Error{
 			Operation: "CheckGovernanceRoleAssignmentResult",
 			Message:   "The role assignment validation failed",
 			Status:    response.Status.Status,
@@ -133,8 +131,8 @@ func parseTime(timeStr string) (time.Time, error) {
 	return time.Parse(timeLayout, timeStr)
 }
 
-func parseDateTime(dateStr string, timeStr string) (string, *common.Error) {
-	_error := &common.Error{
+func parseDateTime(dateStr string, timeStr string) (string, *Error) {
+	_error := &Error{
 		Operation: "parseDateTime",
 	}
 	var d time.Time
@@ -230,7 +228,7 @@ func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, 
 
 func CreateGovernanceRoleAssignmentRequest(subjectId string, roleType string, governanceRoleAssignment *GovernanceRoleAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *GovernanceRoleAssignmentRequest) {
 	if !IsGovernanceRoleType(roleType) {
-		_error := common.Error{
+		_error := Error{
 			Operation: "CreateGovernanceRoleAssignmentRequest",
 			Message:   "Invalid role type specified.",
 		}

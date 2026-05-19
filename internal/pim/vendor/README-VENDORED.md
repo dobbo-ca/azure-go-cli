@@ -6,7 +6,7 @@ License: MIT (see `LICENSE` in this directory)
 
 ## Local modifications
 
-The following changes were applied after copy. To re-sync from upstream, re-apply these in order:
+The following changes are applied across Tasks 1–4 of `docs/superpowers/plans/2026-05-14-pim.md`. As of this commit, items 3, 4, and 5 are applied; items 1 and 2 are still pending. To re-sync from upstream after all four tasks land, re-apply these in order:
 
 1. `client.go`, `utils.go`: all `os.Exit(1)` calls replaced with returned errors. Exported functions that previously returned `*T` now return `(*T, error)`. The `Client` interface and `AzureClient` methods were updated to match.
 2. `client.go`, `utils.go`: `log/slog` calls replaced with our `pkg/logger` equivalents (`logger.Debug`, `logger.Info`, `logger.Error`).

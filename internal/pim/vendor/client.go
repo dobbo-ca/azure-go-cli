@@ -5,7 +5,6 @@ package pimvendor
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,16 +12,12 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
-	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
-	"github.com/netr0m/az-pim-cli/pkg/common"
 )
 
 // Azure Client interface
 type Client interface {
-	GetAccessToken(scope string) string
 	GetEligibleResourceAssignments(token string) *ResourceAssignmentResponse
 	GetEligibleGovernanceRoleAssignments(roleType string, subjectId string, token string) *GovernanceRoleAssignmentResponse
 	ValidateResourceAssignmentRequest(scope string, resourceAssignmentRequest *ResourceAssignmentRequestRequest, token string) bool
@@ -37,47 +32,11 @@ type AzureClient struct {
 	ASMScope   string
 }
 
-// Implementation of the GetAccessToken call
-func (c AzureClient) GetAccessToken(scope string) string {
-	cred, err := azidentity.NewAzureCLICredential(nil)
-	if err != nil {
-		_error := common.Error{
-			Operation: "GetAccessToken",
-			Message:   err.Error(),
-			Err:       err,
-		}
-		slog.Error(_error.Error())
-		os.Exit(1)
-	}
-	tokenOpts := policy.TokenRequestOptions{
-		Scopes: []string{
-			scope,
-		},
-	}
-	token, err := cred.GetToken(context.Background(), tokenOpts)
-	if err != nil {
-		_error := common.Error{
-			Operation: "GetAccessToken",
-			Message:   err.Error(),
-			Status:    "401",
-			Err:       err,
-		}
-		slog.Error(_error.Error())
-		os.Exit(1)
-	}
-
-	return token.Token
-}
-
-func GetAccessToken(scope string, c Client) string {
-	return c.GetAccessToken(scope)
-}
-
 func GetUserInfo(token string) AzureUserInfo {
 	// Decode token
 	decoded, err := jwt.ParseWithClaims(token, &AzureUserInfoClaims{}, nil)
 	if decoded == nil {
-		_error := common.Error{
+		_error := Error{
 			Operation: "GetUserInfo",
 			Message:   err.Error(),
 			Err:       err,
@@ -92,7 +51,7 @@ func GetUserInfo(token string) AzureUserInfo {
 	return claims.AzureUserInfo
 }
 
-func handleRequestErr(_error *common.Error, err error, req *http.Request) {
+func handleRequestErr(_error *Error, err error, req *http.Request) {
 	_error.Message = err.Error()
 	_error.Err = err
 	_error.Request = req
@@ -105,7 +64,7 @@ func Request(request *PIMRequest, responseModel any) any {
 	// Prepare request body
 	var req *http.Request
 	var err error
-	_error := common.Error{
+	_error := Error{
 		Operation: "Request",
 	}
 
@@ -219,7 +178,7 @@ func GetEligibleResourceAssignments(token string, c Client) *ResourceAssignmentR
 
 func (c AzureClient) GetEligibleGovernanceRoleAssignments(roleType string, subjectId string, token string) *GovernanceRoleAssignmentResponse {
 	if !IsGovernanceRoleType(roleType) {
-		_error := common.Error{
+		_error := Error{
 			Operation: "GetEligibleGovernanceRoleAssignments",
 			Message:   "Invalid role type specified.",
 		}
