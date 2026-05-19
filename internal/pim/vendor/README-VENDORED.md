@@ -15,3 +15,4 @@ The following changes are applied across Tasks 1–4 of `docs/superpowers/plans/
 5. Import paths rewritten:
    - `github.com/netr0m/az-pim-cli/pkg/common` → `(removed; types live in this package)`
    - `github.com/netr0m/az-pim-cli/pkg/pim` → `(this package)`
+6. `utils_test.go`: `TestParseDateTime` patched to compute the expected timezone offset from the parsed date (Dec 31 2024) rather than `time.Now()`. The upstream version fails whenever the machine clock is in a different DST window than the parsed date.
