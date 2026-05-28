@@ -76,6 +76,10 @@ make test
 ./bin/az/az {command} {subcommand} {flags}
 ```
 
+### Rules
+
+@.claude/rules/aks-kubeconfig-testing.md
+
 ## Commit Conventions and Versioning
 
 This project uses **conventional commits** and **semantic versioning** with automated releases.
