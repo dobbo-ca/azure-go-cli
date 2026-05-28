@@ -30,18 +30,18 @@ type BastionOptions struct {
 	KubeconfigPath       string // If set, write kubeconfig to this path instead of a temp file (and don't delete it on exit)
 	ContextRegex         *regexp.Regexp
 	ContextReplacement   string
+	AbsolutePath         bool
 	BufferConfig         bastion.BufferConfig
 }
 
 // Bastion is a convenience wrapper around network bastion tunnel
 // It fetches the AKS cluster details and calls the bastion tunnel with appropriate parameters
 func Bastion(ctx context.Context, opts BastionOptions) error {
-	// Check dependencies
+	// Check dependencies (kubectl only; kubelogin functionality is built in).
 	missing := CheckDependencies()
 	if len(missing) > 0 {
 		fmt.Printf("Warning: The following required tools are not installed: %v\n", missing)
-		fmt.Println("Please install them using: sudo az aks install-cli")
-		fmt.Println("(Note: This command requires sudo to install to /usr/local/bin)")
+		fmt.Println("Please install kubectl using: sudo az aks install-cli")
 		fmt.Println()
 	}
 
@@ -99,11 +99,11 @@ func Bastion(ctx context.Context, opts BastionOptions) error {
 		if err := os.MkdirAll(filepath.Dir(kubeconfigPath), 0700); err != nil {
 			return fmt.Errorf("failed to create kubeconfig directory: %w", err)
 		}
-		if err := WriteKubeconfig(kubeconfigPath, effectiveName, clusterFQDN, port); err != nil {
+		if err := WriteKubeconfig(kubeconfigPath, effectiveName, clusterFQDN, port, opts.AbsolutePath); err != nil {
 			return fmt.Errorf("failed to write kubeconfig: %w", err)
 		}
 	} else {
-		kubeconfigPath, err = CreateTempKubeconfig(ctx, effectiveName, clusterFQDN, port)
+		kubeconfigPath, err = CreateTempKubeconfig(ctx, effectiveName, clusterFQDN, port, opts.AbsolutePath)
 		if err != nil {
 			return fmt.Errorf("failed to create temporary kubeconfig: %w", err)
 		}
@@ -115,7 +115,7 @@ func Bastion(ctx context.Context, opts BastionOptions) error {
 	}
 
 	fmt.Printf("Merged \"%s\" as current context in %s\n", effectiveName, kubeconfigPath)
-	fmt.Println("Converted kubeconfig to use Azure CLI authentication.")
+	fmt.Println("Created kubeconfig using Azure CLI authentication.")
 
 	fmt.Printf("Opening tunnel to AKS cluster %s through Bastion...\n", clusterName)
 

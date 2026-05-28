@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/credplugin"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
 	"github.com/cdobbyn/azure-go-cli/pkg/kubeconfig"
@@ -22,6 +23,7 @@ type GetCredentialsOptions struct {
 	Context            string
 	ContextRegex       *regexp.Regexp
 	ContextReplacement string
+	AbsolutePath       bool
 }
 
 func GetCredentials(ctx context.Context, opts GetCredentialsOptions) error {
@@ -83,6 +85,14 @@ func GetCredentials(ctx context.Context, opts GetCredentialsOptions) error {
 		}
 		effectiveContext = opts.Context
 	}
+
+	// Rewrite legacy `auth-provider: azure` / kubelogin exec entries so that
+	// kubectl talks to this binary instead of the external kubelogin tool.
+	converted, _, err := credplugin.Convert(kubeConfig, credplugin.ConvertOptions{AbsolutePath: opts.AbsolutePath})
+	if err != nil {
+		return fmt.Errorf("failed to convert kubeconfig auth entries: %w", err)
+	}
+	kubeConfig = converted
 
 	// Output to stdout
 	if opts.File == "-" {

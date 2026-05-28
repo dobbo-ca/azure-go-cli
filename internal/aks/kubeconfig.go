@@ -11,24 +11,23 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/cdobbyn/azure-go-cli/internal/aks/credplugin"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
 
 // CheckDependencies checks if required CLI tools are installed
 func CheckDependencies() (missing []string) {
-	deps := []string{"kubectl", "kubelogin"}
-
+	deps := []string{"kubectl"}
 	for _, dep := range deps {
 		if _, err := exec.LookPath(dep); err != nil {
 			missing = append(missing, dep)
 		}
 	}
-
 	return missing
 }
 
 // CreateTempKubeconfig creates a temporary kubeconfig file for bastion tunnel
-func CreateTempKubeconfig(ctx context.Context, clusterName, server string, port int) (string, error) {
+func CreateTempKubeconfig(ctx context.Context, clusterName, server string, port int, absolutePath bool) (string, error) {
 	tmpDir, err := os.MkdirTemp("", "az-aks-bastion-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp directory: %w", err)
@@ -40,18 +39,19 @@ func CreateTempKubeconfig(ctx context.Context, clusterName, server string, port 
 	}
 
 	kubeconfigPath := filepath.Join(kubeconfigDir, "config")
-	if err := WriteKubeconfig(kubeconfigPath, clusterName, server, port); err != nil {
+	if err := WriteKubeconfig(kubeconfigPath, clusterName, server, port, absolutePath); err != nil {
 		return "", err
 	}
 	return kubeconfigPath, nil
 }
 
-// WriteKubeconfig writes a kubeconfig pointing at the local bastion tunnel to path.
-// The parent directory must already exist.
-func WriteKubeconfig(path, clusterName, server string, port int) error {
+// WriteKubeconfig writes a kubeconfig pointing at the local bastion tunnel to
+// path. The parent directory must already exist. If absolutePath is true, the
+// exec.command field is the absolute path returned by os.Executable() instead
+// of the bare name "az".
+func WriteKubeconfig(path, clusterName, server string, port int, absolutePath bool) error {
 	localServer := fmt.Sprintf("https://127.0.0.1:%d", port)
 
-	// Get path to our az binary to ensure it's used instead of Python CLI
 	exePath, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("failed to get executable path: %w", err)
@@ -60,12 +60,19 @@ func WriteKubeconfig(path, clusterName, server string, port int) error {
 	currentPath := os.Getenv("PATH")
 	customPath := fmt.Sprintf("%s:%s", exeDir, currentPath)
 
+	command := "az"
+	if absolutePath {
+		command = exePath
+	}
+
 	logger.Debug("Writing kubeconfig at: %s", path)
 	logger.Debug("Server URL: %s", localServer)
-	logger.Debug("Using az binary from: %s", exeDir)
+	logger.Debug("Using exec command: %s", command)
+	logger.Debug("Prepending exe dir to PATH in exec env: %s", exeDir)
 
-	// Pin AZ_SESSION into the kubeconfig so kubelogin's subprocess `az` reads
-	// the right profile/MSAL cache regardless of the shell that launches kubectl.
+	// Pin PATH (so the right `az` is found even if Python `az` is earlier in
+	// the user's shell PATH) and optionally AZ_SESSION (so subprocess token
+	// minting reads the correct MSAL profile).
 	envBlock := fmt.Sprintf("      - name: PATH\n        value: %s\n", customPath)
 	if session := os.Getenv("AZ_SESSION"); session != "" {
 		logger.Debug("Pinning AZ_SESSION=%s into kubeconfig", session)
@@ -90,17 +97,16 @@ users:
   user:
     exec:
       apiVersion: client.authentication.k8s.io/v1beta1
-      command: kubelogin
+      command: %s
       args:
+      - aks
       - get-token
-      - --login
-      - azurecli
       - --server-id
-      - 6dae42f8-4368-4678-94ff-3960e28e3630
+      - %s
       env:
 %s      interactiveMode: IfAvailable
       provideClusterInfo: false
-`, localServer, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, envBlock)
+`, localServer, clusterName, clusterName, clusterName, clusterName, clusterName, clusterName, command, credplugin.AKSServerIDDefault, envBlock)
 
 	if err := os.WriteFile(path, []byte(kubeconfig), 0600); err != nil {
 		return fmt.Errorf("failed to write kubeconfig: %w", err)

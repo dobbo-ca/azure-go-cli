@@ -55,6 +55,8 @@ or use -f - to output to stdout.`,
 			overwrite, _ := cmd.Flags().GetBool("overwrite-existing")
 			contextName, _ := cmd.Flags().GetString("context")
 
+			absolutePath, _ := cmd.Flags().GetBool("absolute-path")
+
 			contextRegex, contextReplacement, err := parseContextRegexFlags(cmd, contextName)
 			if err != nil {
 				return err
@@ -69,6 +71,7 @@ or use -f - to output to stdout.`,
 				Context:            contextName,
 				ContextRegex:       contextRegex,
 				ContextReplacement: contextReplacement,
+				AbsolutePath:       absolutePath,
 			}
 
 			return GetCredentials(context.Background(), opts)
@@ -80,6 +83,7 @@ or use -f - to output to stdout.`,
 	getCredsCmd.Flags().StringP("file", "f", "", "Kubeconfig file path (use '-' for stdout, default: ~/.kube/config)")
 	getCredsCmd.Flags().Bool("overwrite-existing", false, "Overwrite kubeconfig file instead of merging")
 	getCredsCmd.Flags().String("context", "", "Set context name (literal rename of all identifiers)")
+	getCredsCmd.Flags().Bool("absolute-path", false, "Embed the absolute path to this binary in the kubeconfig exec entry instead of the bare command 'az'")
 	addContextRegexFlags(getCredsCmd)
 	getCredsCmd.MarkFlagRequired("name")
 	getCredsCmd.MarkFlagRequired("resource-group")
@@ -90,7 +94,7 @@ or use -f - to output to stdout.`,
 		Long: `Open tunnel to AKS cluster through Azure Bastion.
 
 Creates a temporary kubeconfig and establishes a secure tunnel to the cluster.
-Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
+Dependencies: kubectl (install with: sudo az aks install-cli)`,
 		SilenceUsage: true,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusterName, _ := cmd.Flags().GetString("name")
@@ -101,6 +105,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 			port, _ := cmd.Flags().GetInt("port")
 			cmdToRun, _ := cmd.Flags().GetString("cmd")
 			kubeconfigPath, _ := cmd.Flags().GetString("kubeconfig")
+			absolutePath, _ := cmd.Flags().GetBool("absolute-path")
 
 			contextRegex, contextReplacement, err := parseContextRegexFlags(cmd, "")
 			if err != nil {
@@ -129,6 +134,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 				KubeconfigPath:       kubeconfigPath,
 				ContextRegex:         contextRegex,
 				ContextReplacement:   contextReplacement,
+				AbsolutePath:         absolutePath,
 				BufferConfig:         bufferConfig,
 			}
 
@@ -146,6 +152,7 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 	bastionCmd.Flags().Int("conn-write-buffer", 32, "Connection-level write buffer size in KB (default 32)")
 	bastionCmd.Flags().Int("chunk-read-buffer", 8, "Streaming chunk read buffer size in KB (default 8)")
 	bastionCmd.Flags().Int("chunk-write-buffer", 8, "Streaming chunk write buffer size in KB (default 8)")
+	bastionCmd.Flags().Bool("absolute-path", false, "Embed the absolute path to this binary in the temp kubeconfig exec entry")
 	addContextRegexFlags(bastionCmd)
 	bastionCmd.MarkFlagRequired("name")
 	bastionCmd.MarkFlagRequired("resource-group")
@@ -177,8 +184,8 @@ Dependencies: kubectl, kubelogin (install with: sudo az aks install-cli)`,
 
 	installCliCmd := &cobra.Command{
 		Use:   "install-cli",
-		Short: "Install kubectl and kubelogin",
-		Long: `Install kubectl and kubelogin to /usr/local/bin.
+		Short: "Install kubectl",
+		Long: `Install kubectl to /usr/local/bin.
 
 This command requires sudo privileges to install to /usr/local/bin.
 Run with: sudo az aks install-cli`,
@@ -235,6 +242,8 @@ Run with: sudo az aks install-cli`,
 		stopCmd,
 		abortCmd,
 		reconcileCmd,
+		newGetTokenCmd(),
+		newConvertKubeconfigCmd(),
 		nodepool.NewNodePoolCommand(),
 		addon.NewAddonCommand(),
 		machine.NewMachineCommand(),
