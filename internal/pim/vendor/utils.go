@@ -6,7 +6,6 @@ package pimvendor
 import (
 	"fmt"
 	"log/slog"
-	"os"
 	"strings"
 	"time"
 )
@@ -165,14 +164,14 @@ func parseDateTime(dateStr string, timeStr string) (string, *Error) {
 	return formatted, nil
 }
 
-func CreateResourceAssignmentScheduleInfo(duration int, startDate string, startTime string) *ScheduleInfo {
+func CreateResourceAssignmentScheduleInfo(duration int, startDate string, startTime string) (*ScheduleInfo, error) {
 	var scheduleStart interface{}
 	if (startDate != "") || (startTime != "") {
 		startDateTime, err := parseDateTime(startDate, startTime)
 		if err != nil {
 			slog.Error(err.Error())
 			slog.Debug(err.Debug())
-			os.Exit(1)
+			return nil, fmt.Errorf("CreateResourceAssignmentScheduleInfo: %s", err.Error())
 		}
 		scheduleStart = startDateTime
 	}
@@ -183,11 +182,14 @@ func CreateResourceAssignmentScheduleInfo(duration int, startDate string, startT
 			Type:     "AfterDuration",
 			Duration: fmt.Sprintf("PT%dM", duration),
 		},
-	}
+	}, nil
 }
 
-func CreateResourceAssignmentRequest(subjectId string, resourceAssignment *ResourceAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *ResourceAssignmentRequestRequest) {
-	scheduleInfo := CreateResourceAssignmentScheduleInfo(duration, startDate, startTime)
+func CreateResourceAssignmentRequest(subjectId string, resourceAssignment *ResourceAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *ResourceAssignmentRequestRequest, error) {
+	scheduleInfo, err := CreateResourceAssignmentScheduleInfo(duration, startDate, startTime)
+	if err != nil {
+		return "", nil, err
+	}
 	resourceAssignmentRequest := &ResourceAssignmentRequestRequest{
 		Properties: ResourceAssignmentRequestProperties{
 			PrincipalId:                     subjectId,
@@ -203,17 +205,17 @@ func CreateResourceAssignmentRequest(subjectId string, resourceAssignment *Resou
 	}
 	scope := resourceAssignment.Properties.ExpandedProperties.Scope.Id[1:]
 
-	return scope, resourceAssignmentRequest
+	return scope, resourceAssignmentRequest, nil
 }
 
-func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, startTime string) *GovernanceRoleAssignmentSchedule {
+func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, startTime string) (*GovernanceRoleAssignmentSchedule, error) {
 	var scheduleStart interface{}
 	if (startDate != "") || (startTime != "") {
 		startDateTime, err := parseDateTime(startDate, startTime)
 		if err != nil {
 			slog.Error(err.Error())
 			slog.Debug(err.Debug())
-			os.Exit(1)
+			return nil, fmt.Errorf("CreateGovernanceRoleAssignmentScheduleInfo: %s", err.Error())
 		}
 		scheduleStart = startDateTime
 	}
@@ -223,20 +225,18 @@ func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, 
 		StartDateTime: scheduleStart,
 		EndDateTime:   nil,
 		Duration:      fmt.Sprintf("PT%dM", duration),
-	}
+	}, nil
 }
 
-func CreateGovernanceRoleAssignmentRequest(subjectId string, roleType string, governanceRoleAssignment *GovernanceRoleAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *GovernanceRoleAssignmentRequest) {
+func CreateGovernanceRoleAssignmentRequest(subjectId string, roleType string, governanceRoleAssignment *GovernanceRoleAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *GovernanceRoleAssignmentRequest, error) {
 	if !IsGovernanceRoleType(roleType) {
-		_error := Error{
-			Operation: "CreateGovernanceRoleAssignmentRequest",
-			Message:   "Invalid role type specified.",
-		}
-		slog.Error(_error.Error())
-		os.Exit(1)
+		return "", nil, fmt.Errorf("CreateGovernanceRoleAssignmentRequest: Invalid role type specified.")
 	}
 
-	scheduleInfo := CreateGovernanceRoleAssignmentScheduleInfo(duration, startDate, startTime)
+	scheduleInfo, err := CreateGovernanceRoleAssignmentScheduleInfo(duration, startDate, startTime)
+	if err != nil {
+		return "", nil, err
+	}
 	governanceRoleAssignmentRequest := &GovernanceRoleAssignmentRequest{
 		RoleDefinitionId:               governanceRoleAssignment.RoleDefinitionId,
 		ResourceId:                     governanceRoleAssignment.ResourceId,
@@ -251,7 +251,7 @@ func CreateGovernanceRoleAssignmentRequest(subjectId string, roleType string, go
 		ScopedResourceId:               "",
 	}
 
-	return roleType, governanceRoleAssignmentRequest
+	return roleType, governanceRoleAssignmentRequest, nil
 }
 
 func (resourceAssignment *ResourceAssignment) Debug() string {
