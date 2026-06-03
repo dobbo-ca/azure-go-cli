@@ -39,7 +39,10 @@ func GetUserInfo(token string) (AzureUserInfo, error) {
 	}
 
 	// Parse claims
-	claims := decoded.Claims.(*AzureUserInfoClaims)
+	claims, ok := decoded.Claims.(*AzureUserInfoClaims)
+	if !ok {
+		return AzureUserInfo{}, fmt.Errorf("GetUserInfo: unexpected claims type %T", decoded.Claims)
+	}
 
 	return claims.AzureUserInfo, nil
 }
@@ -87,16 +90,11 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		defer func() {
-			if err := res.Body.Close(); err != nil {
-				slog.Error(fmt.Sprintf("Failed to close response body: %v", err))
-			}
-		}()
+		// res is nil on transport errors (connection refused, DNS failure,
+		// timeout). Don't touch res fields and don't defer res.Body.Close().
 		_error.Message = err.Error()
-		_error.Status = res.Status
 		_error.Err = err
 		_error.Request = req
-		_error.Response = res
 		slog.Error(_error.Error())
 		slog.Debug(_error.Debug())
 		return nil, &_error

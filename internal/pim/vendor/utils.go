@@ -171,7 +171,7 @@ func CreateResourceAssignmentScheduleInfo(duration int, startDate string, startT
 		if err != nil {
 			slog.Error(err.Error())
 			slog.Debug(err.Debug())
-			return nil, fmt.Errorf("CreateResourceAssignmentScheduleInfo: %s", err.Error())
+			return nil, fmt.Errorf("CreateResourceAssignmentScheduleInfo: %w", err)
 		}
 		scheduleStart = startDateTime
 	}
@@ -215,7 +215,7 @@ func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, 
 		if err != nil {
 			slog.Error(err.Error())
 			slog.Debug(err.Debug())
-			return nil, fmt.Errorf("CreateGovernanceRoleAssignmentScheduleInfo: %s", err.Error())
+			return nil, fmt.Errorf("CreateGovernanceRoleAssignmentScheduleInfo: %w", err)
 		}
 		scheduleStart = startDateTime
 	}
@@ -230,7 +230,10 @@ func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, 
 
 func CreateGovernanceRoleAssignmentRequest(subjectId string, roleType string, governanceRoleAssignment *GovernanceRoleAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *GovernanceRoleAssignmentRequest, error) {
 	if !IsGovernanceRoleType(roleType) {
-		return "", nil, fmt.Errorf("CreateGovernanceRoleAssignmentRequest: Invalid role type specified.")
+		return "", nil, &Error{
+			Operation: "CreateGovernanceRoleAssignmentRequest",
+			Message:   "invalid role type specified",
+		}
 	}
 
 	scheduleInfo, err := CreateGovernanceRoleAssignmentScheduleInfo(duration, startDate, startTime)
