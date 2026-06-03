@@ -20,6 +20,12 @@ func (m *mockClient) GetEligibleResourceAssignments(token string) *ResourceAssig
 	return args.Get(0).(*ResourceAssignmentResponse)
 }
 
+func TestGetUserInfo(t *testing.T) {
+	userInfo := GetUserInfo(TEST_DUMMY_JWT)
+	assert.Equal(t, TEST_DUMMY_PRINCIPAL_ID, userInfo.ObjectId)
+	assert.Equal(t, TEST_DUMMY_PRINCIPAL_EMAIL, userInfo.Email)
+}
+
 func TestGetEligibleResourceAssignments(t *testing.T) {
 	m := newMockClient()
 

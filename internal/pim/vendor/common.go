@@ -19,6 +19,9 @@ type Error struct {
 func (e *Error) Unwrap() error { return e.Err }
 
 func (e *Error) Error() string {
+	if e.Status == "" {
+		return fmt.Sprintf("%s: %s", e.Operation, e.Message)
+	}
 	return fmt.Sprintf("%s failed with status %s: %s", e.Operation, e.Status, e.Message)
 }
 
