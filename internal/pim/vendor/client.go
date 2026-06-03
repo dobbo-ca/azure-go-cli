@@ -8,9 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 	"net/http"
 
+	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 )
