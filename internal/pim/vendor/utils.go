@@ -5,7 +5,7 @@ package pimvendor
 
 import (
 	"fmt"
-	"log/slog"
+	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 	"strings"
 	"time"
 )
@@ -75,16 +75,16 @@ func (response *ResourceAssignmentRequestResponse) CheckResourceAssignmentResult
 			Request:   request,
 			Response:  response,
 		}
-		slog.Error(_error.Error())
-		slog.Debug(_error.Debug())
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
 		return false
 	}
 	if IsResourceAssignmentRequestOK(response) {
-		slog.Info("The role assignment request was successful", "status", response.Properties.Status)
+		logger.Info("The role assignment request was successful status=%s", response.Properties.Status)
 		return true
 	}
 	if IsResourceAssignmentRequestPending(response) {
-		slog.Warn("The role assignment request is pending", "status", response.Properties.Status)
+		logger.Warn("The role assignment request is pending status=%s", response.Properties.Status)
 		return true
 	}
 
@@ -100,16 +100,16 @@ func (response *GovernanceRoleAssignmentRequestResponse) CheckGovernanceRoleAssi
 			Request:   request,
 			Response:  response,
 		}
-		slog.Error(_error.Error())
-		slog.Debug(_error.Debug())
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
 		return false
 	}
 	if IsGovernanceRoleAssignmentRequestOK(response) {
-		slog.Info("The role assignment request was successful", "status", response.Status.Status, "subStatus", response.Status.SubStatus)
+		logger.Info("The role assignment request was successful status=%s subStatus=%s", response.Status.Status, response.Status.SubStatus)
 		return true
 	}
 	if IsGovernanceRoleAssignmentRequestPending(response) {
-		slog.Warn("The role assignment request is pending", "status", response.Status.Status, "subStatus", response.Status.SubStatus)
+		logger.Warn("The role assignment request is pending status=%s subStatus=%s", response.Status.Status, response.Status.SubStatus)
 		return true
 	}
 
@@ -169,8 +169,8 @@ func CreateResourceAssignmentScheduleInfo(duration int, startDate string, startT
 	if (startDate != "") || (startTime != "") {
 		startDateTime, err := parseDateTime(startDate, startTime)
 		if err != nil {
-			slog.Error(err.Error())
-			slog.Debug(err.Debug())
+			logger.Error("%s", err.Error())
+			logger.Debug("%s", err.Debug())
 			return nil, fmt.Errorf("CreateResourceAssignmentScheduleInfo: %w", err)
 		}
 		scheduleStart = startDateTime
@@ -213,8 +213,8 @@ func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, 
 	if (startDate != "") || (startTime != "") {
 		startDateTime, err := parseDateTime(startDate, startTime)
 		if err != nil {
-			slog.Error(err.Error())
-			slog.Debug(err.Debug())
+			logger.Error("%s", err.Error())
+			logger.Debug("%s", err.Debug())
 			return nil, fmt.Errorf("CreateGovernanceRoleAssignmentScheduleInfo: %w", err)
 		}
 		scheduleStart = startDateTime

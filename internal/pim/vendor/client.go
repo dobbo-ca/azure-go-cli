@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log/slog"
+	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 	"net/http"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -95,13 +95,13 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Message = err.Error()
 		_error.Err = err
 		_error.Request = req
-		slog.Error(_error.Error())
-		slog.Debug(_error.Debug())
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}
 	defer func() {
 		if err := res.Body.Close(); err != nil {
-			slog.Error(fmt.Sprintf("Failed to close response body: %v", err))
+			logger.Error("Failed to close response body: %v", err)
 		}
 	}()
 
@@ -112,8 +112,8 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Err = err
 		_error.Request = req
 		_error.Response = res
-		slog.Error(_error.Error())
-		slog.Debug(_error.Debug())
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}
 
@@ -125,8 +125,8 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Err = err
 		_error.Request = req
 		_error.Response = res
-		slog.Error(_error.Error())
-		slog.Debug(_error.Debug())
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}
 
@@ -137,8 +137,8 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Err = err
 		_error.Request = req
 		_error.Response = res
-		slog.Error(_error.Error())
-		slog.Debug(_error.Debug())
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}
 
