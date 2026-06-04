@@ -82,12 +82,21 @@ func validateActivateResourceArgs(a activateResourceArgs, noInput bool) error {
 }
 
 func runActivateResource(a activateResourceArgs, w io.Writer) error {
-	prompter := NewPrompter(a.NoInput)
-	if err := promptForMissingResourceArgs(prompter, &a); err != nil {
-		return err
-	}
-	if err := validateActivateResourceArgs(a, true /* enforce */); err != nil {
-		return err
+	// In non-interactive mode validate up-front so the user gets a clear
+	// "missing required flag: --foo" message rather than a generic
+	// prompter error.
+	if a.NoInput {
+		if err := validateActivateResourceArgs(a, true); err != nil {
+			return err
+		}
+	} else {
+		prompter := NewPrompter(a.NoInput)
+		if err := promptForMissingResourceArgs(prompter, &a); err != nil {
+			return err
+		}
+		if err := validateActivateResourceArgs(a, true); err != nil {
+			return err
+		}
 	}
 
 	cred, err := azure.GetCredential()

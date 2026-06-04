@@ -63,34 +63,43 @@ func validateActivateGroupArgs(a activateGroupArgs, noInput bool) error {
 }
 
 func runActivateGroup(a activateGroupArgs, w io.Writer) error {
-	prompter := NewPrompter(a.NoInput)
-	if a.Name == "" {
-		v, err := prompter.PromptString("Group name")
-		if err != nil {
+	// In non-interactive mode validate up-front so the user gets a clear
+	// "missing required flag: --foo" message rather than a generic
+	// prompter error.
+	if a.NoInput {
+		if err := validateActivateGroupArgs(a, true); err != nil {
 			return err
 		}
-		a.Name = v
-	}
-	if a.Justification == "" {
-		v, err := prompter.PromptString("Justification")
-		if err != nil {
+	} else {
+		prompter := NewPrompter(a.NoInput)
+		if a.Name == "" {
+			v, err := prompter.PromptString("Group name")
+			if err != nil {
+				return err
+			}
+			a.Name = v
+		}
+		if a.Justification == "" {
+			v, err := prompter.PromptString("Justification")
+			if err != nil {
+				return err
+			}
+			a.Justification = v
+		}
+		if a.Duration <= 0 {
+			v, err := prompter.PromptString("Duration (minutes)")
+			if err != nil {
+				return err
+			}
+			d, perr := strconv.Atoi(strings.TrimSpace(v))
+			if perr != nil || d <= 0 {
+				return fmt.Errorf("invalid duration %q", v)
+			}
+			a.Duration = d
+		}
+		if err := validateActivateGroupArgs(a, true); err != nil {
 			return err
 		}
-		a.Justification = v
-	}
-	if a.Duration <= 0 {
-		v, err := prompter.PromptString("Duration (minutes)")
-		if err != nil {
-			return err
-		}
-		d, perr := strconv.Atoi(strings.TrimSpace(v))
-		if perr != nil || d <= 0 {
-			return fmt.Errorf("invalid duration %q", v)
-		}
-		a.Duration = d
-	}
-	if err := validateActivateGroupArgs(a, true); err != nil {
-		return err
 	}
 
 	cred, err := azure.GetCredential()
