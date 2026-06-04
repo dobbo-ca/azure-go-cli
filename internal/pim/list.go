@@ -47,7 +47,8 @@ func runList(ctx context.Context, typeFilter, outFmt string, w io.Writer) error 
 	ts := NewTokenSource(cred)
 	client := pimvendor.AzureClient{}
 
-	rows, err := collectRows(ctx, ts, client, typeFilter)
+	_ = ctx
+	rows, err := collectRows(ts, client, typeFilter)
 	if err != nil {
 		return err
 	}
@@ -62,8 +63,7 @@ func runList(ctx context.Context, typeFilter, outFmt string, w io.Writer) error 
 	}
 }
 
-func collectRows(ctx context.Context, ts *TokenSource, client pimvendor.AzureClient, typeFilter string) ([]ListRow, error) {
-	_ = ctx                     // reserved for future SDK calls
+func collectRows(ts *TokenSource, client pimvendor.AzureClient, typeFilter string) ([]ListRow, error) {
 	profile, _ := config.Load() // tolerate missing profile; tenant names degrade to UUIDs
 
 	var rows []ListRow
@@ -78,12 +78,19 @@ func collectRows(ctx context.Context, ts *TokenSource, client pimvendor.AzureCli
 			return nil, err
 		}
 		for _, a := range resp.Value {
+			if a.Properties == nil {
+				continue
+			}
 			tenant, sub := lookupTenantAndSub(profile, a.Properties.Scope)
+			var roleDisplayName string
+			if a.Properties.ExpandedProperties != nil {
+				roleDisplayName = displayNameOrEmpty(a.Properties.ExpandedProperties.RoleDefinition)
+			}
 			rows = append(rows, ListRow{
 				Type:         "resource",
 				Tenant:       tenant,
 				Subscription: sub,
-				Name:         displayNameOrEmpty(a.Properties.ExpandedProperties.RoleDefinition),
+				Name:         roleDisplayName,
 				Status:       formatStatus(a.Properties.Status, a.Properties.EndDateTime),
 			})
 		}
@@ -103,11 +110,18 @@ func collectRows(ctx context.Context, ts *TokenSource, client pimvendor.AzureCli
 			return nil, err
 		}
 		for _, a := range resp.Value {
+			var tenantID, name string
+			if a.RoleDefinition != nil {
+				name = a.RoleDefinition.DisplayName
+				if a.RoleDefinition.Resource != nil {
+					tenantID = a.RoleDefinition.Resource.Id
+				}
+			}
 			rows = append(rows, ListRow{
 				Type:         "group",
-				Tenant:       resolveTenantName(profile, a.RoleDefinition.Resource.Id),
+				Tenant:       resolveTenantName(profile, tenantID),
 				Subscription: "—",
-				Name:         a.RoleDefinition.DisplayName,
+				Name:         name,
 				Status:       formatStatus(a.AssignmentState, ""), // eligible groups have no expiry until activated
 			})
 		}
@@ -185,8 +199,12 @@ func RenderListTable(w io.Writer, rows []ListRow) error {
 	return tw.Flush()
 }
 
-// RenderListJSON writes the rows as a JSON array.
+// RenderListJSON writes the rows as a JSON array. An empty input is emitted
+// as `[]`, never `null`, so downstream `jq`/scripts can consume it cleanly.
 func RenderListJSON(w io.Writer, rows []ListRow) error {
+	if rows == nil {
+		rows = []ListRow{}
+	}
 	enc := json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 	return enc.Encode(rows)
