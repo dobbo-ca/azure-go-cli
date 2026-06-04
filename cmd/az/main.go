@@ -15,6 +15,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/identity"
 	"github.com/cdobbyn/azure-go-cli/internal/keyvault"
 	"github.com/cdobbyn/azure-go-cli/internal/network"
+	"github.com/cdobbyn/azure-go-cli/internal/pim"
 	"github.com/cdobbyn/azure-go-cli/internal/postgres"
 	"github.com/cdobbyn/azure-go-cli/internal/quota"
 	"github.com/cdobbyn/azure-go-cli/internal/resource"
@@ -78,6 +79,7 @@ func main() {
 		group.NewGroupCommand(),
 		identity.NewIdentityCommand(),
 		network.NewNetworkCommand(),
+		pim.NewPIMCommand(),
 		storage.NewStorageCommand(),
 		postgres.NewPostgresCommand(),
 		keyvault.NewKeyVaultCommand(),

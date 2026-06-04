@@ -1,0 +1,299 @@
+/*
+Copyright © 2024 netr0m <netr0m@pm.me>
+*/
+package pimvendor
+
+import (
+	"fmt"
+	"github.com/cdobbyn/azure-go-cli/pkg/logger"
+	"strings"
+	"time"
+)
+
+func IsResourceAssignmentRequestFailed(requestResponse *ResourceAssignmentRequestResponse) bool {
+	switch requestResponse.Properties.Status {
+	case StatusAdminDenied, StatusCanceled, StatusDenied, StatusFailed, StatusFailedAsResourceIsLocked, StatusInvalid, StatusRevoked, StatusTimedOut:
+		return true
+	}
+	return false
+}
+
+func IsGovernanceRoleAssignmentRequestFailed(requestResponse *GovernanceRoleAssignmentRequestResponse) bool {
+	switch requestResponse.Status.SubStatus {
+	case StatusAdminDenied, StatusCanceled, StatusDenied, StatusFailed, StatusFailedAsResourceIsLocked, StatusInvalid, StatusRevoked, StatusTimedOut:
+		return true
+	}
+	return false
+}
+
+func IsResourceAssignmentRequestPending(requestResponse *ResourceAssignmentRequestResponse) bool {
+	switch requestResponse.Properties.Status {
+	case StatusPendingAdminDecision, StatusPendingApproval, StatusPendingApprovalProvisioning, StatusPendingEvaluation, StatusPendingExternalProvisioning, StatusPendingProvisioning, StatusPendingRevocation, StatusPendingScheduleCreation:
+		return true
+	}
+	return false
+}
+
+func IsGovernanceRoleAssignmentRequestPending(requestResponse *GovernanceRoleAssignmentRequestResponse) bool {
+	switch requestResponse.Status.SubStatus {
+	case StatusPendingAdminDecision, StatusPendingApproval, StatusPendingApprovalProvisioning, StatusPendingEvaluation, StatusPendingExternalProvisioning, StatusPendingProvisioning, StatusPendingRevocation, StatusPendingScheduleCreation:
+		return true
+	}
+	return false
+}
+
+func IsResourceAssignmentRequestOK(requestResponse *ResourceAssignmentRequestResponse) bool {
+	switch requestResponse.Properties.Status {
+	case StatusAccepted, StatusAdminApproved, StatusGranted, StatusProvisioned, StatusProvisioningStarted, StatusScheduleCreated:
+		return true
+	}
+	return false
+}
+
+func IsGovernanceRoleAssignmentRequestOK(requestResponse *GovernanceRoleAssignmentRequestResponse) bool {
+	switch requestResponse.Status.SubStatus {
+	case StatusAccepted, StatusAdminApproved, StatusGranted, StatusProvisioned, StatusProvisioningStarted, StatusScheduleCreated:
+		return true
+	}
+	return false
+}
+
+func IsGovernanceRoleType(roleType string) bool {
+	switch roleType {
+	case ROLE_TYPE_AAD_GROUPS, ROLE_TYPE_ENTRA_ROLES:
+		return true
+	}
+	return false
+}
+
+func (response *ResourceAssignmentRequestResponse) CheckResourceAssignmentResult(request *ResourceAssignmentRequestRequest) bool {
+	if IsResourceAssignmentRequestFailed(response) {
+		_error := Error{
+			Operation: "CheckResourceAssignmentResult",
+			Message:   "The role assignment validation failed",
+			Status:    response.Properties.Status,
+			Request:   request,
+			Response:  response,
+		}
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
+		return false
+	}
+	if IsResourceAssignmentRequestOK(response) {
+		logger.Info("The role assignment request was successful status=%s", response.Properties.Status)
+		return true
+	}
+	if IsResourceAssignmentRequestPending(response) {
+		logger.Warn("The role assignment request is pending status=%s", response.Properties.Status)
+		return true
+	}
+
+	return false
+}
+
+func (response *GovernanceRoleAssignmentRequestResponse) CheckGovernanceRoleAssignmentResult(request *GovernanceRoleAssignmentRequest) bool {
+	if IsGovernanceRoleAssignmentRequestFailed(response) {
+		_error := Error{
+			Operation: "CheckGovernanceRoleAssignmentResult",
+			Message:   "The role assignment validation failed",
+			Status:    response.Status.Status,
+			Request:   request,
+			Response:  response,
+		}
+		logger.Error("%s", _error.Error())
+		logger.Debug("%s", _error.Debug())
+		return false
+	}
+	if IsGovernanceRoleAssignmentRequestOK(response) {
+		logger.Info("The role assignment request was successful status=%s subStatus=%s", response.Status.Status, response.Status.SubStatus)
+		return true
+	}
+	if IsGovernanceRoleAssignmentRequestPending(response) {
+		logger.Warn("The role assignment request is pending status=%s subStatus=%s", response.Status.Status, response.Status.SubStatus)
+		return true
+	}
+
+	return false
+}
+
+func parseDate(dateStr string) (time.Time, error) {
+	dateLayout := "02/01/2006" // DD/MM/YYYY
+	d, err := time.Parse(dateLayout, dateStr)
+	if err != nil {
+		return d, err
+	}
+	return time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, time.Local), nil
+}
+
+func parseTime(timeStr string) (time.Time, error) {
+	timeLayout := "15:04" // HH:MM
+	return time.Parse(timeLayout, timeStr)
+}
+
+func parseDateTime(dateStr string, timeStr string) (string, *Error) {
+	_error := &Error{
+		Operation: "parseDateTime",
+	}
+	var d time.Time
+	if dateStr == "" {
+		// Get the current date, remove time info
+		now := time.Now().Local()
+		d = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	} else {
+		_d, err := parseDate(dateStr)
+		if err != nil {
+			_error.Message = "Unable to parse the date"
+			_error.Err = err
+			return "", _error
+		}
+		d = _d
+	}
+	if timeStr != "" {
+		t, err := parseTime(timeStr)
+		if err != nil {
+			_error.Message = "Unable to parse the time"
+			_error.Err = err
+			return "", _error
+		}
+		d = d.Add(time.Hour*time.Duration(t.Hour()) + time.Minute*time.Duration(t.Minute()))
+	}
+
+	// format is the same as 'time.RFC3339', except for the timezone part.
+	// must be customized due to inconsistencies in behavior when TZ environment variable is missing
+	formatted := d.Format("2006-01-02T15:04:05-07:00")
+	return formatted, nil
+}
+
+func CreateResourceAssignmentScheduleInfo(duration int, startDate string, startTime string) (*ScheduleInfo, error) {
+	var scheduleStart interface{}
+	if (startDate != "") || (startTime != "") {
+		startDateTime, err := parseDateTime(startDate, startTime)
+		if err != nil {
+			logger.Error("%s", err.Error())
+			logger.Debug("%s", err.Debug())
+			return nil, fmt.Errorf("CreateResourceAssignmentScheduleInfo: %w", err)
+		}
+		scheduleStart = startDateTime
+	}
+
+	return &ScheduleInfo{
+		StartDateTime: scheduleStart,
+		Expiration: &ScheduleInfoExpiration{
+			Type:     "AfterDuration",
+			Duration: fmt.Sprintf("PT%dM", duration),
+		},
+	}, nil
+}
+
+func CreateResourceAssignmentRequest(subjectId string, resourceAssignment *ResourceAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *ResourceAssignmentRequestRequest, error) {
+	scheduleInfo, err := CreateResourceAssignmentScheduleInfo(duration, startDate, startTime)
+	if err != nil {
+		return "", nil, err
+	}
+	resourceAssignmentRequest := &ResourceAssignmentRequestRequest{
+		Properties: ResourceAssignmentRequestProperties{
+			PrincipalId:                     subjectId,
+			RoleDefinitionId:                resourceAssignment.Properties.ExpandedProperties.RoleDefinition.Id,
+			RequestType:                     "SelfActivate",
+			LinkedRoleEligibilityScheduleId: resourceAssignment.Properties.RoleEligibilityScheduleId,
+			Justification:                   reason,
+			ScheduleInfo:                    scheduleInfo,
+			TicketInfo:                      &TicketInfo{TicketNumber: ticketNumber, TicketSystem: ticketSystem},
+			IsValidationOnly:                false,
+			IsActivativation:                true,
+		},
+	}
+	scope := resourceAssignment.Properties.ExpandedProperties.Scope.Id[1:]
+
+	return scope, resourceAssignmentRequest, nil
+}
+
+func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, startTime string) (*GovernanceRoleAssignmentSchedule, error) {
+	var scheduleStart interface{}
+	if (startDate != "") || (startTime != "") {
+		startDateTime, err := parseDateTime(startDate, startTime)
+		if err != nil {
+			logger.Error("%s", err.Error())
+			logger.Debug("%s", err.Debug())
+			return nil, fmt.Errorf("CreateGovernanceRoleAssignmentScheduleInfo: %w", err)
+		}
+		scheduleStart = startDateTime
+	}
+
+	return &GovernanceRoleAssignmentSchedule{
+		Type:          "Once",
+		StartDateTime: scheduleStart,
+		EndDateTime:   nil,
+		Duration:      fmt.Sprintf("PT%dM", duration),
+	}, nil
+}
+
+func CreateGovernanceRoleAssignmentRequest(subjectId string, roleType string, governanceRoleAssignment *GovernanceRoleAssignment, duration int, startDate string, startTime string, reason string, ticketSystem string, ticketNumber string) (string, *GovernanceRoleAssignmentRequest, error) {
+	if !IsGovernanceRoleType(roleType) {
+		return "", nil, &Error{
+			Operation: "CreateGovernanceRoleAssignmentRequest",
+			Message:   "invalid role type specified",
+		}
+	}
+
+	scheduleInfo, err := CreateGovernanceRoleAssignmentScheduleInfo(duration, startDate, startTime)
+	if err != nil {
+		return "", nil, err
+	}
+	governanceRoleAssignmentRequest := &GovernanceRoleAssignmentRequest{
+		RoleDefinitionId:               governanceRoleAssignment.RoleDefinitionId,
+		ResourceId:                     governanceRoleAssignment.ResourceId,
+		SubjectId:                      subjectId,
+		AssignmentState:                "Active",
+		Type:                           "UserAdd",
+		Reason:                         reason,
+		TicketNumber:                   ticketNumber,
+		TicketSystem:                   ticketSystem,
+		Schedule:                       scheduleInfo,
+		LinkedEligibleRoleAssignmentId: governanceRoleAssignment.Id,
+		ScopedResourceId:               "",
+	}
+
+	return roleType, governanceRoleAssignmentRequest, nil
+}
+
+func (resourceAssignment *ResourceAssignment) Debug() string {
+	var debugLines []string
+
+	debugLines = append(debugLines, fmt.Sprintf("ID: %s", resourceAssignment.Id))
+	if resourceAssignment.Properties != nil {
+		if resourceAssignment.Properties.ExpandedProperties != nil {
+			debugLines = append(debugLines, fmt.Sprintf("\tScopeID: %s", resourceAssignment.Properties.ExpandedProperties.Scope.Id))
+			if resourceAssignment.Properties.ExpandedProperties.Principal != nil {
+				debugLines = append(debugLines, fmt.Sprintf("\tPrincipal: %s", resourceAssignment.Properties.ExpandedProperties.Principal.DisplayName))
+			}
+			if resourceAssignment.Properties.ExpandedProperties.RoleDefinition != nil {
+				debugLines = append(debugLines, fmt.Sprintf("\tRoleDefinition: %s", resourceAssignment.Properties.ExpandedProperties.RoleDefinition.DisplayName))
+			}
+		}
+		debugLines = append(debugLines, fmt.Sprintf("\tRoleDefinitionId: %s", resourceAssignment.Properties.RoleDefinitionId))
+		debugLines = append(debugLines, fmt.Sprintf("\tPrincipalID: %s", resourceAssignment.Properties.PrincipalId))
+		debugLines = append(debugLines, fmt.Sprintf("\tStatus: %s", resourceAssignment.Properties.Status))
+	}
+
+	return strings.Join(debugLines, "\n")
+}
+
+func (roleAssignment *GovernanceRoleAssignment) Debug() string {
+	var debugLines []string
+
+	debugLines = append(debugLines, fmt.Sprintf("ID: %s", roleAssignment.Id))
+	debugLines = append(debugLines, fmt.Sprintf("\tResourceID: %s", roleAssignment.ResourceId))
+	debugLines = append(debugLines, fmt.Sprintf("\tRoleDefinitionId: %s", roleAssignment.RoleDefinitionId))
+	debugLines = append(debugLines, fmt.Sprintf("\tSubjectId: %s", roleAssignment.SubjectId))
+	debugLines = append(debugLines, fmt.Sprintf("\tAssignmentState: %s", roleAssignment.AssignmentState))
+	debugLines = append(debugLines, fmt.Sprintf("\tStatus: %s", roleAssignment.Status))
+	if roleAssignment.Subject != nil {
+		debugLines = append(debugLines, fmt.Sprintf("\tSubject: %s", roleAssignment.Subject.DisplayName))
+	}
+	if roleAssignment.RoleDefinition != nil {
+		debugLines = append(debugLines, fmt.Sprintf("\tRoleDefinition: %s", roleAssignment.RoleDefinition.DisplayName))
+	}
+
+	return strings.Join(debugLines, "\n")
+}

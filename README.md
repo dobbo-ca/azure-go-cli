@@ -37,6 +37,7 @@ This project provides a performant alternative to the official Azure CLI, writte
 - `az identity` - Manage managed identities (CRUD operations)
 - `az role` - Manage role definitions and assignments
 - `az group` - Manage resource groups (CRUD operations)
+- `az pim` - List and activate eligible PIM role assignments and Entra group memberships
 
 ### Key Vault
 - `az keyvault` - Manage Key Vaults (list, show)
@@ -198,6 +199,25 @@ az aks bastion -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
 
 `--context-regex` and `--context-replacement` must be supplied together
 and cannot be combined with `--context`.
+
+### Privileged Identity Management (PIM)
+
+`az pim` lists and activates eligible PIM assignments — Azure resource roles and Entra ID group memberships — and inherits `AZ_SESSION` isolation so multiple customer sessions stay separated.
+
+```bash
+# List eligible and currently-active assignments
+az pim list
+
+# Activate a resource role
+az pim activate resource --role Contributor --scope "Acme Corp/Acme Production" \
+  --ticket Jira:TEC-1234 --justification "Investigating INC-9999" --duration 60
+
+# Activate an Entra group membership
+az pim activate group --name customer-acme-admins \
+  --justification "Customer hand-off" --duration 120
+```
+
+See [`docs/pim.md`](docs/pim.md) for the full guide: the four-form `--scope` resolver, `--set-subscription` behavior, validation pre-flight, AZ_SESSION integration for multi-customer workflows, the vendored upstream attribution, and current limitations.
 
 ### Key Vault Secrets
 
