@@ -45,7 +45,7 @@ func runList(ctx context.Context, typeFilter, outFmt string, w io.Writer) error 
 		return fmt.Errorf("get credential: %w", err)
 	}
 	ts := NewTokenSource(cred)
-	client := pimvendor.AzureClient{}
+	client := pimvendor.AzureClient{ARMBaseURL: pimvendor.ARM_GLOBAL_BASE_URL}
 
 	_ = ctx
 	rows, err := collectRows(ts, client, typeFilter)

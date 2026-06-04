@@ -100,7 +100,7 @@ func runActivateResource(a activateResourceArgs, w io.Writer) error {
 		return err
 	}
 
-	client := pimvendor.AzureClient{}
+	client := pimvendor.AzureClient{ARMBaseURL: pimvendor.ARM_GLOBAL_BASE_URL}
 
 	eligible, err := client.GetEligibleResourceAssignments(token)
 	if err != nil {
@@ -125,16 +125,27 @@ func runActivateResource(a activateResourceArgs, w io.Writer) error {
 	}
 
 	system, number := ParseTicket(a.Ticket)
-	_, req, err := pimvendor.CreateResourceAssignmentRequest(info.ObjectId, &assignment, a.Duration, "", "", a.Justification, system, number)
+	// vendorScope is the resolver's scope minus the leading "/" — the form the
+	// vendor's URL builder expects (sprintf inserts its own slash before it).
+	vendorScope, req, err := pimvendor.CreateResourceAssignmentRequest(info.ObjectId, &assignment, a.Duration, "", "", a.Justification, system, number)
 	if err != nil {
 		return err
 	}
 
-	if _, err := client.ValidateResourceAssignmentRequest(scope, req, token); err != nil {
+	// Validate first. The vendor's validate path mutates
+	// Properties.IsValidationOnly via the aliased pointer, which would
+	// otherwise poison the subsequent activation request. Properties is a
+	// struct value, so a one-level copy of req is enough to isolate it.
+	validationReq := *req
+	ok, err := client.ValidateResourceAssignmentRequest(vendorScope, &validationReq, token)
+	if err != nil {
 		return err
 	}
+	if !ok {
+		return fmt.Errorf("Azure rejected the activation request during validation; check role, scope, ticket, and duration")
+	}
 
-	resp, err := client.RequestResourceAssignment(scope, req, token)
+	resp, err := client.RequestResourceAssignment(vendorScope, req, token)
 	if err != nil {
 		return err
 	}
@@ -281,11 +292,15 @@ func renderActivationResult(w io.Writer, outFmt, status, scope, role, expires, r
 			"requestId": requestID,
 		})
 	case "table":
-		if strings.EqualFold(status, "Pending") {
+		if strings.HasPrefix(strings.ToLower(status), "pending") {
 			fmt.Fprintf(w, "Pending approval; request %s\n", requestID)
 			return nil
 		}
-		fmt.Fprintf(w, "Activated %s on %s; expires %s\n", role, scope, expires)
+		if expires == "" {
+			fmt.Fprintf(w, "Activated %s on %s\n", role, scope)
+		} else {
+			fmt.Fprintf(w, "Activated %s on %s; expires %s\n", role, scope, expires)
+		}
 		return nil
 	default:
 		return fmt.Errorf("unknown --output %q", outFmt)
