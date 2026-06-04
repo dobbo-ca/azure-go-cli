@@ -37,6 +37,7 @@ This project provides a performant alternative to the official Azure CLI, writte
 - `az identity` - Manage managed identities (CRUD operations)
 - `az role` - Manage role definitions and assignments
 - `az group` - Manage resource groups (CRUD operations)
+- `az pim` - List and activate eligible PIM role assignments and Entra group memberships
 
 ### Key Vault
 - `az keyvault` - Manage Key Vaults (list, show)
@@ -198,6 +199,59 @@ az aks bastion -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
 
 `--context-regex` and `--context-replacement` must be supplied together
 and cannot be combined with `--context`.
+
+### Privileged Identity Management (PIM)
+
+`az pim` lists your eligible and currently-active PIM assignments and activates them on demand. v1 supports Azure resource role assignments and Entra ID group memberships.
+
+The PIM client is vendored from [netr0m/az-pim-cli](https://github.com/netr0m/az-pim-cli) (MIT). See `internal/pim/vendor/LICENSE` and `internal/pim/vendor/README-VENDORED.md` for attribution and the list of local modifications.
+
+```bash
+# List eligible + currently-active assignments
+az pim list
+az pim list --type resource
+az pim list --output json
+
+# Activate a resource role (ticket + justification + duration required)
+az pim activate resource \
+  --role Contributor \
+  --scope "Acme Corp/Acme Production" \
+  --ticket Jira:TEC-1234 \
+  --justification "Investigating incident INC-9999" \
+  --duration 60
+
+# Same activation, then mark the activated subscription as the current default
+az pim activate resource --role Contributor --scope acme-prod-sub-uuid \
+  --ticket Jira:TEC-1234 --justification "..." --duration 60 \
+  --set-subscription
+
+# Activate an Entra group membership (no ticket)
+az pim activate group \
+  --name customer-acme-admins \
+  --justification "Customer hand-off" \
+  --duration 120
+
+# Bare command lines prompt for any missing required flags on a TTY.
+# Use --no-input (or pipe stdin) to require explicit flags.
+```
+
+`--scope` accepts four forms, resolved in order:
+1. Full ARM path (`/subscriptions/.../resourceGroups/...`).
+2. Subscription UUID — expanded to `/subscriptions/<UUID>`.
+3. `tenant-name/subscription-name[/resource-group]` — looked up against your eligible list.
+4. Bare subscription name — accepted if unambiguous across all eligible assignments.
+
+`--ticket` is `SYSTEM:NUMBER` (e.g. `Jira:TEC-1234`); the colon splits the two fields the Azure API expects. A value with no colon is treated as the ticket number with an empty system.
+
+#### AZ_SESSION isolation
+
+`az pim` uses the same per-session MSAL cache as every other `az` command. Setting `AZ_SESSION=acme` before running `az pim activate ...` scopes the activation request — and the resulting tokens — to the `acme` session, keeping it isolated from other customer sessions running in parallel shells. See the [`AZ_SESSION` section](#isolated-sessions-with-az_session) for details.
+
+#### Limitations
+
+- **Tenant display names depend on prior `az login` against the tenant.** If you have PIM eligibility in a tenant you have never logged into within the current session, `az pim list` shows the tenant UUID instead of a friendly name, and the `tenant-name/...` form of `--scope` will not resolve for that tenant. Run `az login` once with that tenant active to populate the cache.
+- **Group rows show `—` for the SUBSCRIPTION column.** PIM does not couple group activations to a subscription; resolving a group's effective RBAC would require additional ARM calls per group. Not done in v1.
+- **Entra ID directory roles** (e.g. Global Reader) are not supported in v1.
 
 ### Key Vault Secrets
 
