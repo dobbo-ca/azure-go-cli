@@ -2,7 +2,6 @@ package role
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -11,6 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	output_ "github.com/cdobbyn/azure-go-cli/pkg/output"
 	"github.com/spf13/cobra"
 )
 
@@ -26,11 +26,11 @@ func newListCmd() *cobra.Command {
 		Long:  "List Azure RBAC role definitions in the subscription",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return listRoleDefinitions(ctx, output, custom, scope, name)
+			return listRoleDefinitions(ctx, cmd, output, custom, scope, name)
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json or table")
+	cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json, table, or tsv")
 	cmd.Flags().BoolVar(&custom, "custom", false, "Show only custom roles")
 	cmd.Flags().StringVar(&scope, "scope", "", "Scope to list roles for (defaults to subscription scope)")
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Filter by role definition's name (GUID) or roleName")
@@ -38,7 +38,7 @@ func newListCmd() *cobra.Command {
 	return cmd
 }
 
-func listRoleDefinitions(ctx context.Context, output string, customOnly bool, scope string, nameFilter string) error {
+func listRoleDefinitions(ctx context.Context, cmd *cobra.Command, output string, customOnly bool, scope string, nameFilter string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return fmt.Errorf("failed to get credentials: %w", err)
@@ -93,10 +93,17 @@ func listRoleDefinitions(ctx context.Context, output string, customOnly bool, sc
 		roles = filtered
 	}
 
-	if output == "json" {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(roles)
+	// json/tsv: emit azure-cli-shaped records (flattened) so JMESPath --query
+	// expressions written for azure-cli (e.g. "[0].id") work unchanged. A
+	// --query also forces this path so the filter is never silently dropped in
+	// the default (table) mode.
+	queryStr, _ := cmd.Flags().GetString("query")
+	if output != "table" || queryStr != "" {
+		format := output
+		if format == "table" {
+			format = "json"
+		}
+		return output_.PrintFormatted(cmd, toDefinitionRecords(roles), format)
 	}
 
 	// Table output

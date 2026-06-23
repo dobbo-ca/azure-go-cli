@@ -2,7 +2,6 @@ package assignment
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 	"text/tabwriter"
@@ -10,8 +9,61 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	output_ "github.com/cdobbyn/azure-go-cli/pkg/output"
 	"github.com/spf13/cobra"
 )
+
+// roleAssignmentRecord is the azure-cli-shaped, flattened view of a role
+// assignment emitted for json/tsv output (so --query expressions match).
+type roleAssignmentRecord struct {
+	ID                 string  `json:"id"`
+	Name               string  `json:"name"`
+	Type               string  `json:"type"`
+	PrincipalID        string  `json:"principalId"`
+	PrincipalType      string  `json:"principalType,omitempty"`
+	RoleDefinitionID   string  `json:"roleDefinitionId"`
+	RoleDefinitionName string  `json:"roleDefinitionName"`
+	Scope              string  `json:"scope"`
+	Condition          *string `json:"condition"`
+	ConditionVersion   *string `json:"conditionVersion"`
+	Description        *string `json:"description"`
+}
+
+func toAssignmentRecords(assignments []*armauthorization.RoleAssignment, names map[string]string) []roleAssignmentRecord {
+	records := make([]roleAssignmentRecord, 0, len(assignments))
+	for _, a := range assignments {
+		rec := roleAssignmentRecord{}
+		if a.ID != nil {
+			rec.ID = *a.ID
+		}
+		if a.Name != nil {
+			rec.Name = *a.Name
+		}
+		if a.Type != nil {
+			rec.Type = *a.Type
+		}
+		if p := a.Properties; p != nil {
+			if p.PrincipalID != nil {
+				rec.PrincipalID = *p.PrincipalID
+			}
+			if p.PrincipalType != nil {
+				rec.PrincipalType = string(*p.PrincipalType)
+			}
+			if p.RoleDefinitionID != nil {
+				rec.RoleDefinitionID = *p.RoleDefinitionID
+				rec.RoleDefinitionName = names[getRoleNameFromID(*p.RoleDefinitionID)]
+			}
+			if p.Scope != nil {
+				rec.Scope = *p.Scope
+			}
+			rec.Condition = p.Condition
+			rec.ConditionVersion = p.ConditionVersion
+			rec.Description = p.Description
+		}
+		records = append(records, rec)
+	}
+	return records
+}
 
 func newListCmd() *cobra.Command {
 	var output string
@@ -26,11 +78,11 @@ func newListCmd() *cobra.Command {
 		Long:  "List Azure RBAC role assignments at a given scope",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return listRoleAssignments(ctx, output, scope, assignee, role, all)
+			return listRoleAssignments(ctx, cmd, output, scope, assignee, role, all)
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json or table")
+	cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json, table, or tsv")
 	cmd.Flags().StringVar(&scope, "scope", "", "Scope to list assignments for (defaults to subscription scope)")
 	cmd.Flags().StringVar(&assignee, "assignee", "", "Filter by assignee (user, group, or service principal object ID)")
 	cmd.Flags().StringVar(&role, "role", "", "Filter by role name or ID")
@@ -39,7 +91,7 @@ func newListCmd() *cobra.Command {
 	return cmd
 }
 
-func listRoleAssignments(ctx context.Context, output, scope, assignee, role string, all bool) error {
+func listRoleAssignments(ctx context.Context, cmd *cobra.Command, output, scope, assignee, role string, all bool) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return fmt.Errorf("failed to get credentials: %w", err)
@@ -111,10 +163,27 @@ func listRoleAssignments(ctx context.Context, output, scope, assignee, role stri
 		assignments = filtered
 	}
 
-	if output == "json" {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(assignments)
+	// json/tsv: emit azure-cli-shaped records (flattened, with
+	// roleDefinitionName resolved) so JMESPath --query expressions written for
+	// azure-cli work unchanged. A --query also forces this path so the filter is
+	// never silently dropped in the default (table) mode.
+	queryStr, _ := cmd.Flags().GetString("query")
+	if output != "table" || queryStr != "" {
+		// roleDefinitionName enrichment is best-effort: a caller with
+		// roleAssignments/read but not roleDefinitions/read still gets output
+		// (the name falls back to empty rather than failing the command). Names
+		// are resolved only at `scope`, so --all may leave custom roles defined
+		// at a child scope unnamed.
+		names, err := resolveRoleDefinitionNames(ctx, cred, scope)
+		if err != nil {
+			names = map[string]string{}
+		}
+		records := toAssignmentRecords(assignments, names)
+		format := output
+		if format == "table" {
+			format = "json"
+		}
+		return output_.PrintFormatted(cmd, records, format)
 	}
 
 	// Table output
