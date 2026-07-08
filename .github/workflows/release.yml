@@ -1,208 +1,44 @@
 name: Release
 
 on:
+  push:
+    branches: [main]
+    tags: ['[0-9]+.[0-9]+.[0-9]+', 'v[0-9]+.[0-9]+.[0-9]+']
   workflow_dispatch:
     inputs:
-      force_update:
-        description: 'Force version update'
-        required: false
-        default: 'false'
-  push:
-    branches:
-      - main
+      mode:
+        type: choice
+        options: [auto, beta, release]
+        default: auto
+      dry_run:
+        type: boolean
+        default: false
 
 permissions:
   contents: write
-  pull-requests: write
 
 jobs:
-  semantic-release:
-    runs-on: ubuntu-latest
-    outputs:
-      new_version: ${{ steps.uplift.outputs.new_version }}
-      version_changed: ${{ steps.uplift.outputs.version_changed }}
-    steps:
-      - name: Generate GitHub App Token
-        id: app-token
-        uses: actions/create-github-app-token@v3
-        with:
-          app-id: ${{ vars.GH_PUB_APP_CLIENT_ID }}
-          private-key: ${{ secrets.GH_PUB_APP_PEM }}
-
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-          token: ${{ steps.app-token.outputs.token }}
-
-      - name: Setup Uplift
-        uses: gembaadvantage/uplift-action@v2
-        with:
-          version: latest
-          install-only: true
-          args: version
-
-      - name: Run Uplift
-        id: uplift
-        run: |
-          BEFORE_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-          uplift release --fetch-all --skip-changelog
-          AFTER_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
-
-          if [ -n "$AFTER_TAG" ] && [ "$AFTER_TAG" != "$BEFORE_TAG" ]; then
-            echo "new_version=$AFTER_TAG" >> $GITHUB_OUTPUT
-            echo "version_changed=true" >> $GITHUB_OUTPUT
-          else
-            echo "No version change, skipping release"
-            echo "version_changed=false" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Generate Changelog
-        if: steps.uplift.outputs.version_changed == 'true'
-        uses: orhun/git-cliff-action@v4
-        with:
-          config: .cliff.toml
-          args: --verbose --current
-        env:
-          OUTPUT: CHANGELOG.md
-          GITHUB_REPO: ${{ github.repository }}
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
-
-      - name: Commit Changelog
-        if: steps.uplift.outputs.version_changed == 'true'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git commit -m "docs: update changelog for ${{ steps.uplift.outputs.new_version }}" || echo "No changes to commit"
-          git push origin main || echo "No changes to push"
-
-  build:
-    needs: semantic-release
-    if: needs.semantic-release.outputs.version_changed == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-          - goos: linux
-            goarch: arm64
-          - goos: darwin
-            goarch: amd64
-          - goos: darwin
-            goarch: arm64
-          - goos: windows
-            goarch: amd64
-          - goos: windows
-            goarch: arm64
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - name: Fetch Tags
-        run: |
-          git fetch --tags --force
-          git describe --tags --abbrev=0
-
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.23'
-          cache: false
-
-      - name: Build Binary
-        env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-        run: |
-          VERSION="${{ needs.semantic-release.outputs.new_version }}"
-          COMMIT="${{ github.sha }}"
-          BUILD_DATE="$(date -u '+%Y-%m-%d_%H:%M:%S')"
-
-          LDFLAGS="-X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${BUILD_DATE}"
-
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            OUTPUT="az-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
-          else
-            OUTPUT="az-${{ matrix.goos }}-${{ matrix.goarch }}"
-          fi
-
-          go build -ldflags "${LDFLAGS}" -o "${OUTPUT}" ./cmd/az/main.go
-
-          echo "Built: ${OUTPUT}"
-          ls -lh "${OUTPUT}"
-
-      - name: Create Archive
-        run: |
-          VERSION="${{ needs.semantic-release.outputs.new_version }}"
-
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            BINARY="az-${{ matrix.goos }}-${{ matrix.goarch }}.exe"
-            ARCHIVE="az-go-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.zip"
-            # Rename to az.exe for archive
-            cp "${BINARY}" "az.exe"
-            zip "${ARCHIVE}" "az.exe"
-            rm "az.exe"
-          else
-            BINARY="az-${{ matrix.goos }}-${{ matrix.goarch }}"
-            ARCHIVE="az-go-${VERSION}-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz"
-            # Rename to az for archive
-            cp "${BINARY}" "az"
-            tar czf "${ARCHIVE}" "az"
-            rm "az"
-          fi
-
-          # Generate SHA256
-          shasum -a 256 "${ARCHIVE}" | awk '{print $1}' > "${ARCHIVE}.sha256"
-
-          echo "Created: ${ARCHIVE}"
-          cat "${ARCHIVE}.sha256"
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: az-go-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: |
-            az-go-*.tar.gz
-            az-go-*.tar.gz.sha256
-            az-go-*.zip
-            az-go-*.zip.sha256
-
   release:
-    needs: [semantic-release, build]
-    if: needs.semantic-release.outputs.version_changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Download All Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Prepare Release Assets
-        run: |
-          mkdir -p release-assets
-          find artifacts -type f \( -name "*.tar.gz" -o -name "*.zip" -o -name "*.sha256" \) -exec cp {} release-assets/ \;
-          ls -lh release-assets/
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.semantic-release.outputs.new_version }}
-          name: ${{ needs.semantic-release.outputs.new_version }}
-          body_path: CHANGELOG.md
-          files: release-assets/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    # Beta tags are pushed by the bot and match the tag glob above; skip the
+    # release path for any prerelease tag (contains '-') to avoid a retrigger loop.
+    if: ${{ !(github.ref_type == 'tag' && contains(github.ref_name, '-')) }}
+    uses: dobbo-ca/.github/.github/workflows/release-go.yml@v1
+    with:
+      mode: ${{ inputs.mode || 'auto' }}
+      dry-run: ${{ inputs.dry_run || false }}
+      go-version: '1.23'
+      binary-name: az
+      cmd-path: ./cmd/az/main.go
+      version-pkg: main
+      build-matrix: '[{"goos":"linux","goarch":"amd64"},{"goos":"linux","goarch":"arm64"},{"goos":"darwin","goarch":"amd64"},{"goos":"darwin","goarch":"arm64"},{"goos":"windows","goarch":"amd64"},{"goos":"windows","goarch":"arm64"}]'
+      asset-name-template: 'az-go-{version}-{goos}-{goarch}'
+    secrets:
+      app-id: ${{ vars.GH_PUB_APP_CLIENT_ID }}
+      app-pem: ${{ secrets.GH_PUB_APP_PEM }}
 
   update-homebrew:
-    needs: [semantic-release, release]
-    if: needs.semantic-release.outputs.version_changed == 'true'
+    needs: release
+    if: ${{ needs.release.outputs.is_release == 'true' && !inputs.dry_run }}
     runs-on: ubuntu-latest
     steps:
       - name: Generate GitHub App Token
@@ -240,7 +76,7 @@ jobs:
           client-payload: |
             {
               "formula": "az-go",
-              "version": "${{ needs.semantic-release.outputs.new_version }}",
+              "version": "${{ needs.release.outputs.version }}",
               "darwin_amd64_sha": "${{ steps.checksums.outputs.darwin_amd64 }}",
               "darwin_arm64_sha": "${{ steps.checksums.outputs.darwin_arm64 }}",
               "linux_amd64_sha": "${{ steps.checksums.outputs.linux_amd64 }}",
