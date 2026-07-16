@@ -298,6 +298,21 @@ and `make build` (never plain `go build`).
 Client: `armlocks.NewManagementLocksClient(subscriptionID, cred, nil)` — subscription ID is
 bound at construction, never a method argument.
 
+**API version divergence.** azure-cli pins locks to `2016-09-01`
+(`azure/cli/core/profiles/_shared.py:175`); armlocks v1.2.0 is generated against
+`2020-05-01`. We therefore talk to ARM on a different wire version than azure-cli does.
+
+The one visible consequence: `2020-05-01`'s `ManagementLockObject` carries a `SystemData`
+field that `2016-09-01` has no concept of. Because `record.go` flattens into an explicit
+struct, we simply never emit `systemData`, and the JSON stays azure-cli-shaped. Do not
+"helpfully" add it — that would diverge from az output.
+
+Verified against the module itself (`go doc`), not documentation:
+`LockLevelCanNotDelete = "CanNotDelete"`, `LockLevelReadOnly = "ReadOnly"`,
+`LockLevelNotSpecified = "NotSpecified"`; `ManagementLockProperties{Level *LockLevel,
+Notes *string, Owners []*ManagementLockOwner}`; `ManagementLockOwner{ApplicationID *string}`;
+and every `List*Options` carries exactly one field, `Filter *string`.
+
 | verb | subscription | resource group | resource |
 |---|---|---|---|
 | create | `CreateOrUpdateAtSubscriptionLevel(ctx, name, params, nil)` | `CreateOrUpdateAtResourceGroupLevel(ctx, rg, name, params, nil)` | `CreateOrUpdateAtResourceLevel(ctx, rg, ns, parent, rtype, rname, name, params, nil)` |
