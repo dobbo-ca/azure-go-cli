@@ -119,6 +119,75 @@ func TestPrintFormatted_UnsupportedFormat(t *testing.T) {
 	}
 }
 
+func TestRenderTable(t *testing.T) {
+	tests := []struct {
+		name string
+		in   interface{}
+		want string
+	}{
+		{
+			name: "drops id/type, sorts keys, capitalizes header",
+			in: []interface{}{map[string]interface{}{
+				"id":    "/subscriptions/s1/providers/Microsoft.Authorization/locks/l1",
+				"type":  "Microsoft.Authorization/locks",
+				"level": "CanNotDelete",
+				"name":  "mylock",
+				"notes": "do not delete",
+			}},
+			want: "Level         Name    Notes\n" +
+				"------------  ------  -------------\n" +
+				"CanNotDelete  mylock  do not delete\n",
+		},
+		{
+			name: "null in every row drops the column entirely",
+			in: []interface{}{map[string]interface{}{
+				"level":  "ReadOnly",
+				"name":   "l1",
+				"owners": nil,
+			}},
+			want: "Level     Name\n" +
+				"--------  ------\n" +
+				"ReadOnly  l1\n",
+		},
+		{
+			name: "null in only some rows leaves a blank cell",
+			in: []interface{}{
+				map[string]interface{}{"level": "ReadOnly", "name": "a", "notes": "keep"},
+				map[string]interface{}{"level": "ReadOnly", "name": "b", "notes": nil},
+			},
+			want: "Level     Name    Notes\n" +
+				"--------  ------  -------\n" +
+				"ReadOnly  a       keep\n" +
+				"ReadOnly  b\n",
+		},
+		{
+			name: "single object renders like a one-row list",
+			in:   map[string]interface{}{"level": "ReadOnly", "name": "l1"},
+			want: "Level     Name\n" +
+				"--------  ------\n" +
+				"ReadOnly  l1\n",
+		},
+		{
+			name: "nested values are dropped",
+			in: []interface{}{map[string]interface{}{
+				"name":       "l1",
+				"systemData": map[string]interface{}{"createdBy": "x"},
+			}},
+			want: "Name\n" +
+				"------\n" +
+				"l1\n",
+		},
+		{name: "empty list", in: []interface{}{}, want: "\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := renderTable(tt.in); got != tt.want {
+				t.Errorf("got:\n%q\nwant:\n%q", got, tt.want)
+			}
+		})
+	}
+}
+
 func captureStdout(t *testing.T, fn func()) string {
 	t.Helper()
 	orig := os.Stdout
