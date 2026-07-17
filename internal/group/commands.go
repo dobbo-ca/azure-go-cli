@@ -3,6 +3,7 @@ package group
 import (
 	"context"
 
+	"github.com/cdobbyn/azure-go-cli/internal/lock"
 	"github.com/spf13/cobra"
 )
 
@@ -62,6 +63,6 @@ func NewGroupCommand() *cobra.Command {
 	deleteCmd.Flags().BoolP("yes", "y", false, "Do not prompt for confirmation")
 	deleteCmd.MarkFlagRequired("name")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, lock.NewGroupLockCommand())
 	return cmd
 }
