@@ -33,6 +33,7 @@ func newCreateCmd(kind scopeKind) *cobra.Command {
     },
   }
   addScopeFlags(cmd, kind)
+  addScopeShortcutFlag(cmd)
   cmd.Flags().StringP("name", "n", "", "Name of the lock")
   cmd.Flags().StringP("lock-type", "t", "", "The type of lock restriction. Allowed values: CanNotDelete, ReadOnly")
   cmd.Flags().String("notes", "", "Notes about this lock")
@@ -52,10 +53,6 @@ func runCreate(cmd *cobra.Command) error {
   if err != nil {
     return err
   }
-  s, err := resolveScope(cmd)
-  if err != nil {
-    return err
-  }
   client, err := newLocksClient(cmd)
   if err != nil {
     return err
@@ -67,6 +64,21 @@ func runCreate(cmd *cobra.Command) error {
   if cmd.Flags().Changed("notes") {
     notes, _ := cmd.Flags().GetString("notes")
     params.Properties.Notes = &notes
+  }
+
+  format, _ := cmd.Flags().GetString("output")
+
+  if scope, _ := cmd.Flags().GetString("scope"); scope != "" {
+    resp, err := client.CreateOrUpdateByScope(ctx, scope, name, params, nil)
+    if err != nil {
+      return fmt.Errorf("create lock %s: %w", name, err)
+    }
+    return output.PrintFormatted(cmd, toLockRecord(&resp.ManagementLockObject), format)
+  }
+
+  s, err := resolveScope(cmd)
+  if err != nil {
+    return err
   }
 
   // create is really create-or-update: an existing lock with the same name at
@@ -94,6 +106,5 @@ func runCreate(cmd *cobra.Command) error {
     obj = &resp.ManagementLockObject
   }
 
-  format, _ := cmd.Flags().GetString("output")
   return output.PrintFormatted(cmd, toLockRecord(obj), format)
 }

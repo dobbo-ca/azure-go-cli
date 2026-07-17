@@ -18,6 +18,7 @@ func newShowCmd(kind scopeKind) *cobra.Command {
     },
   }
   addScopeFlags(cmd, kind)
+  addScopeShortcutFlag(cmd)
   addIDsFlag(cmd)
   cmd.Flags().StringP("name", "n", "", "Name of the lock")
   return cmd
@@ -25,6 +26,24 @@ func newShowCmd(kind scopeKind) *cobra.Command {
 
 func runShow(cmd *cobra.Command) error {
   ctx := context.Background()
+
+  if scope, _ := cmd.Flags().GetString("scope"); scope != "" {
+    name, err := scopeShortcutName(cmd)
+    if err != nil {
+      return err
+    }
+    client, err := newLocksClient(cmd)
+    if err != nil {
+      return err
+    }
+    resp, err := client.GetByScope(ctx, scope, name, nil)
+    if err != nil {
+      return fmt.Errorf("get lock %s: %w", name, err)
+    }
+    format, _ := cmd.Flags().GetString("output")
+    return output.PrintFormatted(cmd, toLockRecord(&resp.ManagementLockObject), format)
+  }
+
   targets, err := resolveTargets(cmd)
   if err != nil {
     return err

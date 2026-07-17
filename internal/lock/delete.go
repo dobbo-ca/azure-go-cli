@@ -16,6 +16,7 @@ func newDeleteCmd(kind scopeKind) *cobra.Command {
     },
   }
   addScopeFlags(cmd, kind)
+  addScopeShortcutFlag(cmd)
   addIDsFlag(cmd)
   cmd.Flags().StringP("name", "n", "", "Name of the lock")
   return cmd
@@ -23,6 +24,22 @@ func newDeleteCmd(kind scopeKind) *cobra.Command {
 
 func runDelete(cmd *cobra.Command) error {
   ctx := context.Background()
+
+  if scope, _ := cmd.Flags().GetString("scope"); scope != "" {
+    name, err := scopeShortcutName(cmd)
+    if err != nil {
+      return err
+    }
+    client, err := newLocksClient(cmd)
+    if err != nil {
+      return err
+    }
+    if _, err := client.DeleteByScope(ctx, scope, name, nil); err != nil {
+      return fmt.Errorf("delete lock %s: %w", name, err)
+    }
+    return nil
+  }
+
   targets, err := resolveTargets(cmd)
   if err != nil {
     return err

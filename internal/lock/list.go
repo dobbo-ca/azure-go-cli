@@ -18,6 +18,7 @@ func newListCmd(kind scopeKind) *cobra.Command {
     },
   }
   addScopeFlags(cmd, kind)
+  addScopeShortcutFlag(cmd)
   cmd.Flags().String("filter-string", "", `A query filter to restrict the results. ARM returns locks at the given scope AND all ancestor scopes; pass "atScope()" to list only locks at this scope exactly`)
   if kind == kindGroup {
     _ = cmd.MarkFlagRequired("resource-group")
@@ -36,12 +37,26 @@ func runList(cmd *cobra.Command) error {
     filter = &f
   }
 
+  var objs []*armlocks.ManagementLockObject
+
+  if scope, _ := cmd.Flags().GetString("scope"); scope != "" {
+    p := client.NewListByScopePager(scope, &armlocks.ManagementLocksClientListByScopeOptions{Filter: filter})
+    for p.More() {
+      page, err := p.NextPage(ctx)
+      if err != nil {
+        return fmt.Errorf("list locks: %w", err)
+      }
+      objs = append(objs, page.Value...)
+    }
+    format, _ := cmd.Flags().GetString("output")
+    return output.PrintFormatted(cmd, toLockRecords(objs), format)
+  }
+
   s, err := resolveScope(cmd)
   if err != nil {
     return err
   }
 
-  var objs []*armlocks.ManagementLockObject
   switch s.Level {
   case scopeResourceGroup:
     p := client.NewListAtResourceGroupLevelPager(s.ResourceGroup, &armlocks.ManagementLocksClientListAtResourceGroupLevelOptions{Filter: filter})
