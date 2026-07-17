@@ -159,3 +159,30 @@ func TestResolveScopeAccountKindIsAlwaysSubscription(t *testing.T) {
     t.Errorf("got %v want scopeSubscription", got.Level)
   }
 }
+
+func TestParseLockLevel(t *testing.T) {
+  tests := []struct {
+    in      string
+    want    string
+    wantErr bool
+  }{
+    {in: "CanNotDelete", want: "CanNotDelete"},
+    {in: "cannotdelete", want: "CanNotDelete"},
+    {in: "READONLY", want: "ReadOnly"},
+    {in: "ReadOnly", want: "ReadOnly"},
+    {in: "NotSpecified", wantErr: true},
+    {in: "bogus", wantErr: true},
+    {in: "", wantErr: true},
+  }
+  for _, tt := range tests {
+    t.Run(tt.in, func(t *testing.T) {
+      got, err := parseLockLevel(tt.in)
+      if (err != nil) != tt.wantErr {
+        t.Fatalf("err=%v wantErr=%v", err, tt.wantErr)
+      }
+      if !tt.wantErr && string(got) != tt.want {
+        t.Errorf("got %q want %q", got, tt.want)
+      }
+    })
+  }
+}
