@@ -16,6 +16,7 @@ func newVerbCmds(kind scopeKind) []*cobra.Command {
     newDeleteCmd(kind),
     newListCmd(kind),
     newShowCmd(kind),
+    newUpdateCmd(kind),
   }
 }
 
