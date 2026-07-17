@@ -13,7 +13,9 @@ import (
 func newVerbCmds(kind scopeKind) []*cobra.Command {
   return []*cobra.Command{
     newCreateCmd(kind),
+    newDeleteCmd(kind),
     newListCmd(kind),
+    newShowCmd(kind),
   }
 }
 
