@@ -1,6 +1,10 @@
 package account
 
 import (
+	"context"
+
+	"github.com/cdobbyn/azure-go-cli/internal/account/lock"
+	"github.com/cdobbyn/azure-go-cli/internal/account/managementgroup"
 	"github.com/spf13/cobra"
 )
 
@@ -61,6 +65,15 @@ func NewAccountCommand() *cobra.Command {
 	getAccessTokenCmd.Flags().StringSlice("scope", nil, "Space-separated scopes in Microsoft Entra v2.0")
 	getAccessTokenCmd.Flags().StringP("subscription", "s", "", "Subscription ID (optional)")
 
-	cmd.AddCommand(listCmd, showCmd, setCmd, clearCmd, getAccessTokenCmd)
+	listLocationsCmd := &cobra.Command{
+		Use:   "list-locations",
+		Short: "List supported regions for the current subscription",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return ListLocations(context.Background(), cmd)
+		},
+	}
+
+	cmd.AddCommand(listCmd, showCmd, setCmd, clearCmd, getAccessTokenCmd, listLocationsCmd)
+	cmd.AddCommand(lock.NewLockCommand(), managementgroup.NewManagementGroupCommand())
 	return cmd
 }
