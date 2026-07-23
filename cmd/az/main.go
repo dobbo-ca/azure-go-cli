@@ -12,6 +12,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/disk/encryptionset"
 	"github.com/cdobbyn/azure-go-cli/internal/feature"
 	"github.com/cdobbyn/azure-go-cli/internal/group"
+	"github.com/cdobbyn/azure-go-cli/internal/hdinsight"
 	"github.com/cdobbyn/azure-go-cli/internal/identity"
 	"github.com/cdobbyn/azure-go-cli/internal/keyvault"
 	"github.com/cdobbyn/azure-go-cli/internal/network"
@@ -77,6 +78,7 @@ func main() {
 		encryptionset.NewEncryptionSetCommand(),
 		feature.NewFeatureCommand(),
 		group.NewGroupCommand(),
+		hdinsight.NewHDInsightCommand(),
 		identity.NewIdentityCommand(),
 		network.NewNetworkCommand(),
 		pim.NewPIMCommand(),
