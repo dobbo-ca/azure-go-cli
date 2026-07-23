@@ -36,6 +36,8 @@ github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/quota/armquota v1.1.0 h1:b
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/quota/armquota v1.1.0/go.mod h1:ICnUwYZtis5BpJDzUno4lUM/2szzlp/x6DscD69U85U=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures v1.2.0 h1:wIDqH4WA5uJ6irRqjzodeSw6Pmp0tu3oIbwzBZEdMfQ=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures v1.2.0/go.mod h1:g8mnARUMaYRsg80mxm3PxjF7+oUotB/lneDbwYbGNxg=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armlocks v1.2.0 h1:CMp8GwmUfS/Stg5KBgduD8rPIk9GNj1HMaID/gUAJYg=
+github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armlocks v1.2.0/go.mod h1:GE1wqa9Ny9eZ8wHtHqbCE7mMsFfVbdEY0itmzYV8JEg=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0 h1:Dd+RhdJn0OTtVGaeDLZpcumkIVCtA/3/Fo42+eoYvVM=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources v1.2.0/go.mod h1:5kakwfW5CjC9KK+Q4wjXAg+ShuIm2mBMua0ZFj2C8PE=
 github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armsubscriptions v1.3.0 h1:wxQx2Bt4xzPIKvW59WQf1tJNx/ZZKPfN+EhPX3Z6CYY=
