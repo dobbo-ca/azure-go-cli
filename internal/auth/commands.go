@@ -13,7 +13,8 @@ func NewLoginCommand() *cobra.Command {
 		Long:  "Log in to Azure using device code flow",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenantSelection, _ := cmd.Flags().GetBool("tenant-selection")
-			return Login(context.Background(), tenantSelection)
+			subscription, _ := cmd.Flags().GetString("subscription")
+			return Login(context.Background(), tenantSelection, subscription)
 		},
 	}
 
