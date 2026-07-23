@@ -281,13 +281,10 @@ az aks mesh enable-ingress-gateway
 az aks mesh get-revisions
 az aks mesh get-upgrades
 az aks mesh upgrade
-az aks nodepool add
-az aks nodepool delete
 az aks nodepool delete-machines
 az aks nodepool get-upgrades
 az aks nodepool manual-scale
 az aks nodepool operation-abort
-az aks nodepool scale
 az aks nodepool snapshot
 az aks nodepool start
 az aks nodepool stop
@@ -296,7 +293,6 @@ az aks nodepool upgrade
 az aks nodepool wait
 az aks oidc-issuer
 az aks oidc-issuer rotate-signing-keys
-az aks operation-abort
 az aks rotate-certs
 az aks safeguards
 az aks safeguards create
@@ -306,8 +302,6 @@ az aks safeguards show
 az aks safeguards update
 az aks safeguards wait
 az aks scale
-az aks start
-az aks stop
 az aks trustedaccess
 az aks trustedaccess role
 az aks trustedaccess rolebinding
@@ -1240,15 +1234,10 @@ az deployment-scripts delete
 az deployment-scripts list
 az deployment-scripts show
 az deployment-scripts show-log
-az disk
 az disk config
 az disk config update
-az disk create
-az disk delete
 az disk grant-access
-az disk list
 az disk revoke-access
-az disk show
 az disk update
 az disk wait
 az disk-access
@@ -1258,16 +1247,13 @@ az disk-access list
 az disk-access show
 az disk-access update
 az disk-access wait
-az disk-encryption-set
 az disk-encryption-set create
 az disk-encryption-set delete
 az disk-encryption-set identity
 az disk-encryption-set identity assign
 az disk-encryption-set identity remove
 az disk-encryption-set identity show
-az disk-encryption-set list
 az disk-encryption-set list-associated-resources
-az disk-encryption-set show
 az disk-encryption-set update
 az disk-encryption-set wait
 az dms
@@ -1379,14 +1365,6 @@ az eventhubs namespace schema-registry
 az eventhubs namespace show
 az eventhubs namespace update
 az eventhubs namespace wait
-az extension
-az extension add
-az extension list
-az extension list-available
-az extension list-versions
-az extension remove
-az extension show
-az extension update
 az feature
 az feature list
 az feature register
@@ -2102,22 +2080,11 @@ az network nat gateway
 az network network-watcher
 az network network-watcher connection-monitor
 az network network-watcher packet-capture
-az network nic
-az network nic create
-az network nic delete
 az network nic ip-config
-az network nic list
 az network nic list-effective-nsg
-az network nic show
 az network nic show-effective-route-table
 az network nic update
 az network nic wait
-az network nsg
-az network nsg create
-az network nsg delete
-az network nsg list
-az network nsg rule
-az network nsg show
 az network nsg update
 az network nsg wait
 az network private-dns
@@ -2152,21 +2119,10 @@ az network profile delete
 az network profile list
 az network profile show
 az network profile wait
-az network public-ip
-az network public-ip create
 az network public-ip ddos-protection
-az network public-ip delete
-az network public-ip list
 az network public-ip prefix
-az network public-ip show
 az network public-ip update
 az network public-ip wait
-az network route-table
-az network route-table create
-az network route-table delete
-az network route-table list
-az network route-table route
-az network route-table show
 az network route-table update
 az network route-table wait
 az network routeserver
@@ -2201,7 +2157,6 @@ az network virtual-appliance wait
 az network vnet check-ip-address
 az network vnet list-endpoint-services
 az network vnet peering
-az network vnet subnet
 az network vnet update
 az network vnet wait
 az network vnet-gateway aad
@@ -2294,15 +2249,12 @@ az policy state list
 az policy state summarize
 az policy state trigger-scan
 az postgres flexible-server advanced-threat-protection-setting
-az postgres flexible-server backup
 az postgres flexible-server db
 az postgres flexible-server deploy
 az postgres flexible-server fabric-mirroring
 az postgres flexible-server firewall-rule
-az postgres flexible-server geo-restore
 az postgres flexible-server identity
 az postgres flexible-server index-tuning
-az postgres flexible-server list-skus
 az postgres flexible-server long-term-retention
 az postgres flexible-server microsoft-entra-admin
 az postgres flexible-server migration
@@ -2311,7 +2263,6 @@ az postgres flexible-server private-endpoint-connection
 az postgres flexible-server private-link-resource
 az postgres flexible-server replica
 az postgres flexible-server restart
-az postgres flexible-server restore
 az postgres flexible-server revive-dropped
 az postgres flexible-server server-logs
 az postgres flexible-server show-connection-string
@@ -2411,29 +2362,19 @@ az relay wcfrelay delete
 az relay wcfrelay list
 az relay wcfrelay show
 az relay wcfrelay update
-az resource
-az resource create
-az resource delete
-az resource invoke-action
 az resource link
 az resource link create
 az resource link delete
 az resource link list
 az resource link show
 az resource link update
-az resource list
 az resource lock
 az resource lock create
 az resource lock delete
 az resource lock list
 az resource lock show
 az resource lock update
-az resource move
 az resource patch
-az resource show
-az resource tag
-az resource update
-az resource wait
 az resourcemanagement
 az resourcemanagement private-link
 az resourcemanagement private-link create
@@ -2456,12 +2397,8 @@ az restore-point show
 az restore-point wait
 az role assignment list-changelogs
 az role assignment update
-az role definition
 az role definition create
 az role definition delete
-az role definition list
-az role definition show
-az role definition update
 az search
 az search admin-key
 az search admin-key renew
@@ -3095,28 +3032,22 @@ az storage account revoke-delegation-keys
 az storage account show-connection-string
 az storage account show-usage
 az storage account update
-az storage blob
 az storage blob copy
-az storage blob delete
 az storage blob delete-batch
-az storage blob download
 az storage blob download-batch
 az storage blob exists
 az storage blob generate-sas
 az storage blob immutability-policy
 az storage blob incremental-copy
 az storage blob lease
-az storage blob list
 az storage blob metadata
 az storage blob restore
 az storage blob service-properties
 az storage blob set-legal-hold
 az storage blob set-tier
-az storage blob show
 az storage blob snapshot
 az storage blob undelete
 az storage blob update
-az storage blob upload
 az storage blob upload-batch
 az storage blob url
 az storage container exists
@@ -3398,7 +3329,6 @@ az ts export
 az ts list
 az ts show
 az ts update
-az version
 az vm application
 az vm application list
 az vm application set
@@ -3423,7 +3353,6 @@ az vm boot-diagnostics get-boot-log
 az vm boot-diagnostics get-boot-log-uris
 az vm capture
 az vm convert
-az vm create
 az vm deallocate
 az vm diagnostics
 az vm diagnostics get-default-config
