@@ -15,6 +15,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/hdinsight"
 	"github.com/cdobbyn/azure-go-cli/internal/identity"
 	"github.com/cdobbyn/azure-go-cli/internal/keyvault"
+	"github.com/cdobbyn/azure-go-cli/internal/monitor"
 	"github.com/cdobbyn/azure-go-cli/internal/network"
 	"github.com/cdobbyn/azure-go-cli/internal/pim"
 	"github.com/cdobbyn/azure-go-cli/internal/postgres"
@@ -23,6 +24,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/role"
 	"github.com/cdobbyn/azure-go-cli/internal/storage"
 	"github.com/cdobbyn/azure-go-cli/internal/vm"
+	"github.com/cdobbyn/azure-go-cli/internal/vmss"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -80,6 +82,7 @@ func main() {
 		group.NewGroupCommand(),
 		hdinsight.NewHDInsightCommand(),
 		identity.NewIdentityCommand(),
+		monitor.NewMonitorCommand(),
 		network.NewNetworkCommand(),
 		pim.NewPIMCommand(),
 		storage.NewStorageCommand(),
@@ -89,6 +92,7 @@ func main() {
 		resource.NewResourceCommand(),
 		role.NewRoleCmd(),
 		vm.NewVMCommand(),
+		vmss.NewVmssCommand(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {

@@ -1,0 +1,38 @@
+package vmss
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6"
+	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
+)
+
+func ListInstances(ctx context.Context, cmd *cobra.Command, resourceGroup, name string) error {
+	cred, err := azure.GetCredential()
+	if err != nil {
+		return err
+	}
+	subscriptionID, err := config.GetDefaultSubscription()
+	if err != nil {
+		return err
+	}
+	client, err := armcompute.NewVirtualMachineScaleSetVMsClient(subscriptionID, cred, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create VMSS VM client: %w", err)
+	}
+
+	var items []*armcompute.VirtualMachineScaleSetVM
+	pager := client.NewListPager(resourceGroup, name, nil)
+	for pager.More() {
+		page, err := pager.NextPage(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to list instances: %w", err)
+		}
+		items = append(items, page.Value...)
+	}
+	return output.PrintJSON(cmd, items)
+}
