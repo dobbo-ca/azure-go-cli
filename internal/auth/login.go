@@ -13,7 +13,7 @@ import (
 
 const subscriptionThreshold = 10
 
-func Login(ctx context.Context, forceTenantSelection bool) error {
+func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter string) error {
 	// Clear any existing profile to ensure fresh login
 	// This prevents old subscription data from persisting if the new login fails
 	if err := config.Delete(); err != nil {
@@ -69,7 +69,19 @@ func Login(ctx context.Context, forceTenantSelection bool) error {
 	// Decide whether to use two-step or flat selection
 	useTenantSelection := forceTenantSelection || len(allSubscriptions) > subscriptionThreshold
 
-	if useTenantSelection {
+	if subscriptionFilter != "" {
+		// Non-interactive: --subscription names exactly which subscription to use,
+		// so skip the picker entirely (browser auth above may still open, which is
+		// acceptable for agent workloads).
+		selectedSub = resolveSubscription(allSubscriptions, subscriptionFilter)
+		if selectedSub == nil {
+			msg := fmt.Sprintf("subscription '%s' not found among accessible subscriptions", subscriptionFilter)
+			if len(mfaTenants) > 0 {
+				msg += "; some tenants require interactive sign-in — run 'az login' without --subscription to sign in to them"
+			}
+			return fmt.Errorf("%s", msg)
+		}
+	} else if useTenantSelection {
 		// Two-step: tenant first, then subscription
 		logger.Debug("Using two-step selection (tenant then subscription)")
 		selectedTenant, err := promptForTenant(tenantInfos)
@@ -134,6 +146,20 @@ func Login(ctx context.Context, forceTenantSelection bool) error {
 	logger.Println("")
 	logger.Info("You have successfully logged in")
 
+	return nil
+}
+
+// resolveSubscription returns the subscription matching query by exact ID or
+// name, or nil if none match. Mirrors the matching used by 'az account set'.
+func resolveSubscription(subs []config.Subscription, query string) *config.Subscription {
+	if query == "" {
+		return nil
+	}
+	for i := range subs {
+		if subs[i].ID == query || subs[i].Name == query {
+			return &subs[i]
+		}
+	}
 	return nil
 }
 
