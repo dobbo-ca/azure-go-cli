@@ -13,7 +13,7 @@ import (
 
 const subscriptionThreshold = 10
 
-func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter string) error {
+func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, tenantFilter string) error {
 	// Clear any existing profile to ensure fresh login
 	// This prevents old subscription data from persisting if the new login fails
 	if err := config.Delete(); err != nil {
@@ -41,6 +41,17 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter st
 	tenantInfos, authRecord, err := azure.DiscoverAllSubscriptionsWithAuth(ctx, cred)
 	if err != nil {
 		return fmt.Errorf("failed to discover subscriptions: %w", err)
+	}
+
+	// If a specific tenant was requested, narrow discovery to just that tenant.
+	// The subscription selection below is unchanged: --subscription still selects
+	// non-interactively, otherwise the user is prompted among this tenant's subs.
+	if tenantFilter != "" {
+		filtered := filterTenants(tenantInfos, tenantFilter)
+		if len(filtered) == 0 {
+			return fmt.Errorf("tenant '%s' not found among accessible tenants", tenantFilter)
+		}
+		tenantInfos = filtered
 	}
 
 	// Separate tenants with subscriptions from MFA-blocked tenants
@@ -163,14 +174,28 @@ func resolveSubscription(subs []config.Subscription, query string) *config.Subsc
 	return nil
 }
 
+// filterTenants returns the tenants whose ID or default domain matches the
+// requested tenant (case-insensitive). Used by `az login --tenant` to scope the
+// login to a single tenant.
+func filterTenants(tenants []azure.TenantInfo, want string) []azure.TenantInfo {
+	want = strings.ToLower(strings.TrimSpace(want))
+	var out []azure.TenantInfo
+	for _, t := range tenants {
+		if strings.ToLower(t.TenantID) == want || strings.ToLower(t.DefaultDomain) == want {
+			out = append(out, t)
+		}
+	}
+	return out
+}
+
 func promptForTenant(tenantInfos []azure.TenantInfo) (*azure.TenantInfo, error) {
 	logger.Println("")
 	logger.Println("[Tenant selection]")
 	logger.Println("")
 
 	templates := &promptui.SelectTemplates{
-		Label: "{{ . }}",
-		Active: `{{ if .NeedsMFA }}` + "\U0001F449 \U0001F510 {{ .DisplayName | yellow }} (requires sign-in)" + `{{ else }}` + "\U0001F449 {{ .DisplayName | cyan }} ({{ .Subscriptions | len }} subscriptions)" + `{{ end }}`,
+		Label:    "{{ . }}",
+		Active:   `{{ if .NeedsMFA }}` + "\U0001F449 \U0001F510 {{ .DisplayName | yellow }} (requires sign-in)" + `{{ else }}` + "\U0001F449 {{ .DisplayName | cyan }} ({{ .Subscriptions | len }} subscriptions)" + `{{ end }}`,
 		Inactive: `{{ if .NeedsMFA }}  ` + "\U0001F510 {{ .DisplayName | yellow }} (requires sign-in)" + `{{ else }}  {{ .DisplayName | cyan }} ({{ .Subscriptions | len }} subscriptions){{ end }}`,
 		Selected: "\U0001F449 {{ .DisplayName | green }}",
 		Details: `{{ if .NeedsMFA }}
@@ -429,8 +454,8 @@ func promptForSubscriptionFlatWithMFA(ctx context.Context, activeTenants []azure
 	}
 
 	templates := &promptui.SelectTemplates{
-		Label:  "{{ . }}",
-		Active: `{{ if .IsMFA }}` + "\U0001F449 \U0001F510 {{ .Name | yellow }}" + `{{ else }}` + "\U0001F449 {{ .Name | cyan }} ({{ .TenantName | faint }})" + `{{ end }}`,
+		Label:    "{{ . }}",
+		Active:   `{{ if .IsMFA }}` + "\U0001F449 \U0001F510 {{ .Name | yellow }}" + `{{ else }}` + "\U0001F449 {{ .Name | cyan }} ({{ .TenantName | faint }})" + `{{ end }}`,
 		Inactive: `{{ if .IsMFA }}  ` + "\U0001F510 {{ .Name | yellow }}" + `{{ else }}  {{ .Name }} ({{ .TenantName | faint }}){{ end }}`,
 		Selected: "\U0001F449 {{ .Name | green }}",
 		Details: `{{ if .IsMFA }}

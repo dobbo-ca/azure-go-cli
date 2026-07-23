@@ -14,11 +14,13 @@ func NewLoginCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tenantSelection, _ := cmd.Flags().GetBool("tenant-selection")
 			subscription, _ := cmd.Flags().GetString("subscription")
-			return Login(context.Background(), tenantSelection, subscription)
+			tenant, _ := cmd.Flags().GetString("tenant")
+			return Login(context.Background(), tenantSelection, subscription, tenant)
 		},
 	}
 
 	cmd.Flags().Bool("tenant-selection", false, "Always show tenant selection (useful with many subscriptions)")
+	cmd.Flags().StringP("tenant", "t", "", "Tenant ID or domain to sign in to (prompts for subscription unless --subscription is given)")
 
 	return cmd
 }

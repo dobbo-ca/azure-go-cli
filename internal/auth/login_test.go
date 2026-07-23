@@ -3,6 +3,7 @@ package auth
 import (
 	"testing"
 
+	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
 )
 
@@ -38,6 +39,37 @@ func TestResolveSubscription(t *testing.T) {
 			}
 			if got.ID != tc.wantID {
 				t.Errorf("resolveSubscription(%q).ID = %s, want %s", tc.query, got.ID, tc.wantID)
+			}
+		})
+	}
+}
+
+func TestFilterTenants(t *testing.T) {
+	tenants := []azure.TenantInfo{
+		{TenantID: "aaaaaaaa-0000-0000-0000-000000000000", DefaultDomain: "contoso.onmicrosoft.com"},
+		{TenantID: "bbbbbbbb-0000-0000-0000-000000000000", DefaultDomain: "fabrikam.com"},
+	}
+
+	cases := []struct {
+		name    string
+		want    string
+		wantLen int
+		wantID  string
+	}{
+		{"by tenant ID", "aaaaaaaa-0000-0000-0000-000000000000", 1, "aaaaaaaa-0000-0000-0000-000000000000"},
+		{"by domain", "fabrikam.com", 1, "bbbbbbbb-0000-0000-0000-000000000000"},
+		{"case-insensitive domain", "Contoso.OnMicrosoft.com", 1, "aaaaaaaa-0000-0000-0000-000000000000"},
+		{"no match", "nope.com", 0, ""},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := filterTenants(tenants, tc.want)
+			if len(got) != tc.wantLen {
+				t.Fatalf("filterTenants(%q) len = %d, want %d", tc.want, len(got), tc.wantLen)
+			}
+			if tc.wantLen == 1 && got[0].TenantID != tc.wantID {
+				t.Errorf("filterTenants(%q) = %s, want %s", tc.want, got[0].TenantID, tc.wantID)
 			}
 		})
 	}
