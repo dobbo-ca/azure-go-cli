@@ -8,9 +8,10 @@ import (
 
 func NewFeatureCommand() *cobra.Command {
   cmd := &cobra.Command{
-    Use:   "feat",
-    Short: "Manage Azure preview features",
-    Long:  "Commands to register, unregister, and view Azure preview features",
+    Use:     "feat",
+    Aliases: []string{"feature"},
+    Short:   "Manage Azure preview features",
+    Long:    "Commands to register, unregister, and view Azure preview features",
   }
 
   listCmd := &cobra.Command{
