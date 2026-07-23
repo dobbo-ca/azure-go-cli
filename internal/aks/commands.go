@@ -4,12 +4,15 @@ import (
 	"context"
 
 	"github.com/cdobbyn/azure-go-cli/internal/aks/addon"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/command"
 	"github.com/cdobbyn/azure-go-cli/internal/aks/machine"
 	"github.com/cdobbyn/azure-go-cli/internal/aks/maintenanceconfiguration"
 	"github.com/cdobbyn/azure-go-cli/internal/aks/nodepool"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/oidcissuer"
 	"github.com/cdobbyn/azure-go-cli/internal/aks/operation"
 	"github.com/cdobbyn/azure-go-cli/internal/aks/podidentity"
 	"github.com/cdobbyn/azure-go-cli/internal/aks/snapshot"
+	"github.com/cdobbyn/azure-go-cli/internal/aks/trustedaccess"
 	"github.com/cdobbyn/azure-go-cli/internal/network/bastion"
 	"github.com/spf13/cobra"
 )
@@ -231,6 +234,70 @@ Run with: sudo az aks install-cli`,
 		Reconcile,
 	)
 
+	getVersionsCmd := &cobra.Command{
+		Use:   "get-versions",
+		Short: "List the Kubernetes versions available in a location",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			location, _ := cmd.Flags().GetString("location")
+			return GetVersions(context.Background(), cmd, location)
+		},
+	}
+	getVersionsCmd.Flags().StringP("location", "l", "", "Azure region")
+	getVersionsCmd.MarkFlagRequired("location")
+
+	getUpgradesCmd := &cobra.Command{
+		Use:   "get-upgrades",
+		Short: "Get available upgrade versions for an AKS cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			return GetUpgrades(context.Background(), cmd, name, resourceGroup)
+		},
+	}
+	getUpgradesCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	getUpgradesCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	getUpgradesCmd.MarkFlagRequired("name")
+	getUpgradesCmd.MarkFlagRequired("resource-group")
+
+	rotateCertsCmd := &cobra.Command{
+		Use:   "rotate-certs",
+		Short: "Rotate the certificates of an AKS cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return RotateCerts(context.Background(), cmd, name, resourceGroup, noWait)
+		},
+	}
+	rotateCertsCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	rotateCertsCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	rotateCertsCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	rotateCertsCmd.MarkFlagRequired("name")
+	rotateCertsCmd.MarkFlagRequired("resource-group")
+
+	waitCmd := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait for an AKS cluster to reach a condition",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			deleted, _ := cmd.Flags().GetBool("deleted")
+			exists, _ := cmd.Flags().GetBool("exists")
+			interval, _ := cmd.Flags().GetInt("interval")
+			timeout, _ := cmd.Flags().GetInt("timeout")
+			return Wait(context.Background(), cmd, name, resourceGroup, deleted, exists, interval, timeout)
+		},
+	}
+	waitCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	waitCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	waitCmd.Flags().Bool("created", false, "Wait until succeeded (default behavior)")
+	waitCmd.Flags().Bool("deleted", false, "Wait until deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the cluster exists")
+	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
+	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
+	waitCmd.MarkFlagRequired("name")
+	waitCmd.MarkFlagRequired("resource-group")
+
 	cmd.AddCommand(
 		getCredsCmd,
 		bastionCmd,
@@ -242,6 +309,10 @@ Run with: sudo az aks install-cli`,
 		stopCmd,
 		abortCmd,
 		reconcileCmd,
+		getVersionsCmd,
+		getUpgradesCmd,
+		rotateCertsCmd,
+		waitCmd,
 		newGetTokenCmd(),
 		newConvertKubeconfigCmd(),
 		nodepool.NewNodePoolCommand(),
@@ -251,6 +322,9 @@ Run with: sudo az aks install-cli`,
 		snapshot.NewSnapshotCommand(),
 		operation.NewOperationCommand(),
 		podidentity.NewPodIdentityCommand(),
+		oidcissuer.NewOIDCIssuerCommand(),
+		trustedaccess.NewTrustedAccessCommand(),
+		command.NewCommandCommand(),
 	)
 	return cmd
 }

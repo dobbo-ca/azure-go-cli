@@ -104,6 +104,90 @@ func NewNodePoolCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, scaleCmd, addCmd, deleteCmd)
+	getUpgradesCmd := &cobra.Command{
+		Use:   "get-upgrades",
+		Short: "Get available upgrade versions for a node pool",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clusterName, _ := cmd.Flags().GetString("cluster-name")
+			nodepoolName, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			return GetUpgrades(context.Background(), cmd, clusterName, nodepoolName, resourceGroup)
+		},
+	}
+	getUpgradesCmd.Flags().String("cluster-name", "", "AKS cluster name")
+	getUpgradesCmd.Flags().StringP("name", "n", "", "Node pool name")
+	getUpgradesCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	getUpgradesCmd.MarkFlagRequired("cluster-name")
+	getUpgradesCmd.MarkFlagRequired("name")
+	getUpgradesCmd.MarkFlagRequired("resource-group")
+
+	operationAbortCmd := &cobra.Command{
+		Use:   "operation-abort",
+		Short: "Abort the latest running operation on a node pool",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clusterName, _ := cmd.Flags().GetString("cluster-name")
+			nodepoolName, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return OperationAbort(context.Background(), cmd, clusterName, nodepoolName, resourceGroup, noWait)
+		},
+	}
+	operationAbortCmd.Flags().String("cluster-name", "", "AKS cluster name")
+	operationAbortCmd.Flags().StringP("name", "n", "", "Node pool name")
+	operationAbortCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	operationAbortCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	operationAbortCmd.MarkFlagRequired("cluster-name")
+	operationAbortCmd.MarkFlagRequired("name")
+	operationAbortCmd.MarkFlagRequired("resource-group")
+
+	deleteMachinesCmd := &cobra.Command{
+		Use:   "delete-machines",
+		Short: "Delete specific machines from a node pool",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clusterName, _ := cmd.Flags().GetString("cluster-name")
+			nodepoolName, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			machineNames, _ := cmd.Flags().GetStringSlice("machine-names")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return DeleteMachines(context.Background(), cmd, clusterName, nodepoolName, resourceGroup, machineNames, noWait)
+		},
+	}
+	deleteMachinesCmd.Flags().String("cluster-name", "", "AKS cluster name")
+	deleteMachinesCmd.Flags().StringP("name", "n", "", "Node pool name")
+	deleteMachinesCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	deleteMachinesCmd.Flags().StringSlice("machine-names", nil, "Names of the machines to delete")
+	deleteMachinesCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	deleteMachinesCmd.MarkFlagRequired("cluster-name")
+	deleteMachinesCmd.MarkFlagRequired("name")
+	deleteMachinesCmd.MarkFlagRequired("resource-group")
+	deleteMachinesCmd.MarkFlagRequired("machine-names")
+
+	waitCmd := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait for a node pool to reach a condition",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clusterName, _ := cmd.Flags().GetString("cluster-name")
+			nodepoolName, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			deleted, _ := cmd.Flags().GetBool("deleted")
+			exists, _ := cmd.Flags().GetBool("exists")
+			interval, _ := cmd.Flags().GetInt("interval")
+			timeout, _ := cmd.Flags().GetInt("timeout")
+			return Wait(context.Background(), cmd, clusterName, nodepoolName, resourceGroup, deleted, exists, interval, timeout)
+		},
+	}
+	waitCmd.Flags().String("cluster-name", "", "AKS cluster name")
+	waitCmd.Flags().StringP("name", "n", "", "Node pool name")
+	waitCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	waitCmd.Flags().Bool("created", false, "Wait until the node pool is created")
+	waitCmd.Flags().Bool("deleted", false, "Wait until the node pool is deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the node pool exists")
+	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
+	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
+	waitCmd.MarkFlagRequired("cluster-name")
+	waitCmd.MarkFlagRequired("name")
+	waitCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, scaleCmd, addCmd, deleteCmd, getUpgradesCmd, operationAbortCmd, deleteMachinesCmd, waitCmd)
 	return cmd
 }
