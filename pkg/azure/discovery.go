@@ -120,9 +120,10 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 		for subsPager.More() {
 			subsPage, err := subsPager.NextPage(ctx)
 			if err != nil {
-				// Check if this is an MFA/Conditional Access error (AADSTS50076)
-				if isMFARequiredError(err) {
-					logger.Debug("Tenant '%s' requires MFA - will offer interactive auth if selected", tenantDisplay)
+				// Check if interactive sign-in can fix this (MFA AADSTS50076 or
+				// expired refresh token AADSTS70043)
+				if needsInteractiveAuth(err) {
+					logger.Debug("Tenant '%s' needs interactive sign-in - will offer re-auth if selected", tenantDisplay)
 					mfaRequired = true
 				} else {
 					logger.Warning("Failed to list subscriptions for tenant '%s' (%s): %v", tenantDisplay, tenantID, err)
@@ -317,13 +318,18 @@ func DiscoverAllSubscriptionsFromCache(ctx context.Context) ([]TenantInfo, error
 	return tenantInfos, nil
 }
 
-// isMFARequiredError checks if an error is an AADSTS50076 (MFA required) error
-func isMFARequiredError(err error) bool {
+// needsInteractiveAuth reports whether a silent token acquisition failed for a
+// reason that interactive sign-in can fix: an MFA / Conditional Access challenge
+// (AADSTS50076), or an expired refresh token from Conditional Access sign-in
+// frequency policy (AADSTS70043). Both are resolved by re-authenticating the
+// tenant interactively, so the tenant is offered as "requires sign-in".
+func needsInteractiveAuth(err error) bool {
 	if err == nil {
 		return false
 	}
 	errStr := err.Error()
-	return strings.Contains(errStr, "AADSTS50076") || strings.Contains(errStr, "50076")
+	return strings.Contains(errStr, "AADSTS50076") || // MFA required
+		strings.Contains(errStr, "AADSTS70043") // refresh token expired (sign-in frequency)
 }
 
 // AuthenticateForTenant performs interactive browser authentication targeting a specific tenant
