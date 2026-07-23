@@ -4,6 +4,9 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/storage/account"
 	"github.com/cdobbyn/azure-go-cli/internal/storage/blob"
 	"github.com/cdobbyn/azure-go-cli/internal/storage/container"
+	"github.com/cdobbyn/azure-go-cli/internal/storage/containerrm"
+	"github.com/cdobbyn/azure-go-cli/internal/storage/sharerm"
+	"github.com/cdobbyn/azure-go-cli/internal/storage/sku"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +21,9 @@ func NewStorageCommand() *cobra.Command {
 		account.NewAccountCommand(),
 		blob.NewBlobCommand(),
 		container.NewContainerCommand(),
+		containerrm.NewContainerRMCommand(),
+		sharerm.NewShareRMCommand(),
+		sku.NewSKUCommand(),
 	)
 	return cmd
 }
