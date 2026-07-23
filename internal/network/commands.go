@@ -1,8 +1,10 @@
 package network
 
 import (
+	"github.com/cdobbyn/azure-go-cli/internal/network/asg"
 	"github.com/cdobbyn/azure-go-cli/internal/network/bastion"
 	"github.com/cdobbyn/azure-go-cli/internal/network/lb"
+	"github.com/cdobbyn/azure-go-cli/internal/network/localgateway"
 	"github.com/cdobbyn/azure-go-cli/internal/network/natgateway"
 	"github.com/cdobbyn/azure-go-cli/internal/network/nic"
 	"github.com/cdobbyn/azure-go-cli/internal/network/nsg"
@@ -36,6 +38,8 @@ func NewNetworkCommand() *cobra.Command {
 		nsg.NewNsgCommand(),
 		publicip.NewPublicIPCommand(),
 		nic.NewNicCommand(),
+		asg.NewASGCommand(),
+		localgateway.NewLocalGatewayCommand(),
 	)
 	return cmd
 }

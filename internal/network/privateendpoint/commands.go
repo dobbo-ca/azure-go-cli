@@ -81,6 +81,28 @@ func NewPrivateEndpointCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	waitCmd := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait until a private endpoint reaches a desired state",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			deleted, _ := cmd.Flags().GetBool("deleted")
+			exists, _ := cmd.Flags().GetBool("exists")
+			interval, _ := cmd.Flags().GetInt("interval")
+			timeout, _ := cmd.Flags().GetInt("timeout")
+			return Wait(context.Background(), cmd, name, resourceGroup, deleted, exists, interval, timeout)
+		},
+	}
+	waitCmd.Flags().StringP("name", "n", "", "Private endpoint name")
+	waitCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	waitCmd.Flags().Bool("deleted", false, "Wait until the private endpoint is deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the private endpoint exists")
+	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
+	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
+	waitCmd.MarkFlagRequired("name")
+	waitCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, waitCmd)
 	return cmd
 }

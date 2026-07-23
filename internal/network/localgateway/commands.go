@@ -1,57 +1,61 @@
-package nsg
+package localgateway
 
 import (
 	"context"
 
-	"github.com/cdobbyn/azure-go-cli/internal/network/nsg/rule"
 	"github.com/spf13/cobra"
 )
 
-func NewNsgCommand() *cobra.Command {
+func NewLocalGatewayCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "nsg",
-		Short: "Manage network security groups",
-		Long:  "Commands to manage Azure network security groups",
+		Use:   "local-gateway",
+		Short: "Manage local network gateways",
+		Long:  "Commands to manage Azure local network gateways",
 	}
 
 	listCmd := &cobra.Command{
 		Use:   "list",
-		Short: "List network security groups",
+		Short: "List local network gateways",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
-	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")
+	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	listCmd.MarkFlagRequired("resource-group")
 
 	showCmd := &cobra.Command{
 		Use:   "show",
-		Short: "Show details of a network security group",
+		Short: "Show details of a local network gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			return Show(context.Background(), cmd, name, resourceGroup)
 		},
 	}
-	showCmd.Flags().StringP("name", "n", "", "NSG name")
+	showCmd.Flags().StringP("name", "n", "", "Local network gateway name")
 	showCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
 	showCmd.MarkFlagRequired("name")
 	showCmd.MarkFlagRequired("resource-group")
 
 	createCmd := &cobra.Command{
 		Use:   "create",
-		Short: "Create a network security group",
+		Short: "Create a local network gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			location, _ := cmd.Flags().GetString("location")
+			gatewayIP, _ := cmd.Flags().GetString("gateway-ip-address")
+			prefixes, _ := cmd.Flags().GetString("local-address-prefixes")
 			tags, _ := cmd.Flags().GetStringToString("tags")
-			return Create(context.Background(), cmd, name, resourceGroup, location, tags)
+			return Create(context.Background(), cmd, name, resourceGroup, location, gatewayIP, splitCSV(prefixes), tags)
 		},
 	}
-	createCmd.Flags().StringP("name", "n", "", "NSG name")
+	createCmd.Flags().StringP("name", "n", "", "Local network gateway name")
 	createCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
 	createCmd.Flags().StringP("location", "l", "", "Location (e.g., eastus, westus2)")
+	createCmd.Flags().String("gateway-ip-address", "", "IP address of the local network gateway")
+	createCmd.Flags().String("local-address-prefixes", "", "Comma-separated CIDR address prefixes (e.g., 10.0.0.0/24,10.1.0.0/24)")
 	createCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
 	createCmd.MarkFlagRequired("name")
 	createCmd.MarkFlagRequired("resource-group")
@@ -59,7 +63,7 @@ func NewNsgCommand() *cobra.Command {
 
 	deleteCmd := &cobra.Command{
 		Use:   "delete",
-		Short: "Delete a network security group",
+		Short: "Delete a local network gateway",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
@@ -67,7 +71,7 @@ func NewNsgCommand() *cobra.Command {
 			return Delete(context.Background(), name, resourceGroup, noWait)
 		},
 	}
-	deleteCmd.Flags().StringP("name", "n", "", "NSG name")
+	deleteCmd.Flags().StringP("name", "n", "", "Local network gateway name")
 	deleteCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
 	deleteCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
 	deleteCmd.MarkFlagRequired("name")
@@ -75,7 +79,7 @@ func NewNsgCommand() *cobra.Command {
 
 	updateCmd := &cobra.Command{
 		Use:   "update",
-		Short: "Update a network security group",
+		Short: "Update a local network gateway (gateway IP, local address prefixes, tags)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
@@ -83,8 +87,10 @@ func NewNsgCommand() *cobra.Command {
 			return Update(context.Background(), cmd, name, resourceGroup, noWait)
 		},
 	}
-	updateCmd.Flags().StringP("name", "n", "", "NSG name")
+	updateCmd.Flags().StringP("name", "n", "", "Local network gateway name")
 	updateCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	updateCmd.Flags().String("gateway-ip-address", "", "IP address of the local network gateway")
+	updateCmd.Flags().String("local-address-prefixes", "", "Comma-separated CIDR address prefixes (e.g., 10.0.0.0/24,10.1.0.0/24)")
 	updateCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
 	updateCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
 	updateCmd.MarkFlagRequired("name")
@@ -92,7 +98,7 @@ func NewNsgCommand() *cobra.Command {
 
 	waitCmd := &cobra.Command{
 		Use:   "wait",
-		Short: "Wait for a network security group to reach a condition",
+		Short: "Wait until a condition of the local network gateway is met",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
@@ -103,15 +109,15 @@ func NewNsgCommand() *cobra.Command {
 			return Wait(context.Background(), cmd, name, resourceGroup, deleted, exists, interval, timeout)
 		},
 	}
-	waitCmd.Flags().StringP("name", "n", "", "NSG name")
+	waitCmd.Flags().StringP("name", "n", "", "Local network gateway name")
 	waitCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
-	waitCmd.Flags().Bool("deleted", false, "Wait until the NSG is deleted")
-	waitCmd.Flags().Bool("exists", false, "Wait until the NSG exists")
+	waitCmd.Flags().Bool("deleted", false, "Wait until deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the resource exists")
 	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
 	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
 	waitCmd.MarkFlagRequired("name")
 	waitCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, updateCmd, waitCmd, rule.NewRuleCommand())
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, updateCmd, waitCmd)
 	return cmd
 }

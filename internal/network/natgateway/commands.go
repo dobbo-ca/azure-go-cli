@@ -74,6 +74,46 @@ func NewNatGatewayCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	updateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update a NAT gateway",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Update(context.Background(), cmd, name, resourceGroup, noWait)
+		},
+	}
+	updateCmd.Flags().StringP("name", "n", "", "NAT gateway name")
+	updateCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	updateCmd.Flags().Int32("idle-timeout", 4, "Idle timeout in minutes (4-120)")
+	updateCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
+	updateCmd.Flags().Bool("no-wait", false, "Do not wait for the long-running operation to finish")
+	updateCmd.MarkFlagRequired("name")
+	updateCmd.MarkFlagRequired("resource-group")
+
+	waitCmd := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait for a NAT gateway to reach a condition",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			deleted, _ := cmd.Flags().GetBool("deleted")
+			exists, _ := cmd.Flags().GetBool("exists")
+			interval, _ := cmd.Flags().GetInt("interval")
+			timeout, _ := cmd.Flags().GetInt("timeout")
+			return Wait(context.Background(), cmd, name, resourceGroup, deleted, exists, interval, timeout)
+		},
+	}
+	waitCmd.Flags().StringP("name", "n", "", "NAT gateway name")
+	waitCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	waitCmd.Flags().Bool("deleted", false, "Wait until the NAT gateway is deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the NAT gateway exists")
+	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
+	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
+	waitCmd.MarkFlagRequired("name")
+	waitCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, updateCmd, waitCmd)
 	return cmd
 }
