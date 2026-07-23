@@ -23,6 +23,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/role"
 	"github.com/cdobbyn/azure-go-cli/internal/storage"
 	"github.com/cdobbyn/azure-go-cli/internal/vm"
+	"github.com/cdobbyn/azure-go-cli/internal/vmss"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 	"github.com/spf13/cobra"
 )
@@ -89,6 +90,7 @@ func main() {
 		resource.NewResourceCommand(),
 		role.NewRoleCmd(),
 		vm.NewVMCommand(),
+		vmss.NewVmssCommand(),
 	)
 
 	if err := rootCmd.Execute(); err != nil {
