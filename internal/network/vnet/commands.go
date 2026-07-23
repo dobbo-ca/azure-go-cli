@@ -76,6 +76,48 @@ func NewVNetCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, subnet.NewSubnetCommand())
+	updateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update a virtual network",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			addressPrefixesStr, _ := cmd.Flags().GetString("address-prefixes")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			addressPrefixes := ParseAddressPrefixes(addressPrefixesStr)
+			return Update(context.Background(), cmd, name, resourceGroup, addressPrefixes, noWait)
+		},
+	}
+	updateCmd.Flags().StringP("name", "n", "", "Virtual network name")
+	updateCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	updateCmd.Flags().String("address-prefixes", "", "Comma-separated list of IP address prefixes (e.g., 10.0.0.0/16,10.1.0.0/16)")
+	updateCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
+	updateCmd.Flags().Bool("no-wait", false, "Do not wait for the long-running operation to finish")
+	updateCmd.MarkFlagRequired("name")
+	updateCmd.MarkFlagRequired("resource-group")
+
+	waitCmd := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait for a virtual network to reach a condition",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			deleted, _ := cmd.Flags().GetBool("deleted")
+			exists, _ := cmd.Flags().GetBool("exists")
+			interval, _ := cmd.Flags().GetInt("interval")
+			timeout, _ := cmd.Flags().GetInt("timeout")
+			return Wait(context.Background(), cmd, name, resourceGroup, deleted, exists, interval, timeout)
+		},
+	}
+	waitCmd.Flags().StringP("name", "n", "", "Virtual network name")
+	waitCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	waitCmd.Flags().Bool("deleted", false, "Wait until the virtual network is deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the virtual network exists")
+	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
+	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
+	waitCmd.MarkFlagRequired("name")
+	waitCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, updateCmd, waitCmd, subnet.NewSubnetCommand())
 	return cmd
 }

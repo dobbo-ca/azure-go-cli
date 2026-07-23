@@ -3,6 +3,7 @@ package publicip
 import (
 	"context"
 
+	"github.com/cdobbyn/azure-go-cli/internal/network/publicip/prefix"
 	"github.com/spf13/cobra"
 )
 
@@ -76,6 +77,47 @@ func NewPublicIPCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	updateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update a public IP address",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Update(context.Background(), cmd, name, resourceGroup, noWait)
+		},
+	}
+	updateCmd.Flags().StringP("name", "n", "", "Public IP name")
+	updateCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	updateCmd.Flags().Int32("idle-timeout", 0, "Idle timeout in minutes")
+	updateCmd.Flags().String("allocation-method", "", "IP allocation method (Static or Dynamic)")
+	updateCmd.Flags().StringToString("tags", nil, "Space-separated tags: key1=value1 key2=value2")
+	updateCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	updateCmd.MarkFlagRequired("name")
+	updateCmd.MarkFlagRequired("resource-group")
+
+	waitCmd := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait until a condition of the public IP address is met",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			deleted, _ := cmd.Flags().GetBool("deleted")
+			exists, _ := cmd.Flags().GetBool("exists")
+			interval, _ := cmd.Flags().GetInt("interval")
+			timeout, _ := cmd.Flags().GetInt("timeout")
+			return Wait(context.Background(), cmd, name, resourceGroup, deleted, exists, interval, timeout)
+		},
+	}
+	waitCmd.Flags().StringP("name", "n", "", "Public IP name")
+	waitCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	waitCmd.Flags().Bool("deleted", false, "Wait until deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the resource exists")
+	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
+	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
+	waitCmd.MarkFlagRequired("name")
+	waitCmd.MarkFlagRequired("resource-group")
+
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, updateCmd, waitCmd, prefix.NewPrefixCommand())
 	return cmd
 }
