@@ -1,0 +1,59 @@
+package replica
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/postgresql/armpostgresqlflexibleservers/v4"
+	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
+)
+
+// Promote promotes a read replica to either a standalone server or a new primary.
+// promoteMode accepts the SDK values "standalone" or "switchover".
+// promoteOption accepts the SDK values "planned" or "forced".
+func Promote(ctx context.Context, cmd *cobra.Command, resourceGroup, serverName, promoteMode, promoteOption string, noWait bool) error {
+	cred, err := azure.GetCredential()
+	if err != nil {
+		return err
+	}
+
+	subscriptionID, err := config.GetDefaultSubscription()
+	if err != nil {
+		return err
+	}
+
+	client, err := armpostgresqlflexibleservers.NewServersClient(subscriptionID, cred, nil)
+	if err != nil {
+		return fmt.Errorf("failed to create servers client: %w", err)
+	}
+
+	parameters := armpostgresqlflexibleservers.ServerForUpdate{
+		Properties: &armpostgresqlflexibleservers.ServerPropertiesForUpdate{
+			Replica: &armpostgresqlflexibleservers.Replica{
+				PromoteMode:   to.Ptr(armpostgresqlflexibleservers.ReadReplicaPromoteMode(promoteMode)),
+				PromoteOption: to.Ptr(armpostgresqlflexibleservers.ReplicationPromoteOption(promoteOption)),
+			},
+		},
+	}
+
+	fmt.Printf("Promoting replica '%s' (mode=%s, option=%s)...\n", serverName, promoteMode, promoteOption)
+	poller, err := client.BeginUpdate(ctx, resourceGroup, serverName, parameters, nil)
+	if err != nil {
+		return fmt.Errorf("failed to begin promote: %w", err)
+	}
+
+	if noWait {
+		return output.PrintJSON(cmd, map[string]string{"status": "promote started"})
+	}
+
+	resp, err := poller.PollUntilDone(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("promote failed: %w", err)
+	}
+
+	return output.PrintJSON(cmd, resp.Server)
+}
