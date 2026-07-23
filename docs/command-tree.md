@@ -9,8 +9,8 @@ Legend:
 ## Summary
 
 - **Total Commands**:     3757
-- **Implemented**:      138 (3.7%)
-- **Missing**:     3664
+- **Implemented**:      658 (17.5%)
+- **Missing**:     3303
 
 ---
 
@@ -23,24 +23,24 @@ Legend:
   - ✅ `clear`
   - ✅ `get-access-token`
   - ✅ `list`
-  - ❌ `list-locations`
-  - ❌ `lock`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `update`
-  - ❌ `management-group`
-    - ❌ `check-name-availability`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `entities`
-    - ❌ `hierarchy-settings`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `subscription`
-    - ❌ `tenant-backfill`
-    - ❌ `update`
+  - ✅ `list-locations`
+  - ✅ `lock`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `update`
+  - ✅ `management-group`
+    - ✅ `check-name-availability`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `entities`
+    - ✅ `hierarchy-settings`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `subscription`
+    - ✅ `tenant-backfill`
+    - ✅ `update`
   - ✅ `set`
   - ✅ `show`
 
@@ -306,15 +306,15 @@ Legend:
     - ❌ `zone`
   - ❌ `browse`
   - ❌ `check-acr`
-  - ❌ `command`
-    - ❌ `invoke`
-    - ❌ `result`
+  - ✅ `command`
+    - ✅ `invoke`
+    - ✅ `result`
   - ✅ `delete`
   - ❌ `disable-addons`
   - ❌ `enable-addons`
   - ✅ `get-credentials`
-  - ❌ `get-upgrades`
-  - ❌ `get-versions`
+  - ✅ `get-upgrades`
+  - ✅ `get-versions`
   - ✅ `install-cli`
   - ✅ `list`
   - ✅ `machine`
@@ -335,25 +335,25 @@ Legend:
     - ❌ `get-upgrades`
     - ❌ `upgrade`
   - ✅ `nodepool`
-    - ❌ `add`
-    - ❌ `delete`
-    - ❌ `delete-machines`
-    - ❌ `get-upgrades`
+    - ✅ `add`
+    - ✅ `delete`
+    - ✅ `delete-machines`
+    - ✅ `get-upgrades`
     - ✅ `list`
     - ❌ `manual-scale`
-    - ❌ `operation-abort`
-    - ❌ `scale`
+    - ✅ `operation-abort`
+    - ✅ `scale`
     - ✅ `show`
     - ❌ `snapshot`
     - ❌ `start`
     - ❌ `stop`
     - ❌ `update`
     - ❌ `upgrade`
-    - ❌ `wait`
-  - ❌ `oidc-issuer`
-    - ❌ `rotate-signing-keys`
-  - ❌ `operation-abort`
-  - ❌ `rotate-certs`
+    - ✅ `wait`
+  - ✅ `oidc-issuer`
+    - ✅ `rotate-signing-keys`
+  - ✅ `operation-abort`
+  - ✅ `rotate-certs`
   - ❌ `safeguards`
     - ❌ `create`
     - ❌ `delete`
@@ -363,15 +363,15 @@ Legend:
     - ❌ `wait`
   - ❌ `scale`
   - ✅ `show`
-  - ❌ `start`
-  - ❌ `stop`
-  - ❌ `trustedaccess`
-    - ❌ `role`
-    - ❌ `rolebinding`
+  - ✅ `start`
+  - ✅ `stop`
+  - ✅ `trustedaccess`
+    - ✅ `role`
+    - ✅ `rolebinding`
   - ❌ `update`
   - ❌ `update-credentials`
   - ❌ `upgrade`
-  - ❌ `wait`
+  - ✅ `wait`
 
 ### az ams
 
@@ -1375,15 +1375,15 @@ Legend:
 
 ### az disk
 
-- ❌ `disk`
+- ✅ `disk`
   - ❌ `config`
     - ❌ `update`
-  - ❌ `create`
-  - ❌ `delete`
+  - ✅ `create`
+  - ✅ `delete`
   - ❌ `grant-access`
-  - ❌ `list`
+  - ✅ `list`
   - ❌ `revoke-access`
-  - ❌ `show`
+  - ✅ `show`
   - ❌ `update`
   - ❌ `wait`
 
@@ -1399,18 +1399,18 @@ Legend:
 
 ### az disk-encryption-set
 
-- ❌ `disk-encryption-set`
-  - ❌ `create`
-  - ❌ `delete`
-  - ❌ `identity`
-    - ❌ `assign`
-    - ❌ `remove`
-    - ❌ `show`
-  - ❌ `list`
-  - ❌ `list-associated-resources`
-  - ❌ `show`
-  - ❌ `update`
-  - ❌ `wait`
+- ✅ `disk-encryption-set`
+  - ✅ `create`
+  - ✅ `delete`
+  - ✅ `identity`
+    - ✅ `assign`
+    - ✅ `remove`
+    - ✅ `show`
+  - ✅ `list`
+  - ✅ `list-associated-resources`
+  - ✅ `show`
+  - ✅ `update`
+  - ✅ `wait`
 
 ### az dms
 
@@ -1666,13 +1666,13 @@ Legend:
 
 ### az hdinsight
 
-- ❌ `hdinsight`
-  - ❌ `application`
+- ✅ `hdinsight`
+  - ✅ `application`
     - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `wait`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `wait`
   - ❌ `autoscale`
     - ❌ `condition`
     - ❌ `create`
@@ -1681,41 +1681,41 @@ Legend:
     - ❌ `show`
     - ❌ `update`
     - ❌ `wait`
-  - ❌ `azure-monitor`
-    - ❌ `disable`
-    - ❌ `enable`
-    - ❌ `show`
+  - ✅ `azure-monitor`
+    - ✅ `disable`
+    - ✅ `enable`
+    - ✅ `show`
   - ❌ `azure-monitor-agent`
     - ❌ `disable`
     - ❌ `enable`
     - ❌ `show`
   - ❌ `create`
-  - ❌ `credentials`
-    - ❌ `show`
-    - ❌ `update`
-    - ❌ `wait`
-  - ❌ `delete`
-  - ❌ `host`
-    - ❌ `list`
-    - ❌ `restart`
-  - ❌ `list`
-  - ❌ `list-usage`
-  - ❌ `monitor`
-    - ❌ `disable`
-    - ❌ `enable`
-    - ❌ `show`
-  - ❌ `resize`
-  - ❌ `rotate-disk-encryption-key`
-  - ❌ `script-action`
-    - ❌ `delete`
-    - ❌ `execute`
-    - ❌ `list`
-    - ❌ `list-execution-history`
-    - ❌ `promote`
-    - ❌ `show-execution-details`
-  - ❌ `show`
-  - ❌ `update`
-  - ❌ `wait`
+  - ✅ `credentials`
+    - ✅ `show`
+    - ✅ `update`
+    - ✅ `wait`
+  - ✅ `delete`
+  - ✅ `host`
+    - ✅ `list`
+    - ✅ `restart`
+  - ✅ `list`
+  - ✅ `list-usage`
+  - ✅ `monitor`
+    - ✅ `disable`
+    - ✅ `enable`
+    - ✅ `show`
+  - ✅ `resize`
+  - ✅ `rotate-disk-encryption-key`
+  - ✅ `script-action`
+    - ✅ `delete`
+    - ✅ `execute`
+    - ✅ `list`
+    - ✅ `list-execution-history`
+    - ✅ `promote`
+    - ✅ `show-execution-details`
+  - ✅ `show`
+  - ✅ `update`
+  - ✅ `wait`
 
 ### az identity
 
@@ -1796,52 +1796,52 @@ Legend:
 - ✅ `keyvault`
   - ❌ `backup`
     - ❌ `start`
-  - ❌ `certificate`
-    - ❌ `backup`
+  - ✅ `certificate`
+    - ✅ `backup`
     - ❌ `contact`
     - ❌ `create`
-    - ❌ `delete`
+    - ✅ `delete`
     - ❌ `download`
     - ❌ `get-default-policy`
     - ❌ `import`
     - ❌ `issuer`
-    - ❌ `list`
-    - ❌ `list-deleted`
-    - ❌ `list-versions`
+    - ✅ `list`
+    - ✅ `list-deleted`
+    - ✅ `list-versions`
     - ❌ `pending`
-    - ❌ `purge`
-    - ❌ `recover`
-    - ❌ `restore`
-    - ❌ `set-attributes`
-    - ❌ `show`
-    - ❌ `show-deleted`
-  - ❌ `check-name`
+    - ✅ `purge`
+    - ✅ `recover`
+    - ✅ `restore`
+    - ✅ `set-attributes`
+    - ✅ `show`
+    - ✅ `show-deleted`
+  - ✅ `check-name`
   - ✅ `create`
   - ✅ `delete`
   - ❌ `delete-policy`
-  - ❌ `key`
-    - ❌ `backup`
-    - ❌ `create`
-    - ❌ `delete`
+  - ✅ `key`
+    - ✅ `backup`
+    - ✅ `create`
+    - ✅ `delete`
     - ❌ `download`
     - ❌ `get-attestation`
     - ❌ `import`
-    - ❌ `list`
-    - ❌ `list-deleted`
-    - ❌ `list-versions`
-    - ❌ `purge`
+    - ✅ `list`
+    - ✅ `list-deleted`
+    - ✅ `list-versions`
+    - ✅ `purge`
     - ❌ `random`
-    - ❌ `recover`
-    - ❌ `restore`
-    - ❌ `rotate`
+    - ✅ `recover`
+    - ✅ `restore`
+    - ✅ `rotate`
     - ❌ `rotation-policy`
-    - ❌ `set-attributes`
-    - ❌ `show`
-    - ❌ `show-deleted`
+    - ✅ `set-attributes`
+    - ✅ `show`
+    - ✅ `show-deleted`
     - ❌ `sign`
     - ❌ `verify`
   - ✅ `list`
-  - ❌ `list-deleted`
+  - ✅ `list-deleted`
   - ❌ `network-rule`
     - ❌ `add`
     - ❌ `list`
@@ -1856,8 +1856,8 @@ Legend:
     - ❌ `wait`
   - ❌ `private-link-resource`
     - ❌ `list`
-  - ❌ `purge`
-  - ❌ `recover`
+  - ✅ `purge`
+  - ✅ `recover`
   - ❌ `region`
     - ❌ `add`
     - ❌ `list`
@@ -1869,19 +1869,19 @@ Legend:
     - ❌ `assignment`
     - ❌ `definition`
   - ✅ `secret`
-    - ❌ `backup`
+    - ✅ `backup`
     - ✅ `delete`
-    - ❌ `download`
+    - ✅ `download`
     - ✅ `list`
-    - ❌ `list-deleted`
-    - ❌ `list-versions`
-    - ❌ `purge`
-    - ❌ `recover`
-    - ❌ `restore`
+    - ✅ `list-deleted`
+    - ✅ `list-versions`
+    - ✅ `purge`
+    - ✅ `recover`
+    - ✅ `restore`
     - ✅ `set`
-    - ❌ `set-attributes`
+    - ✅ `set-attributes`
     - ✅ `show`
-    - ❌ `show-deleted`
+    - ✅ `show-deleted`
   - ❌ `security-domain`
     - ❌ `download`
     - ❌ `init-recovery`
@@ -1894,8 +1894,8 @@ Legend:
     - ❌ `show`
     - ❌ `update`
   - ✅ `show`
-  - ❌ `show-deleted`
-  - ❌ `update`
+  - ✅ `show-deleted`
+  - ✅ `update`
   - ❌ `update-hsm`
   - ❌ `wait`
   - ❌ `wait-hsm`
@@ -2037,7 +2037,7 @@ Legend:
 
 ### az monitor
 
-- ❌ `monitor`
+- ✅ `monitor`
   - ❌ `account`
     - ❌ `create`
     - ❌ `delete`
@@ -2045,50 +2045,50 @@ Legend:
     - ❌ `show`
     - ❌ `update`
     - ❌ `wait`
-  - ❌ `action-group`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `enable-receiver`
+  - ✅ `action-group`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `enable-receiver`
     - ❌ `identity`
-    - ❌ `list`
-    - ❌ `show`
+    - ✅ `list`
+    - ✅ `show`
     - ❌ `test-notifications`
     - ❌ `update`
     - ❌ `wait`
-  - ❌ `activity-log`
+  - ✅ `activity-log`
     - ❌ `alert`
-    - ❌ `list`
-    - ❌ `list-categories`
-  - ❌ `autoscale`
+    - ✅ `list`
+    - ✅ `list-categories`
+  - ✅ `autoscale`
     - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
+    - ✅ `delete`
+    - ✅ `list`
     - ❌ `profile`
     - ❌ `rule`
-    - ❌ `show`
+    - ✅ `show`
     - ❌ `show-predictive-metric`
     - ❌ `update`
-  - ❌ `diagnostic-settings`
-    - ❌ `categories`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `show`
+  - ✅ `diagnostic-settings`
+    - ✅ `categories`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `show`
     - ❌ `subscription`
     - ❌ `update`
   - ❌ `log-analytics`
     - ❌ `cluster`
     - ❌ `workspace`
-  - ❌ `log-profiles`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `show`
+  - ✅ `log-profiles`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `show`
     - ❌ `update`
-  - ❌ `metrics`
+  - ✅ `metrics`
     - ❌ `alert`
-    - ❌ `list`
-    - ❌ `list-definitions`
+    - ✅ `list`
+    - ✅ `list-definitions`
     - ❌ `list-sub`
     - ❌ `list-sub-definitions`
 
@@ -2278,13 +2278,13 @@ Legend:
     - ❌ `waf-config`
     - ❌ `waf-policy`
     - ❌ `wait`
-  - ❌ `asg`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `update`
-    - ❌ `wait`
+  - ✅ `asg`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `update`
+    - ✅ `wait`
   - ❌ `cross-region-lb`
     - ❌ `address-pool`
     - ❌ `create`
@@ -2341,36 +2341,36 @@ Legend:
   - ❌ `list-service-aliases`
   - ❌ `list-service-tags`
   - ❌ `list-usages`
-  - ❌ `local-gateway`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `update`
-    - ❌ `wait`
+  - ✅ `local-gateway`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `update`
+    - ✅ `wait`
   - ✅ `nat`
     - ❌ `gateway`
   - ❌ `network-watcher`
     - ❌ `connection-monitor`
     - ❌ `packet-capture`
-  - ❌ `nic`
-    - ❌ `create`
-    - ❌ `delete`
+  - ✅ `nic`
+    - ✅ `create`
+    - ✅ `delete`
     - ❌ `ip-config`
-    - ❌ `list`
+    - ✅ `list`
     - ❌ `list-effective-nsg`
-    - ❌ `show`
+    - ✅ `show`
     - ❌ `show-effective-route-table`
-    - ❌ `update`
-    - ❌ `wait`
-  - ❌ `nsg`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `rule`
-    - ❌ `show`
-    - ❌ `update`
-    - ❌ `wait`
+    - ✅ `update`
+    - ✅ `wait`
+  - ✅ `nsg`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `rule`
+    - ✅ `show`
+    - ✅ `update`
+    - ✅ `wait`
   - ❌ `private-dns`
     - ❌ `link`
     - ❌ `record-set`
@@ -2385,7 +2385,7 @@ Legend:
     - ❌ `list-types`
     - ✅ `show`
     - ❌ `update`
-    - ❌ `wait`
+    - ✅ `wait`
   - ❌ `private-endpoint-connection`
     - ❌ `approve`
     - ❌ `delete`
@@ -2408,23 +2408,23 @@ Legend:
     - ❌ `list`
     - ❌ `show`
     - ❌ `wait`
-  - ❌ `public-ip`
-    - ❌ `create`
+  - ✅ `public-ip`
+    - ✅ `create`
     - ❌ `ddos-protection`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `prefix`
-    - ❌ `show`
-    - ❌ `update`
-    - ❌ `wait`
-  - ❌ `route-table`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `list`
-    - ❌ `route`
-    - ❌ `show`
-    - ❌ `update`
-    - ❌ `wait`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `prefix`
+    - ✅ `show`
+    - ✅ `update`
+    - ✅ `wait`
+  - ✅ `route-table`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `list`
+    - ✅ `route`
+    - ✅ `show`
+    - ✅ `update`
+    - ✅ `wait`
   - ❌ `routeserver`
     - ❌ `create`
     - ❌ `delete`
@@ -2462,9 +2462,9 @@ Legend:
     - ❌ `list-endpoint-services`
     - ❌ `peering`
     - ✅ `show`
-    - ❌ `subnet`
-    - ❌ `update`
-    - ❌ `wait`
+    - ✅ `subnet`
+    - ✅ `update`
+    - ✅ `wait`
   - ✅ `vnet-gateway`
     - ❌ `aad`
     - ✅ `create`
@@ -2567,37 +2567,37 @@ Legend:
 
 - ✅ `postgres`
   - ✅ `flexible-server`
-    - ❌ `advanced-threat-protection-setting`
-    - ❌ `backup`
-    - ❌ `db`
+    - ✅ `advanced-threat-protection-setting`
+    - ✅ `backup`
+    - ✅ `db`
     - ✅ `delete`
     - ❌ `deploy`
     - ❌ `fabric-mirroring`
-    - ❌ `firewall-rule`
-    - ❌ `geo-restore`
-    - ❌ `identity`
+    - ✅ `firewall-rule`
+    - ✅ `geo-restore`
+    - ✅ `identity`
     - ❌ `index-tuning`
     - ✅ `list`
-    - ❌ `list-skus`
-    - ❌ `long-term-retention`
-    - ❌ `microsoft-entra-admin`
-    - ❌ `migration`
-    - ❌ `parameter`
-    - ❌ `private-endpoint-connection`
-    - ❌ `private-link-resource`
-    - ❌ `replica`
-    - ❌ `restart`
-    - ❌ `restore`
-    - ❌ `revive-dropped`
-    - ❌ `server-logs`
+    - ✅ `list-skus`
+    - ✅ `long-term-retention`
+    - ✅ `microsoft-entra-admin`
+    - ✅ `migration`
+    - ✅ `parameter`
+    - ✅ `private-endpoint-connection`
+    - ✅ `private-link-resource`
+    - ✅ `replica`
+    - ✅ `restart`
+    - ✅ `restore`
+    - ✅ `revive-dropped`
+    - ✅ `server-logs`
     - ✅ `show`
-    - ❌ `show-connection-string`
-    - ❌ `start`
-    - ❌ `stop`
-    - ❌ `update`
-    - ❌ `upgrade`
-    - ❌ `virtual-endpoint`
-    - ❌ `wait`
+    - ✅ `show-connection-string`
+    - ✅ `start`
+    - ✅ `stop`
+    - ✅ `update`
+    - ✅ `upgrade`
+    - ✅ `virtual-endpoint`
+    - ✅ `wait`
 
 ### az ppg
 
@@ -2706,29 +2706,29 @@ Legend:
 
 ### az resource
 
-- ❌ `resource`
-  - ❌ `create`
-  - ❌ `delete`
-  - ❌ `invoke-action`
+- ✅ `resource`
+  - ✅ `create`
+  - ✅ `delete`
+  - ✅ `invoke-action`
   - ❌ `link`
     - ❌ `create`
     - ❌ `delete`
     - ❌ `list`
     - ❌ `show`
     - ❌ `update`
-  - ❌ `list`
+  - ✅ `list`
   - ❌ `lock`
     - ❌ `create`
     - ❌ `delete`
     - ❌ `list`
     - ❌ `show`
     - ❌ `update`
-  - ❌ `move`
+  - ✅ `move`
   - ❌ `patch`
-  - ❌ `show`
-  - ❌ `tag`
-  - ❌ `update`
-  - ❌ `wait`
+  - ✅ `show`
+  - ✅ `tag`
+  - ✅ `update`
+  - ✅ `wait`
 
 ### az resourcemanagement
 
@@ -2768,12 +2768,12 @@ Legend:
     - ✅ `list`
     - ❌ `list-changelogs`
     - ❌ `update`
-  - ❌ `definition`
+  - ✅ `definition`
     - ❌ `create`
     - ❌ `delete`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `update`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `update`
 
 ### az search
 
@@ -3426,51 +3426,51 @@ Legend:
 
 - ✅ `storage`
   - ✅ `account`
-    - ❌ `blob-service-properties`
-    - ❌ `check-name`
+    - ✅ `blob-service-properties`
+    - ✅ `check-name`
     - ✅ `create`
     - ✅ `delete`
-    - ❌ `encryption-scope`
+    - ✅ `encryption-scope`
     - ❌ `file-service-properties`
     - ❌ `file-service-usage`
     - ❌ `generate-sas`
     - ❌ `hns-migration`
-    - ❌ `keys`
+    - ✅ `keys`
     - ✅ `list`
     - ❌ `local-user`
-    - ❌ `management-policy`
+    - ✅ `management-policy`
     - ❌ `migration`
-    - ❌ `network-rule`
+    - ✅ `network-rule`
     - ❌ `network-security-perimeter-configuration`
     - ❌ `or-policy`
     - ❌ `private-link-resource`
     - ❌ `revoke-delegation-keys`
     - ✅ `show`
-    - ❌ `show-connection-string`
-    - ❌ `show-usage`
-    - ❌ `update`
-  - ❌ `blob`
+    - ✅ `show-connection-string`
+    - ✅ `show-usage`
+    - ✅ `update`
+  - ✅ `blob`
     - ❌ `copy`
-    - ❌ `delete`
+    - ✅ `delete`
     - ❌ `delete-batch`
-    - ❌ `download`
+    - ✅ `download`
     - ❌ `download-batch`
     - ❌ `exists`
     - ❌ `generate-sas`
     - ❌ `immutability-policy`
     - ❌ `incremental-copy`
     - ❌ `lease`
-    - ❌ `list`
+    - ✅ `list`
     - ❌ `metadata`
     - ❌ `restore`
     - ❌ `service-properties`
     - ❌ `set-legal-hold`
     - ❌ `set-tier`
-    - ❌ `show`
+    - ✅ `show`
     - ❌ `snapshot`
     - ❌ `undelete`
     - ❌ `update`
-    - ❌ `upload`
+    - ✅ `upload`
     - ❌ `upload-batch`
     - ❌ `url`
   - ✅ `container`
@@ -3488,13 +3488,13 @@ Legend:
     - ❌ `set-permission`
     - ✅ `show`
     - ❌ `show-permission`
-  - ❌ `container-rm`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `exists`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `update`
+  - ✅ `container-rm`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `exists`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `update`
   - ❌ `copy`
   - ❌ `cors`
     - ❌ `add`
@@ -3567,17 +3567,17 @@ Legend:
     - ❌ `stats`
     - ❌ `update`
     - ❌ `url`
-  - ❌ `share-rm`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `exists`
-    - ❌ `list`
-    - ❌ `restore`
-    - ❌ `show`
-    - ❌ `stats`
-    - ❌ `update`
-  - ❌ `sku`
-    - ❌ `list`
+  - ✅ `share-rm`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `exists`
+    - ✅ `list`
+    - ✅ `restore`
+    - ✅ `show`
+    - ✅ `stats`
+    - ✅ `update`
+  - ✅ `sku`
+    - ✅ `list`
   - ❌ `table`
     - ❌ `create`
     - ❌ `delete`
@@ -3772,7 +3772,7 @@ Legend:
 
 ### az version
 
-- ❌ `version`
+- ✅ `version`
 
 ### az vm
 
@@ -3794,15 +3794,15 @@ Legend:
     - ❌ `start-migration-to-vmss`
     - ❌ `update`
     - ❌ `validate-migration-to-vmss`
-  - ❌ `boot-diagnostics`
-    - ❌ `disable`
-    - ❌ `enable`
+  - ✅ `boot-diagnostics`
+    - ✅ `disable`
+    - ✅ `enable`
     - ❌ `get-boot-log`
-    - ❌ `get-boot-log-uris`
-  - ❌ `capture`
+    - ✅ `get-boot-log-uris`
+  - ✅ `capture`
   - ❌ `convert`
-  - ❌ `create`
-  - ❌ `deallocate`
+  - ✅ `create`
+  - ✅ `deallocate`
   - ✅ `delete`
   - ❌ `diagnostics`
     - ❌ `get-default-config`
@@ -3814,15 +3814,15 @@ Legend:
     - ❌ `disable`
     - ❌ `enable`
     - ❌ `show`
-  - ❌ `extension`
-    - ❌ `delete`
+  - ✅ `extension`
+    - ✅ `delete`
     - ❌ `image`
-    - ❌ `list`
-    - ❌ `set`
-    - ❌ `show`
+    - ✅ `list`
+    - ✅ `set`
+    - ✅ `show`
     - ❌ `wait`
-  - ❌ `generalize`
-  - ❌ `get-instance-view`
+  - ✅ `generalize`
+  - ✅ `get-instance-view`
   - ❌ `host`
     - ❌ `create`
     - ❌ `delete`
@@ -3836,10 +3836,10 @@ Legend:
     - ❌ `show`
     - ❌ `update`
     - ❌ `wait`
-  - ❌ `identity`
-    - ❌ `assign`
-    - ❌ `remove`
-    - ❌ `show`
+  - ✅ `identity`
+    - ✅ `assign`
+    - ✅ `remove`
+    - ✅ `show`
   - ❌ `image`
     - ❌ `list`
     - ❌ `list-offers`
@@ -3849,10 +3849,10 @@ Legend:
     - ❌ `terms`
   - ❌ `install-patches`
   - ✅ `list`
-  - ❌ `list-ip-addresses`
+  - ✅ `list-ip-addresses`
   - ✅ `list-skus`
   - ❌ `list-usage`
-  - ❌ `list-vm-resize-options`
+  - ✅ `list-vm-resize-options`
   - ❌ `migrate-to-vmss`
   - ❌ `monitor`
     - ❌ `log`
@@ -3865,16 +3865,16 @@ Legend:
   - ❌ `open-port`
   - ❌ `perform-maintenance`
   - ❌ `reapply`
-  - ❌ `redeploy`
-  - ❌ `reimage`
+  - ✅ `redeploy`
+  - ✅ `reimage`
   - ❌ `resize`
-  - ❌ `restart`
-  - ❌ `run-command`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `invoke`
-    - ❌ `list`
-    - ❌ `show`
+  - ✅ `restart`
+  - ✅ `run-command`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `invoke`
+    - ✅ `list`
+    - ✅ `show`
     - ❌ `update`
     - ❌ `wait`
   - ❌ `secret`
@@ -3883,7 +3883,7 @@ Legend:
     - ❌ `list`
     - ❌ `remove`
   - ✅ `show`
-  - ❌ `simulate-eviction`
+  - ✅ `simulate-eviction`
   - ✅ `start`
   - ✅ `stop`
   - ❌ `unmanaged-disk`
@@ -3895,18 +3895,18 @@ Legend:
     - ❌ `delete`
     - ❌ `reset-ssh`
     - ❌ `update`
-  - ❌ `wait`
+  - ✅ `wait`
 
 ### az vmss
 
-- ❌ `vmss`
+- ✅ `vmss`
   - ❌ `application`
     - ❌ `list`
     - ❌ `set`
   - ❌ `create`
-  - ❌ `deallocate`
-  - ❌ `delete`
-  - ❌ `delete-instances`
+  - ✅ `deallocate`
+  - ✅ `delete`
+  - ✅ `delete-instances`
   - ❌ `diagnostics`
     - ❌ `get-default-config`
     - ❌ `set`
@@ -3917,52 +3917,52 @@ Legend:
     - ❌ `disable`
     - ❌ `enable`
     - ❌ `show`
-  - ❌ `extension`
-    - ❌ `delete`
+  - ✅ `extension`
+    - ✅ `delete`
     - ❌ `image`
-    - ❌ `list`
-    - ❌ `set`
-    - ❌ `show`
-    - ❌ `upgrade`
-  - ❌ `get-instance-view`
-  - ❌ `get-os-upgrade-history`
-  - ❌ `identity`
-    - ❌ `assign`
-    - ❌ `show`
-  - ❌ `list`
+    - ✅ `list`
+    - ✅ `set`
+    - ✅ `show`
+    - ✅ `upgrade`
+  - ✅ `get-instance-view`
+  - ✅ `get-os-upgrade-history`
+  - ✅ `identity`
+    - ✅ `assign`
+    - ✅ `show`
+  - ✅ `list`
   - ❌ `list-instance-connection-info`
-  - ❌ `list-instance-public-ips`
-  - ❌ `list-instances`
-  - ❌ `list-skus`
-  - ❌ `nic`
-    - ❌ `list`
-    - ❌ `list-vm-nics`
-    - ❌ `show`
-  - ❌ `perform-maintenance`
-  - ❌ `reimage`
-  - ❌ `restart`
-  - ❌ `rolling-upgrade`
-    - ❌ `cancel`
-    - ❌ `get-latest`
-    - ❌ `start`
-  - ❌ `run-command`
-    - ❌ `create`
-    - ❌ `delete`
-    - ❌ `invoke`
-    - ❌ `list`
-    - ❌ `show`
-    - ❌ `update`
+  - ✅ `list-instance-public-ips`
+  - ✅ `list-instances`
+  - ✅ `list-skus`
+  - ✅ `nic`
+    - ✅ `list`
+    - ✅ `list-vm-nics`
+    - ✅ `show`
+  - ✅ `perform-maintenance`
+  - ✅ `reimage`
+  - ✅ `restart`
+  - ✅ `rolling-upgrade`
+    - ✅ `cancel`
+    - ✅ `get-latest`
+    - ✅ `start`
+  - ✅ `run-command`
+    - ✅ `create`
+    - ✅ `delete`
+    - ✅ `invoke`
+    - ✅ `list`
+    - ✅ `show`
+    - ✅ `update`
     - ❌ `wait`
-  - ❌ `scale`
-  - ❌ `set-orchestration-service-state`
-  - ❌ `show`
-  - ❌ `simulate-eviction`
-  - ❌ `start`
-  - ❌ `stop`
+  - ✅ `scale`
+  - ✅ `set-orchestration-service-state`
+  - ✅ `show`
+  - ✅ `simulate-eviction`
+  - ✅ `start`
+  - ✅ `stop`
   - ❌ `update`
-  - ❌ `update-domain-walk`
-  - ❌ `update-instances`
-  - ❌ `wait`
+  - ✅ `update-domain-walk`
+  - ✅ `update-instances`
+  - ✅ `wait`
 
 ### az webapp
 
