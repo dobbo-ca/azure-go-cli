@@ -3,6 +3,10 @@ package vm
 import (
 	"context"
 
+	"github.com/cdobbyn/azure-go-cli/internal/vm/bootdiagnostics"
+	"github.com/cdobbyn/azure-go-cli/internal/vm/extension"
+	"github.com/cdobbyn/azure-go-cli/internal/vm/identity"
+	"github.com/cdobbyn/azure-go-cli/internal/vm/runcommand"
 	"github.com/spf13/cobra"
 )
 
@@ -147,6 +151,154 @@ func NewVMCommand() *cobra.Command {
 	createCmd.MarkFlagRequired("location")
 	createCmd.MarkFlagRequired("nic-id")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, startCmd, stopCmd, listSkusCmd)
+	// --- LRO power/lifecycle leaves ---
+	deallocateCmd := newVMLRO("deallocate", "Deallocate a virtual machine", Deallocate)
+	restartCmd := newVMLRO("restart", "Restart a virtual machine", Restart)
+	redeployCmd := newVMLRO("redeploy", "Redeploy a virtual machine", Redeploy)
+	reimageCmd := newVMLRO("reimage", "Reimage a virtual machine", Reimage)
+
+	// --- read-only / status leaves ---
+	instanceViewCmd := &cobra.Command{
+		Use:   "get-instance-view",
+		Short: "Get the instance view (runtime status) of a virtual machine",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			return GetInstanceView(context.Background(), cmd, rg, name)
+		},
+	}
+	addVMRGName(instanceViewCmd)
+
+	listIPCmd := &cobra.Command{
+		Use:   "list-ip-addresses",
+		Short: "List the private and public IP addresses of a virtual machine",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			return ListIPAddresses(context.Background(), cmd, rg, name)
+		},
+	}
+	addVMRGName(listIPCmd)
+
+	resizeOptionsCmd := &cobra.Command{
+		Use:   "list-vm-resize-options",
+		Short: "List the VM sizes a virtual machine can be resized to",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			return ListVMResizeOptions(context.Background(), cmd, rg, name)
+		},
+	}
+	addVMRGName(resizeOptionsCmd)
+
+	listSizesCmd := &cobra.Command{
+		Use:   "list-sizes",
+		Short: "List the available VM sizes in a location",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			location, _ := cmd.Flags().GetString("location")
+			return ListSizes(context.Background(), cmd, location)
+		},
+	}
+	listSizesCmd.Flags().StringP("location", "l", "", "Azure location (e.g., eastus, westus2)")
+	listSizesCmd.MarkFlagRequired("location")
+
+	// --- mutation leaves ---
+	generalizeCmd := &cobra.Command{
+		Use:   "generalize",
+		Short: "Generalize a virtual machine (mark the OS as generalized before capture)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			return Generalize(context.Background(), cmd, rg, name)
+		},
+	}
+	addVMRGName(generalizeCmd)
+
+	simulateEvictionCmd := &cobra.Command{
+		Use:   "simulate-eviction",
+		Short: "Simulate the eviction of a Spot virtual machine",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			return SimulateEviction(context.Background(), cmd, rg, name)
+		},
+	}
+	addVMRGName(simulateEvictionCmd)
+
+	captureCmd := &cobra.Command{
+		Use:   "capture",
+		Short: "Capture a virtual machine into a reusable image (VHDs)",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			vhdPrefix, _ := cmd.Flags().GetString("vhd-name-prefix")
+			containerName, _ := cmd.Flags().GetString("storage-container-name")
+			overwrite, _ := cmd.Flags().GetBool("overwrite")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return Capture(context.Background(), cmd, rg, name, vhdPrefix, containerName, overwrite, noWait)
+		},
+	}
+	addVMRGName(captureCmd)
+	captureCmd.Flags().String("vhd-name-prefix", "", "Prefix for the captured VHD blob names")
+	captureCmd.Flags().String("storage-container-name", "", "Destination storage container name")
+	captureCmd.Flags().Bool("overwrite", false, "Overwrite the destination VHDs if they already exist")
+	captureCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	captureCmd.MarkFlagRequired("vhd-name-prefix")
+	captureCmd.MarkFlagRequired("storage-container-name")
+
+	waitCmd := &cobra.Command{
+		Use:   "wait",
+		Short: "Wait until a condition of the virtual machine is met",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			deleted, _ := cmd.Flags().GetBool("deleted")
+			exists, _ := cmd.Flags().GetBool("exists")
+			interval, _ := cmd.Flags().GetInt("interval")
+			timeout, _ := cmd.Flags().GetInt("timeout")
+			return Wait(context.Background(), cmd, name, rg, deleted, exists, interval, timeout)
+		},
+	}
+	addVMRGName(waitCmd)
+	waitCmd.Flags().Bool("deleted", false, "Wait until deleted")
+	waitCmd.Flags().Bool("exists", false, "Wait until the resource exists")
+	waitCmd.Flags().Int("interval", 30, "Polling interval in seconds")
+	waitCmd.Flags().Int("timeout", 3600, "Maximum wait time in seconds")
+
+	cmd.AddCommand(
+		listCmd, showCmd, createCmd, deleteCmd, startCmd, stopCmd, listSkusCmd,
+		deallocateCmd, restartCmd, redeployCmd, reimageCmd,
+		instanceViewCmd, listIPCmd, resizeOptionsCmd, listSizesCmd,
+		generalizeCmd, simulateEvictionCmd, captureCmd, waitCmd,
+		identity.NewIdentityCommand(),
+		extension.NewExtensionCommand(),
+		runcommand.NewRunCommandCommand(),
+		bootdiagnostics.NewBootDiagnosticsCommand(),
+	)
 	return cmd
+}
+
+// addVMRGName adds the standard required --resource-group and --name flags.
+func addVMRGName(c *cobra.Command) {
+	c.Flags().StringP("resource-group", "g", "", "Resource group name")
+	c.Flags().StringP("name", "n", "", "VM name")
+	c.MarkFlagRequired("resource-group")
+	c.MarkFlagRequired("name")
+}
+
+// newVMLRO builds a standard LRO subcommand taking (rg, name, noWait).
+func newVMLRO(use, short string, run func(context.Context, *cobra.Command, string, string, bool) error) *cobra.Command {
+	c := &cobra.Command{
+		Use:   use,
+		Short: short,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			rg, _ := cmd.Flags().GetString("resource-group")
+			name, _ := cmd.Flags().GetString("name")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			return run(context.Background(), cmd, rg, name, noWait)
+		},
+	}
+	addVMRGName(c)
+	c.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	return c
 }
