@@ -52,10 +52,14 @@ func runShow(cmd *cobra.Command) error {
   if err != nil {
     return err
   }
+  index, err := buildPrecheckIndex(ctx, client)
+  if err != nil {
+    return err
+  }
 
   results := make([]lockRecord, 0, len(targets))
   for _, t := range targets {
-    if err := runPrecheck(ctx, cmd, t.Scope, t.LockName); err != nil {
+    if err := runPrecheck(index, t.Scope, t.LockName); err != nil {
       return err
     }
     obj, err := getLock(ctx, client, t)
@@ -71,6 +75,33 @@ func runShow(cmd *cobra.Command) error {
     return output.PrintFormatted(cmd, results[0], format)
   }
   return output.PrintFormatted(cmd, results, format)
+}
+
+// createOrUpdateLock dispatches the scope-level CreateOrUpdate call and returns
+// the unwrapped SDK error, letting each verb wrap it with its own text (create
+// vs. update). Shared by runCreate and runUpdate, which previously carried
+// identical 3-way switches.
+func createOrUpdateLock(ctx context.Context, client *armlocks.ManagementLocksClient, s lockScope, name string, params armlocks.ManagementLockObject) (*armlocks.ManagementLockObject, error) {
+  switch s.Level {
+  case scopeResourceGroup:
+    resp, err := client.CreateOrUpdateAtResourceGroupLevel(ctx, s.ResourceGroup, name, params, nil)
+    if err != nil {
+      return nil, err
+    }
+    return &resp.ManagementLockObject, nil
+  case scopeResource:
+    resp, err := client.CreateOrUpdateAtResourceLevel(ctx, s.ResourceGroup, s.Namespace, s.Parent, s.ResourceType, s.ResourceName, name, params, nil)
+    if err != nil {
+      return nil, err
+    }
+    return &resp.ManagementLockObject, nil
+  default:
+    resp, err := client.CreateOrUpdateAtSubscriptionLevel(ctx, name, params, nil)
+    if err != nil {
+      return nil, err
+    }
+    return &resp.ManagementLockObject, nil
+  }
 }
 
 func getLock(ctx context.Context, client *armlocks.ManagementLocksClient, t lockTarget) (*armlocks.ManagementLockObject, error) {

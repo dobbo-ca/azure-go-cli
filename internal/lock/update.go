@@ -99,10 +99,14 @@ func runUpdate(cmd *cobra.Command) error {
   if err != nil {
     return err
   }
+  index, err := buildPrecheckIndex(ctx, client)
+  if err != nil {
+    return err
+  }
 
   results := make([]lockRecord, 0, len(targets))
   for _, t := range targets {
-    if err := runPrecheck(ctx, cmd, t.Scope, t.LockName); err != nil {
+    if err := runPrecheck(index, t.Scope, t.LockName); err != nil {
       return err
     }
     existing, err := getLock(ctx, client, t)
@@ -114,26 +118,9 @@ func runUpdate(cmd *cobra.Command) error {
       return fmt.Errorf("lock %s has no level; --lock-type is required", t.LockName)
     }
 
-    var obj *armlocks.ManagementLockObject
-    switch t.Scope.Level {
-    case scopeResourceGroup:
-      resp, err := client.CreateOrUpdateAtResourceGroupLevel(ctx, t.Scope.ResourceGroup, t.LockName, params, nil)
-      if err != nil {
-        return fmt.Errorf("update lock %s: %w", t.LockName, err)
-      }
-      obj = &resp.ManagementLockObject
-    case scopeResource:
-      resp, err := client.CreateOrUpdateAtResourceLevel(ctx, t.Scope.ResourceGroup, t.Scope.Namespace, t.Scope.Parent, t.Scope.ResourceType, t.Scope.ResourceName, t.LockName, params, nil)
-      if err != nil {
-        return fmt.Errorf("update lock %s: %w", t.LockName, err)
-      }
-      obj = &resp.ManagementLockObject
-    default:
-      resp, err := client.CreateOrUpdateAtSubscriptionLevel(ctx, t.LockName, params, nil)
-      if err != nil {
-        return fmt.Errorf("update lock %s: %w", t.LockName, err)
-      }
-      obj = &resp.ManagementLockObject
+    obj, err := createOrUpdateLock(ctx, client, t.Scope, t.LockName, params)
+    if err != nil {
+      return fmt.Errorf("update lock %s: %w", t.LockName, err)
     }
     results = append(results, toLockRecord(obj))
   }

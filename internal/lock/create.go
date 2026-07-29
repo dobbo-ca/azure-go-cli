@@ -84,26 +84,9 @@ func runCreate(cmd *cobra.Command) error {
   // create is really create-or-update: an existing lock with the same name at
   // the same scope is silently overwritten. azure-cli behaves the same way, and
   // deliberately runs no precheck here.
-  var obj *armlocks.ManagementLockObject
-  switch s.Level {
-  case scopeResourceGroup:
-    resp, err := client.CreateOrUpdateAtResourceGroupLevel(ctx, s.ResourceGroup, name, params, nil)
-    if err != nil {
-      return fmt.Errorf("create lock %s: %w", name, err)
-    }
-    obj = &resp.ManagementLockObject
-  case scopeResource:
-    resp, err := client.CreateOrUpdateAtResourceLevel(ctx, s.ResourceGroup, s.Namespace, s.Parent, s.ResourceType, s.ResourceName, name, params, nil)
-    if err != nil {
-      return fmt.Errorf("create lock %s: %w", name, err)
-    }
-    obj = &resp.ManagementLockObject
-  default:
-    resp, err := client.CreateOrUpdateAtSubscriptionLevel(ctx, name, params, nil)
-    if err != nil {
-      return fmt.Errorf("create lock %s: %w", name, err)
-    }
-    obj = &resp.ManagementLockObject
+  obj, err := createOrUpdateLock(ctx, client, s, name, params)
+  if err != nil {
+    return fmt.Errorf("create lock %s: %w", name, err)
   }
 
   return output.PrintFormatted(cmd, toLockRecord(obj), format)

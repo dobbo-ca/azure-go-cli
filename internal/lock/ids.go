@@ -4,6 +4,7 @@ import (
   "context"
   "fmt"
 
+  "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armlocks"
   "github.com/spf13/cobra"
 )
 
@@ -69,37 +70,43 @@ func scopeFromIDParts(p lockIDParts) lockScope {
   return s
 }
 
-// runPrecheck ports the listing half of _validate_lock_params_match_lock: list
-// locks subscription-wide, and if exactly one matches by name, verify the
-// user's scope flags against it. If the count is not exactly one, azure-cli
-// performs no validation at all — match that.
+// buildPrecheckIndex drains the subscription-wide lock list once and indexes the
+// parsed IDs by lock name. This is the listing half of
+// _validate_lock_params_match_lock, hoisted out of the per-target loop: azure-cli
+// lists subscription-wide on every show/delete/update, and the spec accepted one
+// such list per invocation — not one per --ids entry. Reuses the caller's client
+// rather than rebuilding it (which would re-read config from disk each time).
 //
-// This costs a subscription-wide list on every show/delete/update and needs
-// subscription-wide lock-read permission. That trade was made deliberately; see
-// the spec.
-func runPrecheck(ctx context.Context, cmd *cobra.Command, want lockScope, lockName string) error {
-  client, err := newLocksClient(cmd)
-  if err != nil {
-    return err
-  }
-  var matches []lockIDParts
+// This costs a subscription-wide list and needs subscription-wide lock-read
+// permission. That trade was made deliberately; see the spec.
+func buildPrecheckIndex(ctx context.Context, client *armlocks.ManagementLocksClient) (map[string][]lockIDParts, error) {
+  index := map[string][]lockIDParts{}
   p := client.NewListAtSubscriptionLevelPager(nil)
   for p.More() {
     page, err := p.NextPage(ctx)
     if err != nil {
-      return fmt.Errorf("list locks: %w", err)
+      return nil, fmt.Errorf("list locks: %w", err)
     }
     for _, o := range page.Value {
-      if o == nil || o.Name == nil || *o.Name != lockName || o.ID == nil {
+      if o == nil || o.Name == nil || o.ID == nil {
         continue
       }
       parts, err := parseLockID(*o.ID)
       if err != nil {
         continue
       }
-      matches = append(matches, parts)
+      index[*o.Name] = append(index[*o.Name], parts)
     }
   }
+  return index, nil
+}
+
+// runPrecheck ports the validation half of _validate_lock_params_match_lock: if
+// exactly one lock in the index matches by name, verify the user's scope flags
+// against it. If the count is not exactly one, azure-cli performs no validation
+// at all — match that.
+func runPrecheck(index map[string][]lockIDParts, want lockScope, lockName string) error {
+  matches := index[lockName]
   if len(matches) != 1 {
     return nil
   }

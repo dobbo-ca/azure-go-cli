@@ -48,8 +48,12 @@ func runDelete(cmd *cobra.Command) error {
   if err != nil {
     return err
   }
+  index, err := buildPrecheckIndex(ctx, client)
+  if err != nil {
+    return err
+  }
   for _, t := range targets {
-    if err := runPrecheck(ctx, cmd, t.Scope, t.LockName); err != nil {
+    if err := runPrecheck(index, t.Scope, t.LockName); err != nil {
       return err
     }
     switch t.Scope.Level {
