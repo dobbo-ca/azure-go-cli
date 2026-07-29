@@ -26,7 +26,15 @@ func newGroupCmd(use, short string, kind scopeKind) *cobra.Command {
     Short:        short,
     SilenceUsage: true,
   }
-  cmd.AddCommand(newVerbCmds(kind)...)
+  verbs := newVerbCmds(kind)
+  // Cobra only honors SilenceUsage on the leaf command it executes and on the
+  // root Execute() was called on, not on an intermediate parent. Set it on each
+  // verb so a scope-validation error prints just the error, not the full usage
+  // block. Without this the flag above would be silently ineffective.
+  for _, v := range verbs {
+    v.SilenceUsage = true
+  }
+  cmd.AddCommand(verbs...)
   return cmd
 }
 
