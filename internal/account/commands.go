@@ -3,8 +3,8 @@ package account
 import (
 	"context"
 
-	"github.com/cdobbyn/azure-go-cli/internal/account/lock"
 	"github.com/cdobbyn/azure-go-cli/internal/account/managementgroup"
+	"github.com/cdobbyn/azure-go-cli/internal/lock"
 	"github.com/spf13/cobra"
 )
 
@@ -74,6 +74,6 @@ func NewAccountCommand() *cobra.Command {
 	}
 
 	cmd.AddCommand(listCmd, showCmd, setCmd, clearCmd, getAccessTokenCmd, listLocationsCmd)
-	cmd.AddCommand(lock.NewLockCommand(), managementgroup.NewManagementGroupCommand())
+	cmd.AddCommand(lock.NewAccountLockCommand(), managementgroup.NewManagementGroupCommand())
 	return cmd
 }

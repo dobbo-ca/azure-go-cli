@@ -1,6 +1,7 @@
 package resource
 
 import (
+  "github.com/cdobbyn/azure-go-cli/internal/lock"
   "github.com/spf13/cobra"
 )
 
@@ -22,6 +23,7 @@ func NewResourceCommand() *cobra.Command {
     newCreateCmd(),
     newUpdateCmd(),
     newInvokeActionCmd(),
+    lock.NewResourceLockCommand(),
   )
   return cmd
 }

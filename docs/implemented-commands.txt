@@ -18,11 +18,7 @@ az account management-group hierarchy-settings
 az account management-group list
 az account management-group show
 az account management-group subscription
-az account management-group subscription add
-az account management-group subscription remove
 az account management-group tenant-backfill
-az account management-group tenant-backfill get
-az account management-group tenant-backfill start
 az account management-group update
 az account set
 az account show
@@ -79,13 +75,7 @@ az aks start
 az aks stop
 az aks trustedaccess
 az aks trustedaccess role
-az aks trustedaccess role list
 az aks trustedaccess rolebinding
-az aks trustedaccess rolebinding create
-az aks trustedaccess rolebinding delete
-az aks trustedaccess rolebinding list
-az aks trustedaccess rolebinding show
-az aks trustedaccess rolebinding update
 az aks wait
 az completion
 az completion bash
@@ -99,7 +89,6 @@ az dataprotection backup-instance create
 az dataprotection backup-instance delete
 az dataprotection backup-instance list
 az dataprotection backup-instance restore
-az dataprotection backup-instance restore trigger
 az dataprotection backup-instance resume-protection
 az dataprotection backup-instance show
 az dataprotection backup-instance stop-protection
@@ -131,9 +120,6 @@ az disk encryption-set
 az disk encryption-set create
 az disk encryption-set delete
 az disk encryption-set identity
-az disk encryption-set identity assign
-az disk encryption-set identity remove
-az disk encryption-set identity show
 az disk encryption-set list
 az disk encryption-set list-associated-resources
 az disk encryption-set show
@@ -162,6 +148,12 @@ az group
 az group create
 az group delete
 az group list
+az group lock
+az group lock create
+az group lock delete
+az group lock list
+az group lock show
+az group lock update
 az group show
 az hdinsight
 az hdinsight application
@@ -256,6 +248,12 @@ az keyvault secret show-deleted
 az keyvault show
 az keyvault show-deleted
 az keyvault update
+az lock
+az lock create
+az lock delete
+az lock list
+az lock show
+az lock update
 az login
 az logout
 az monitor
@@ -274,8 +272,6 @@ az monitor autoscale list
 az monitor autoscale show
 az monitor diagnostic-settings
 az monitor diagnostic-settings categories
-az monitor diagnostic-settings categories list
-az monitor diagnostic-settings categories show
 az monitor diagnostic-settings create
 az monitor diagnostic-settings delete
 az monitor diagnostic-settings list
@@ -330,10 +326,6 @@ az network nsg create
 az network nsg delete
 az network nsg list
 az network nsg rule
-az network nsg rule create
-az network nsg rule delete
-az network nsg rule list
-az network nsg rule show
 az network nsg show
 az network nsg update
 az network nsg wait
@@ -348,12 +340,6 @@ az network public-ip create
 az network public-ip delete
 az network public-ip list
 az network public-ip prefix
-az network public-ip prefix create
-az network public-ip prefix delete
-az network public-ip prefix list
-az network public-ip prefix show
-az network public-ip prefix update
-az network public-ip prefix wait
 az network public-ip show
 az network public-ip update
 az network public-ip wait
@@ -362,10 +348,6 @@ az network route-table create
 az network route-table delete
 az network route-table list
 az network route-table route
-az network route-table route create
-az network route-table route delete
-az network route-table route list
-az network route-table route show
 az network route-table show
 az network route-table update
 az network route-table wait
@@ -381,11 +363,6 @@ az network vnet delete
 az network vnet list
 az network vnet show
 az network vnet subnet
-az network vnet subnet create
-az network vnet subnet delete
-az network vnet subnet list
-az network vnet subnet show
-az network vnet subnet update
 az network vnet update
 az network vnet wait
 az network vnet-gateway
@@ -406,73 +383,26 @@ az pim list
 az postgres
 az postgres flexible-server
 az postgres flexible-server advanced-threat-protection-setting
-az postgres flexible-server advanced-threat-protection-setting show
-az postgres flexible-server advanced-threat-protection-setting update
 az postgres flexible-server backup
-az postgres flexible-server backup create
-az postgres flexible-server backup delete
-az postgres flexible-server backup list
-az postgres flexible-server backup show
 az postgres flexible-server create
 az postgres flexible-server db
-az postgres flexible-server db create
-az postgres flexible-server db delete
-az postgres flexible-server db list
-az postgres flexible-server db show
 az postgres flexible-server delete
 az postgres flexible-server firewall-rule
-az postgres flexible-server firewall-rule create
-az postgres flexible-server firewall-rule delete
-az postgres flexible-server firewall-rule list
-az postgres flexible-server firewall-rule show
-az postgres flexible-server firewall-rule update
 az postgres flexible-server geo-restore
 az postgres flexible-server identity
-az postgres flexible-server identity assign
-az postgres flexible-server identity list
-az postgres flexible-server identity remove
-az postgres flexible-server identity show
 az postgres flexible-server list
 az postgres flexible-server list-skus
 az postgres flexible-server long-term-retention
-az postgres flexible-server long-term-retention list
-az postgres flexible-server long-term-retention show
-az postgres flexible-server long-term-retention start
 az postgres flexible-server microsoft-entra-admin
-az postgres flexible-server microsoft-entra-admin create
-az postgres flexible-server microsoft-entra-admin delete
-az postgres flexible-server microsoft-entra-admin list
-az postgres flexible-server microsoft-entra-admin show
 az postgres flexible-server migration
-az postgres flexible-server migration check-name-availability
-az postgres flexible-server migration create
-az postgres flexible-server migration list
-az postgres flexible-server migration show
-az postgres flexible-server migration update
 az postgres flexible-server parameter
-az postgres flexible-server parameter list
-az postgres flexible-server parameter set
-az postgres flexible-server parameter show
 az postgres flexible-server private-endpoint-connection
-az postgres flexible-server private-endpoint-connection approve
-az postgres flexible-server private-endpoint-connection delete
-az postgres flexible-server private-endpoint-connection list
-az postgres flexible-server private-endpoint-connection reject
-az postgres flexible-server private-endpoint-connection show
 az postgres flexible-server private-link-resource
-az postgres flexible-server private-link-resource list
-az postgres flexible-server private-link-resource show
 az postgres flexible-server replica
-az postgres flexible-server replica create
-az postgres flexible-server replica list
-az postgres flexible-server replica promote
-az postgres flexible-server replica stop-replication
 az postgres flexible-server restart
 az postgres flexible-server restore
 az postgres flexible-server revive-dropped
 az postgres flexible-server server-logs
-az postgres flexible-server server-logs download
-az postgres flexible-server server-logs list
 az postgres flexible-server show
 az postgres flexible-server show-connection-string
 az postgres flexible-server start
@@ -480,11 +410,6 @@ az postgres flexible-server stop
 az postgres flexible-server update
 az postgres flexible-server upgrade
 az postgres flexible-server virtual-endpoint
-az postgres flexible-server virtual-endpoint create
-az postgres flexible-server virtual-endpoint delete
-az postgres flexible-server virtual-endpoint list
-az postgres flexible-server virtual-endpoint show
-az postgres flexible-server virtual-endpoint update
 az postgres flexible-server wait
 az quota
 az quota list
@@ -497,6 +422,12 @@ az resource create
 az resource delete
 az resource invoke-action
 az resource list
+az resource lock
+az resource lock create
+az resource lock delete
+az resource lock list
+az resource lock show
+az resource lock update
 az resource move
 az resource show
 az resource tag
@@ -516,27 +447,15 @@ az role show
 az storage
 az storage account
 az storage account blob-service-properties
-az storage account blob-service-properties show
-az storage account blob-service-properties update
 az storage account check-name
 az storage account create
 az storage account delete
 az storage account encryption-scope
-az storage account encryption-scope create
-az storage account encryption-scope list
-az storage account encryption-scope show
-az storage account encryption-scope update
 az storage account failover
 az storage account keys
-az storage account keys list
-az storage account keys renew
 az storage account list
 az storage account management-policy
-az storage account management-policy create
-az storage account management-policy delete
-az storage account management-policy show
 az storage account network-rule
-az storage account network-rule list
 az storage account show
 az storage account show-connection-string
 az storage account show-usage

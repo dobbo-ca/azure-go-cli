@@ -15,6 +15,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/hdinsight"
 	"github.com/cdobbyn/azure-go-cli/internal/identity"
 	"github.com/cdobbyn/azure-go-cli/internal/keyvault"
+	"github.com/cdobbyn/azure-go-cli/internal/lock"
 	"github.com/cdobbyn/azure-go-cli/internal/monitor"
 	"github.com/cdobbyn/azure-go-cli/internal/network"
 	"github.com/cdobbyn/azure-go-cli/internal/pim"
@@ -82,6 +83,7 @@ func main() {
 		group.NewGroupCommand(),
 		hdinsight.NewHDInsightCommand(),
 		identity.NewIdentityCommand(),
+		lock.NewLockCommand(),
 		monitor.NewMonitorCommand(),
 		network.NewNetworkCommand(),
 		pim.NewPIMCommand(),
