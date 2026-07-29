@@ -2,22 +2,43 @@ az account
 az account clear
 az account get-access-token
 az account list
+az account list-locations
 az account lock
 az account lock create
 az account lock delete
 az account lock list
 az account lock show
 az account lock update
+az account management-group
+az account management-group check-name-availability
+az account management-group create
+az account management-group delete
+az account management-group entities
+az account management-group hierarchy-settings
+az account management-group list
+az account management-group show
+az account management-group subscription
+az account management-group tenant-backfill
+az account management-group update
 az account set
 az account show
 az aks
 az aks addon
+az aks addon disable
+az aks addon enable
 az aks addon list
 az aks addon list-available
 az aks addon show
 az aks bastion
+az aks command
+az aks command invoke
+az aks command result
+az aks convert-kubeconfig
 az aks delete
 az aks get-credentials
+az aks get-token
+az aks get-upgrades
+az aks get-versions
 az aks install-cli
 az aks list
 az aks machine
@@ -27,22 +48,102 @@ az aks maintenanceconfiguration
 az aks maintenanceconfiguration list
 az aks maintenanceconfiguration show
 az aks nodepool
+az aks nodepool add
+az aks nodepool delete
+az aks nodepool delete-machines
+az aks nodepool get-upgrades
 az aks nodepool list
+az aks nodepool operation-abort
+az aks nodepool scale
 az aks nodepool show
+az aks nodepool wait
+az aks oidc-issuer
+az aks oidc-issuer rotate-signing-keys
 az aks operation
 az aks operation show
 az aks operation show-latest
+az aks operation-abort
 az aks pod-identity
 az aks pod-identity list
+az aks reconcile
+az aks rotate-certs
 az aks show
 az aks snapshot
 az aks snapshot list
 az aks snapshot show
+az aks start
+az aks stop
+az aks trustedaccess
+az aks trustedaccess role
+az aks trustedaccess rolebinding
+az aks wait
 az completion
 az completion bash
 az completion fish
 az completion powershell
 az completion zsh
+az dataprotection
+az dataprotection backup-instance
+az dataprotection backup-instance adhoc-backup
+az dataprotection backup-instance create
+az dataprotection backup-instance delete
+az dataprotection backup-instance list
+az dataprotection backup-instance restore
+az dataprotection backup-instance resume-protection
+az dataprotection backup-instance show
+az dataprotection backup-instance stop-protection
+az dataprotection backup-instance suspend-backup
+az dataprotection backup-instance validate-for-backup
+az dataprotection backup-instance validate-for-restore
+az dataprotection backup-policy
+az dataprotection backup-policy create
+az dataprotection backup-policy delete
+az dataprotection backup-policy get-default-policy-template
+az dataprotection backup-policy list
+az dataprotection backup-policy show
+az dataprotection backup-vault
+az dataprotection backup-vault create
+az dataprotection backup-vault delete
+az dataprotection backup-vault list
+az dataprotection backup-vault show
+az dataprotection backup-vault update
+az dataprotection job
+az dataprotection job list
+az dataprotection job show
+az dataprotection recovery-point
+az dataprotection recovery-point list
+az dataprotection recovery-point show
+az disk
+az disk create
+az disk delete
+az disk encryption-set
+az disk encryption-set create
+az disk encryption-set delete
+az disk encryption-set identity
+az disk encryption-set list
+az disk encryption-set list-associated-resources
+az disk encryption-set show
+az disk encryption-set update
+az disk encryption-set wait
+az disk list
+az disk show
+az disk-encryption-set
+az disk-encryption-set create
+az disk-encryption-set delete
+az disk-encryption-set identity
+az disk-encryption-set identity assign
+az disk-encryption-set identity remove
+az disk-encryption-set identity show
+az disk-encryption-set list
+az disk-encryption-set list-associated-resources
+az disk-encryption-set show
+az disk-encryption-set update
+az disk-encryption-set wait
+az feat
+az feat list
+az feat register
+az feat show
+az feat unregister
 az group
 az group create
 az group delete
@@ -54,6 +155,42 @@ az group lock list
 az group lock show
 az group lock update
 az group show
+az hdinsight
+az hdinsight application
+az hdinsight application delete
+az hdinsight application list
+az hdinsight application show
+az hdinsight application wait
+az hdinsight azure-monitor
+az hdinsight azure-monitor disable
+az hdinsight azure-monitor enable
+az hdinsight azure-monitor show
+az hdinsight credentials
+az hdinsight credentials show
+az hdinsight credentials update
+az hdinsight credentials wait
+az hdinsight delete
+az hdinsight host
+az hdinsight host list
+az hdinsight host restart
+az hdinsight list
+az hdinsight list-usage
+az hdinsight monitor
+az hdinsight monitor disable
+az hdinsight monitor enable
+az hdinsight monitor show
+az hdinsight resize
+az hdinsight rotate-disk-encryption-key
+az hdinsight script-action
+az hdinsight script-action delete
+az hdinsight script-action execute
+az hdinsight script-action list
+az hdinsight script-action list-execution-history
+az hdinsight script-action promote
+az hdinsight script-action show-execution-details
+az hdinsight show
+az hdinsight update
+az hdinsight wait
 az help
 az identity
 az identity create
@@ -61,15 +198,56 @@ az identity delete
 az identity list
 az identity show
 az keyvault
+az keyvault certificate
+az keyvault certificate backup
+az keyvault certificate delete
+az keyvault certificate list
+az keyvault certificate list-deleted
+az keyvault certificate list-versions
+az keyvault certificate purge
+az keyvault certificate recover
+az keyvault certificate restore
+az keyvault certificate set-attributes
+az keyvault certificate show
+az keyvault certificate show-deleted
+az keyvault check-name
 az keyvault create
 az keyvault delete
+az keyvault key
+az keyvault key backup
+az keyvault key create
+az keyvault key delete
+az keyvault key list
+az keyvault key list-deleted
+az keyvault key list-versions
+az keyvault key purge
+az keyvault key recover
+az keyvault key restore
+az keyvault key rotate
+az keyvault key set-attributes
+az keyvault key show
+az keyvault key show-deleted
 az keyvault list
+az keyvault list-deleted
+az keyvault purge
+az keyvault recover
 az keyvault secret
+az keyvault secret backup
 az keyvault secret delete
+az keyvault secret download
 az keyvault secret list
+az keyvault secret list-deleted
+az keyvault secret list-versions
+az keyvault secret purge
+az keyvault secret recover
+az keyvault secret restore
 az keyvault secret set
+az keyvault secret set-attributes
 az keyvault secret show
+az keyvault secret show-deleted
 az keyvault show
+az keyvault show-deleted
+az keyvault update
 az lock
 az lock create
 az lock delete
@@ -78,7 +256,42 @@ az lock show
 az lock update
 az login
 az logout
+az monitor
+az monitor action-group
+az monitor action-group create
+az monitor action-group delete
+az monitor action-group enable-receiver
+az monitor action-group list
+az monitor action-group show
+az monitor activity-log
+az monitor activity-log list
+az monitor activity-log list-categories
+az monitor autoscale
+az monitor autoscale delete
+az monitor autoscale list
+az monitor autoscale show
+az monitor diagnostic-settings
+az monitor diagnostic-settings categories
+az monitor diagnostic-settings create
+az monitor diagnostic-settings delete
+az monitor diagnostic-settings list
+az monitor diagnostic-settings show
+az monitor log-profiles
+az monitor log-profiles create
+az monitor log-profiles delete
+az monitor log-profiles list
+az monitor log-profiles show
+az monitor metrics
+az monitor metrics list
+az monitor metrics list-definitions
 az network
+az network asg
+az network asg create
+az network asg delete
+az network asg list
+az network asg show
+az network asg update
+az network asg wait
 az network bastion
 az network bastion ssh
 az network bastion tunnel
@@ -87,26 +300,71 @@ az network lb create
 az network lb delete
 az network lb list
 az network lb show
+az network local-gateway
+az network local-gateway create
+az network local-gateway delete
+az network local-gateway list
+az network local-gateway show
+az network local-gateway update
+az network local-gateway wait
 az network nat
 az network nat create
 az network nat delete
 az network nat list
 az network nat show
+az network nat update
+az network nat wait
+az network nic
+az network nic create
+az network nic delete
+az network nic list
+az network nic show
+az network nic update
+az network nic wait
+az network nsg
+az network nsg create
+az network nsg delete
+az network nsg list
+az network nsg rule
+az network nsg show
+az network nsg update
+az network nsg wait
 az network private-endpoint
 az network private-endpoint create
 az network private-endpoint delete
 az network private-endpoint list
 az network private-endpoint show
+az network private-endpoint wait
+az network public-ip
+az network public-ip create
+az network public-ip delete
+az network public-ip list
+az network public-ip prefix
+az network public-ip show
+az network public-ip update
+az network public-ip wait
+az network route-table
+az network route-table create
+az network route-table delete
+az network route-table list
+az network route-table route
+az network route-table show
+az network route-table update
+az network route-table wait
 az network subnet
 az network subnet create
 az network subnet delete
 az network subnet list
 az network subnet show
+az network subnet update
 az network vnet
 az network vnet create
 az network vnet delete
 az network vnet list
 az network vnet show
+az network vnet subnet
+az network vnet update
+az network vnet wait
 az network vnet-gateway
 az network vnet-gateway create
 az network vnet-gateway delete
@@ -117,46 +375,203 @@ az network vnet-peering create
 az network vnet-peering delete
 az network vnet-peering list
 az network vnet-peering show
+az pim
+az pim activate
+az pim activate group
+az pim activate resource
+az pim list
 az postgres
 az postgres flexible-server
+az postgres flexible-server advanced-threat-protection-setting
+az postgres flexible-server backup
 az postgres flexible-server create
+az postgres flexible-server db
 az postgres flexible-server delete
+az postgres flexible-server firewall-rule
+az postgres flexible-server geo-restore
+az postgres flexible-server identity
 az postgres flexible-server list
+az postgres flexible-server list-skus
+az postgres flexible-server long-term-retention
+az postgres flexible-server microsoft-entra-admin
+az postgres flexible-server migration
+az postgres flexible-server parameter
+az postgres flexible-server private-endpoint-connection
+az postgres flexible-server private-link-resource
+az postgres flexible-server replica
+az postgres flexible-server restart
+az postgres flexible-server restore
+az postgres flexible-server revive-dropped
+az postgres flexible-server server-logs
 az postgres flexible-server show
+az postgres flexible-server show-connection-string
+az postgres flexible-server start
+az postgres flexible-server stop
+az postgres flexible-server update
+az postgres flexible-server upgrade
+az postgres flexible-server virtual-endpoint
+az postgres flexible-server wait
 az quota
 az quota list
 az quota request
 az quota request create
 az quota request list
 az quota show
+az resource
+az resource create
+az resource delete
+az resource invoke-action
+az resource list
 az resource lock
 az resource lock create
 az resource lock delete
 az resource lock list
 az resource lock show
 az resource lock update
+az resource move
+az resource show
+az resource tag
+az resource update
+az resource wait
 az role
 az role assignment
 az role assignment create
 az role assignment delete
 az role assignment list
+az role definition
+az role definition list
+az role definition show
+az role definition update
 az role list
 az role show
 az storage
 az storage account
+az storage account blob-service-properties
+az storage account check-name
 az storage account create
 az storage account delete
+az storage account encryption-scope
+az storage account failover
+az storage account keys
 az storage account list
+az storage account management-policy
+az storage account network-rule
 az storage account show
+az storage account show-connection-string
+az storage account show-usage
+az storage account update
+az storage blob
+az storage blob delete
+az storage blob download
+az storage blob list
+az storage blob show
+az storage blob upload
 az storage container
 az storage container create
 az storage container delete
 az storage container list
 az storage container show
+az storage container-rm
+az storage container-rm create
+az storage container-rm delete
+az storage container-rm exists
+az storage container-rm list
+az storage container-rm show
+az storage container-rm update
+az storage share-rm
+az storage share-rm create
+az storage share-rm delete
+az storage share-rm exists
+az storage share-rm list
+az storage share-rm restore
+az storage share-rm show
+az storage share-rm stats
+az storage share-rm update
+az storage sku
+az storage sku list
+az version
 az vm
+az vm boot-diagnostics
+az vm boot-diagnostics disable
+az vm boot-diagnostics enable
+az vm boot-diagnostics get-boot-log-uris
+az vm capture
+az vm create
+az vm deallocate
 az vm delete
+az vm extension
+az vm extension delete
+az vm extension list
+az vm extension set
+az vm extension show
+az vm generalize
+az vm get-instance-view
+az vm identity
+az vm identity assign
+az vm identity remove
+az vm identity show
 az vm list
+az vm list-ip-addresses
+az vm list-sizes
 az vm list-skus
+az vm list-vm-resize-options
+az vm redeploy
+az vm reimage
+az vm restart
+az vm run-command
+az vm run-command create
+az vm run-command delete
+az vm run-command invoke
+az vm run-command list
+az vm run-command show
 az vm show
+az vm simulate-eviction
 az vm start
 az vm stop
+az vm wait
+az vmss
+az vmss deallocate
+az vmss delete
+az vmss delete-instances
+az vmss extension
+az vmss extension delete
+az vmss extension list
+az vmss extension set
+az vmss extension show
+az vmss extension upgrade
+az vmss get-instance-view
+az vmss get-os-upgrade-history
+az vmss identity
+az vmss identity assign
+az vmss identity show
+az vmss list
+az vmss list-instance-public-ips
+az vmss list-instances
+az vmss list-skus
+az vmss nic
+az vmss nic list
+az vmss nic list-vm-nics
+az vmss nic show
+az vmss perform-maintenance
+az vmss reimage
+az vmss restart
+az vmss rolling-upgrade
+az vmss rolling-upgrade cancel
+az vmss rolling-upgrade get-latest
+az vmss rolling-upgrade start
+az vmss run-command
+az vmss run-command create
+az vmss run-command delete
+az vmss run-command invoke
+az vmss run-command list
+az vmss run-command show
+az vmss run-command update
+az vmss scale
+az vmss set-orchestration-service-state
+az vmss show
+az vmss simulate-eviction
+az vmss start
+az vmss stop
+az vmss update-domain-walk
+az vmss update-instances
+az vmss wait

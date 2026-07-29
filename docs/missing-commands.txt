@@ -1,15 +1,3 @@
-az account list-locations
-az account management-group
-az account management-group check-name-availability
-az account management-group create
-az account management-group delete
-az account management-group entities
-az account management-group hierarchy-settings
-az account management-group list
-az account management-group show
-az account management-group subscription
-az account management-group tenant-backfill
-az account management-group update
 az acr
 az acr build
 az acr cache
@@ -166,132 +154,46 @@ az advisor recommendation
 az advisor recommendation disable
 az advisor recommendation enable
 az advisor recommendation list
-az afd
-az afd custom-domain
-az afd custom-domain create
-az afd custom-domain delete
-az afd custom-domain list
-az afd custom-domain regenerate-validation-token
-az afd custom-domain show
-az afd custom-domain update
-az afd custom-domain wait
-az afd endpoint
-az afd endpoint create
-az afd endpoint delete
-az afd endpoint list
-az afd endpoint purge
-az afd endpoint show
-az afd endpoint update
-az afd endpoint wait
-az afd log-analytic
-az afd log-analytic location
-az afd log-analytic metric
-az afd log-analytic ranking
-az afd log-analytic resource
-az afd origin
-az afd origin create
-az afd origin delete
-az afd origin list
-az afd origin show
-az afd origin update
-az afd origin wait
-az afd origin-group
-az afd origin-group create
-az afd origin-group delete
-az afd origin-group list
-az afd origin-group show
-az afd origin-group update
-az afd origin-group wait
-az afd profile
-az afd profile create
-az afd profile delete
-az afd profile identity
-az afd profile list
-az afd profile log-scrubbing
-az afd profile show
-az afd profile update
-az afd profile usage
-az afd profile wait
-az afd route
-az afd route create
-az afd route delete
-az afd route list
-az afd route show
-az afd route update
-az afd route wait
-az afd rule
-az afd rule create
-az afd rule delete
-az afd rule list
-az afd rule show
-az afd rule update
-az afd rule wait
-az afd rule-set
-az afd rule-set create
-az afd rule-set delete
-az afd rule-set list
-az afd rule-set show
-az afd rule-set usage
-az afd rule-set wait
-az afd secret
-az afd secret create
-az afd secret delete
-az afd secret list
-az afd secret show
-az afd secret update
-az afd secret wait
-az afd security-policy
-az afd security-policy create
-az afd security-policy delete
-az afd security-policy list
-az afd security-policy show
-az afd security-policy update
-az afd security-policy wait
-az afd waf-log-analytic
-az afd waf-log-analytic metric
-az afd waf-log-analytic ranking
 az aks approuting
 az aks approuting disable
 az aks approuting enable
+az aks approuting gateway
 az aks approuting update
 az aks approuting zone
 az aks browse
 az aks check-acr
-az aks command
-az aks command invoke
-az aks command result
+az aks create
 az aks disable-addons
 az aks enable-addons
-az aks get-upgrades
-az aks get-versions
 az aks maintenanceconfiguration add
 az aks maintenanceconfiguration delete
 az aks maintenanceconfiguration update
 az aks mesh
 az aks mesh disable
+az aks mesh disable-egress-gateway
 az aks mesh disable-ingress-gateway
 az aks mesh enable
+az aks mesh enable-egress-gateway
 az aks mesh enable-ingress-gateway
 az aks mesh get-revisions
 az aks mesh get-upgrades
+az aks mesh proxy-redirection-mechanism
 az aks mesh upgrade
-az aks nodepool add
-az aks nodepool delete
-az aks nodepool delete-machines
-az aks nodepool get-upgrades
+az aks namespace
+az aks namespace add
+az aks namespace delete
+az aks namespace get-credentials
+az aks namespace list
+az aks namespace show
+az aks namespace update
+az aks nodepool get-rollback-versions
 az aks nodepool manual-scale
-az aks nodepool operation-abort
-az aks nodepool scale
+az aks nodepool rollback
 az aks nodepool snapshot
 az aks nodepool start
 az aks nodepool stop
 az aks nodepool update
 az aks nodepool upgrade
-az aks nodepool wait
-az aks oidc-issuer
-az aks oidc-issuer rotate-signing-keys
-az aks operation-abort
-az aks rotate-certs
 az aks safeguards
 az aks safeguards create
 az aks safeguards delete
@@ -300,15 +202,9 @@ az aks safeguards show
 az aks safeguards update
 az aks safeguards wait
 az aks scale
-az aks start
-az aks stop
-az aks trustedaccess
-az aks trustedaccess role
-az aks trustedaccess rolebinding
 az aks update
 az aks update-credentials
 az aks upgrade
-az aks wait
 az ams
 az ams account
 az ams account check-name
@@ -427,6 +323,12 @@ az apim api update
 az apim api versionset
 az apim api wait
 az apim apply-network-updates
+az apim backend
+az apim backend create
+az apim backend delete
+az apim backend list
+az apim backend show
+az apim backend update
 az apim backup
 az apim check-name
 az apim create
@@ -487,6 +389,7 @@ az appconfig kv lock
 az appconfig kv restore
 az appconfig kv set
 az appconfig kv set-keyvault
+az appconfig kv set-snapshot-reference
 az appconfig kv show
 az appconfig kv unlock
 az appconfig list
@@ -672,10 +575,12 @@ az batch pool
 az batch pool autoscale
 az batch pool create
 az batch pool delete
+az batch pool list
 az batch pool node-counts
 az batch pool reset
 az batch pool resize
 az batch pool set
+az batch pool show
 az batch pool supported-images
 az batch pool usage-metrics
 az batch private-endpoint-connection
@@ -706,6 +611,8 @@ az bicep lint
 az bicep list-versions
 az bicep publish
 az bicep restore
+az bicep run
+az bicep snapshot
 az bicep uninstall
 az bicep upgrade
 az bicep version
@@ -752,65 +659,6 @@ az capacity reservation list
 az capacity reservation show
 az capacity reservation update
 az capacity reservation wait
-az cdn
-az cdn custom-domain
-az cdn custom-domain create
-az cdn custom-domain delete
-az cdn custom-domain disable-https
-az cdn custom-domain enable-https
-az cdn custom-domain list
-az cdn custom-domain show
-az cdn custom-domain update
-az cdn custom-domain wait
-az cdn edge-action
-az cdn edge-action add-attachment
-az cdn edge-action create
-az cdn edge-action delete
-az cdn edge-action delete-attachment
-az cdn edge-action execution-filter
-az cdn edge-action list
-az cdn edge-action show
-az cdn edge-action update
-az cdn edge-action version
-az cdn edge-action wait
-az cdn edge-node
-az cdn edge-node list
-az cdn endpoint
-az cdn endpoint create
-az cdn endpoint delete
-az cdn endpoint list
-az cdn endpoint load
-az cdn endpoint name-exists
-az cdn endpoint purge
-az cdn endpoint show
-az cdn endpoint start
-az cdn endpoint stop
-az cdn endpoint update
-az cdn endpoint validate-custom-domain
-az cdn endpoint wait
-az cdn name-exists
-az cdn origin
-az cdn origin create
-az cdn origin delete
-az cdn origin list
-az cdn origin show
-az cdn origin update
-az cdn origin wait
-az cdn origin-group
-az cdn origin-group create
-az cdn origin-group delete
-az cdn origin-group list
-az cdn origin-group show
-az cdn origin-group update
-az cdn origin-group wait
-az cdn profile
-az cdn profile create
-az cdn profile delete
-az cdn profile deployment-version
-az cdn profile list
-az cdn profile show
-az cdn profile update
-az cdn usage
 az cloud
 az cloud list
 az cloud list-profiles
@@ -822,6 +670,7 @@ az cloud update
 az cognitiveservices
 az cognitiveservices account
 az cognitiveservices account commitment-plan
+az cognitiveservices account connection
 az cognitiveservices account create
 az cognitiveservices account delete
 az cognitiveservices account deployment
@@ -834,6 +683,7 @@ az cognitiveservices account list-models
 az cognitiveservices account list-skus
 az cognitiveservices account list-usage
 az cognitiveservices account network-rule
+az cognitiveservices account project
 az cognitiveservices account purge
 az cognitiveservices account recover
 az cognitiveservices account show
@@ -845,6 +695,9 @@ az cognitiveservices model
 az cognitiveservices model list
 az cognitiveservices usage
 az cognitiveservices usage list
+az compute-fleet
+az compute-fleet list-vms
+az compute-fleet wait
 az compute-recommender
 az compute-recommender spot-placement-score
 az configure
@@ -1234,15 +1087,10 @@ az deployment-scripts delete
 az deployment-scripts list
 az deployment-scripts show
 az deployment-scripts show-log
-az disk
 az disk config
 az disk config update
-az disk create
-az disk delete
 az disk grant-access
-az disk list
 az disk revoke-access
-az disk show
 az disk update
 az disk wait
 az disk-access
@@ -1252,18 +1100,6 @@ az disk-access list
 az disk-access show
 az disk-access update
 az disk-access wait
-az disk-encryption-set
-az disk-encryption-set create
-az disk-encryption-set delete
-az disk-encryption-set identity
-az disk-encryption-set identity assign
-az disk-encryption-set identity remove
-az disk-encryption-set identity show
-az disk-encryption-set list
-az disk-encryption-set list-associated-resources
-az disk-encryption-set show
-az disk-encryption-set update
-az disk-encryption-set wait
 az dms
 az dms check-name
 az dms check-status
@@ -1470,6 +1306,8 @@ az functionapp show
 az functionapp start
 az functionapp stop
 az functionapp update
+az functionapp update-strategy
+az functionapp update-strategy config
 az functionapp vnet-integration
 az functionapp vnet-integration add
 az functionapp vnet-integration list
@@ -1478,13 +1316,7 @@ az group exists
 az group export
 az group update
 az group wait
-az hdinsight
-az hdinsight application
 az hdinsight application create
-az hdinsight application delete
-az hdinsight application list
-az hdinsight application show
-az hdinsight application wait
 az hdinsight autoscale
 az hdinsight autoscale condition
 az hdinsight autoscale create
@@ -1493,41 +1325,11 @@ az hdinsight autoscale list-timezones
 az hdinsight autoscale show
 az hdinsight autoscale update
 az hdinsight autoscale wait
-az hdinsight azure-monitor
-az hdinsight azure-monitor disable
-az hdinsight azure-monitor enable
-az hdinsight azure-monitor show
 az hdinsight azure-monitor-agent
 az hdinsight azure-monitor-agent disable
 az hdinsight azure-monitor-agent enable
 az hdinsight azure-monitor-agent show
 az hdinsight create
-az hdinsight credentials
-az hdinsight credentials show
-az hdinsight credentials update
-az hdinsight credentials wait
-az hdinsight delete
-az hdinsight host
-az hdinsight host list
-az hdinsight host restart
-az hdinsight list
-az hdinsight list-usage
-az hdinsight monitor
-az hdinsight monitor disable
-az hdinsight monitor enable
-az hdinsight monitor show
-az hdinsight resize
-az hdinsight rotate-disk-encryption-key
-az hdinsight script-action
-az hdinsight script-action delete
-az hdinsight script-action execute
-az hdinsight script-action list
-az hdinsight script-action list-execution-history
-az hdinsight script-action promote
-az hdinsight script-action show-execution-details
-az hdinsight show
-az hdinsight update
-az hdinsight wait
 az identity federated-credential
 az identity federated-credential create
 az identity federated-credential delete
@@ -1536,6 +1338,7 @@ az identity federated-credential show
 az identity federated-credential update
 az identity list-operations
 az identity list-resources
+az identity update
 az image
 az image builder
 az image builder cancel
@@ -1590,49 +1393,21 @@ az iot hub update
 az iot hub wait
 az keyvault backup
 az keyvault backup start
-az keyvault certificate
-az keyvault certificate backup
 az keyvault certificate contact
 az keyvault certificate create
-az keyvault certificate delete
 az keyvault certificate download
 az keyvault certificate get-default-policy
 az keyvault certificate import
 az keyvault certificate issuer
-az keyvault certificate list
-az keyvault certificate list-deleted
-az keyvault certificate list-versions
 az keyvault certificate pending
-az keyvault certificate purge
-az keyvault certificate recover
-az keyvault certificate restore
-az keyvault certificate set-attributes
-az keyvault certificate show
-az keyvault certificate show-deleted
-az keyvault check-name
 az keyvault delete-policy
-az keyvault key
-az keyvault key backup
-az keyvault key create
-az keyvault key delete
 az keyvault key download
 az keyvault key get-attestation
 az keyvault key import
-az keyvault key list
-az keyvault key list-deleted
-az keyvault key list-versions
-az keyvault key purge
 az keyvault key random
-az keyvault key recover
-az keyvault key restore
-az keyvault key rotate
 az keyvault key rotation-policy
-az keyvault key set-attributes
-az keyvault key show
-az keyvault key show-deleted
 az keyvault key sign
 az keyvault key verify
-az keyvault list-deleted
 az keyvault network-rule
 az keyvault network-rule add
 az keyvault network-rule list
@@ -1647,8 +1422,6 @@ az keyvault private-endpoint-connection show
 az keyvault private-endpoint-connection wait
 az keyvault private-link-resource
 az keyvault private-link-resource list
-az keyvault purge
-az keyvault recover
 az keyvault region
 az keyvault region add
 az keyvault region list
@@ -1659,15 +1432,6 @@ az keyvault restore start
 az keyvault role
 az keyvault role assignment
 az keyvault role definition
-az keyvault secret backup
-az keyvault secret download
-az keyvault secret list-deleted
-az keyvault secret list-versions
-az keyvault secret purge
-az keyvault secret recover
-az keyvault secret restore
-az keyvault secret set-attributes
-az keyvault secret show-deleted
 az keyvault security-domain
 az keyvault security-domain download
 az keyvault security-domain init-recovery
@@ -1679,8 +1443,6 @@ az keyvault setting
 az keyvault setting list
 az keyvault setting show
 az keyvault setting update
-az keyvault show-deleted
-az keyvault update
 az keyvault update-hsm
 az keyvault wait
 az keyvault wait-hsm
@@ -1747,12 +1509,6 @@ az maps account keys
 az maps account list
 az maps account show
 az maps account update
-az maps creator
-az maps creator create
-az maps creator delete
-az maps creator list
-az maps creator show
-az maps creator update
 az maps map
 az maps map list-operation
 az mariadb
@@ -1784,7 +1540,6 @@ az mariadb server wait
 az mariadb server-logs
 az mariadb server-logs download
 az mariadb server-logs list
-az monitor
 az monitor account
 az monitor account create
 az monitor account delete
@@ -1792,50 +1547,29 @@ az monitor account list
 az monitor account show
 az monitor account update
 az monitor account wait
-az monitor action-group
-az monitor action-group create
-az monitor action-group delete
-az monitor action-group enable-receiver
 az monitor action-group identity
-az monitor action-group list
-az monitor action-group show
 az monitor action-group test-notifications
 az monitor action-group update
 az monitor action-group wait
-az monitor activity-log
 az monitor activity-log alert
-az monitor activity-log list
-az monitor activity-log list-categories
-az monitor autoscale
 az monitor autoscale create
-az monitor autoscale delete
-az monitor autoscale list
 az monitor autoscale profile
 az monitor autoscale rule
-az monitor autoscale show
 az monitor autoscale show-predictive-metric
 az monitor autoscale update
-az monitor diagnostic-settings
-az monitor diagnostic-settings categories
-az monitor diagnostic-settings create
-az monitor diagnostic-settings delete
-az monitor diagnostic-settings list
-az monitor diagnostic-settings show
+az monitor dashboard
+az monitor dashboard create
+az monitor dashboard delete
+az monitor dashboard list
+az monitor dashboard show
+az monitor dashboard wait
 az monitor diagnostic-settings subscription
 az monitor diagnostic-settings update
 az monitor log-analytics
 az monitor log-analytics cluster
 az monitor log-analytics workspace
-az monitor log-profiles
-az monitor log-profiles create
-az monitor log-profiles delete
-az monitor log-profiles list
-az monitor log-profiles show
 az monitor log-profiles update
-az monitor metrics
 az monitor metrics alert
-az monitor metrics list
-az monitor metrics list-definitions
 az monitor metrics list-sub
 az monitor metrics list-sub-definitions
 az mysql
@@ -1908,13 +1642,25 @@ az netappfiles account change-key-vault
 az netappfiles account create
 az netappfiles account delete
 az netappfiles account get-key-vault-status
+az netappfiles account identity
 az netappfiles account list
 az netappfiles account migrate-backup
+az netappfiles account quota-limit
 az netappfiles account renew-credentials
 az netappfiles account show
 az netappfiles account transitiontocmk
 az netappfiles account update
 az netappfiles account wait
+az netappfiles cache
+az netappfiles cache create
+az netappfiles cache delete
+az netappfiles cache list
+az netappfiles cache list-peering-passphrase
+az netappfiles cache pool-change
+az netappfiles cache reset-smb-password
+az netappfiles cache show
+az netappfiles cache update
+az netappfiles cache wait
 az netappfiles check-file-path-availability
 az netappfiles check-name-availability
 az netappfiles check-quota-availability
@@ -1941,20 +1687,13 @@ az netappfiles snapshot restore-files
 az netappfiles snapshot show
 az netappfiles snapshot update
 az netappfiles snapshot wait
-az netappfiles subvolume
-az netappfiles subvolume create
-az netappfiles subvolume delete
-az netappfiles subvolume list
-az netappfiles subvolume metadata
-az netappfiles subvolume show
-az netappfiles subvolume update
-az netappfiles subvolume wait
 az netappfiles update-network-sibling-set
 az netappfiles usage
 az netappfiles usage list
 az netappfiles usage show
 az netappfiles volume
 az netappfiles volume break-file-locks
+az netappfiles volume bucket
 az netappfiles volume create
 az netappfiles volume delete
 az netappfiles volume export-policy
@@ -1963,16 +1702,19 @@ az netappfiles volume get-groupid-list-for-ldapuser
 az netappfiles volume latest-backup-status
 az netappfiles volume latest-restore-status
 az netappfiles volume list
+az netappfiles volume list-quota-report
 az netappfiles volume migrate-backup
 az netappfiles volume pool-change
 az netappfiles volume populate-availability-zone
 az netappfiles volume quota-rule
+az netappfiles volume ransomware-report
 az netappfiles volume relocate
 az netappfiles volume replication
 az netappfiles volume reset-cifs-pw
 az netappfiles volume revert
 az netappfiles volume revert-relocation
 az netappfiles volume show
+az netappfiles volume splitclonefromparent
 az netappfiles volume update
 az netappfiles volume wait
 az netappfiles volume-group
@@ -2015,13 +1757,6 @@ az network application-gateway url-path-map
 az network application-gateway waf-config
 az network application-gateway waf-policy
 az network application-gateway wait
-az network asg
-az network asg create
-az network asg delete
-az network asg list
-az network asg show
-az network asg update
-az network asg wait
 az network cross-region-lb
 az network cross-region-lb address-pool
 az network cross-region-lb create
@@ -2034,6 +1769,13 @@ az network cross-region-lb update
 az network cross-region-lb wait
 az network custom-ip
 az network custom-ip prefix
+az network ddos-custom-policy
+az network ddos-custom-policy create
+az network ddos-custom-policy delete
+az network ddos-custom-policy list
+az network ddos-custom-policy show
+az network ddos-custom-policy update
+az network ddos-custom-policy wait
 az network ddos-protection
 az network ddos-protection create
 az network ddos-protection delete
@@ -2050,6 +1792,8 @@ az network express-route auth
 az network express-route create
 az network express-route delete
 az network express-route gateway
+az network express-route get-link-failover-all-tests-detail
+az network express-route get-link-failover-single-test-detail
 az network express-route get-stats
 az network express-route list
 az network express-route list-arp-tables
@@ -2057,6 +1801,8 @@ az network express-route list-service-providers
 az network express-route peering
 az network express-route port
 az network express-route show
+az network express-route start-link-failover-test
+az network express-route stop-link-failover-test
 az network express-route update
 az network express-route wait
 az network lb address-pool
@@ -2073,35 +1819,13 @@ az network lb wait
 az network list-service-aliases
 az network list-service-tags
 az network list-usages
-az network local-gateway
-az network local-gateway create
-az network local-gateway delete
-az network local-gateway list
-az network local-gateway show
-az network local-gateway update
-az network local-gateway wait
 az network nat gateway
 az network network-watcher
 az network network-watcher connection-monitor
 az network network-watcher packet-capture
-az network nic
-az network nic create
-az network nic delete
 az network nic ip-config
-az network nic list
 az network nic list-effective-nsg
-az network nic show
 az network nic show-effective-route-table
-az network nic update
-az network nic wait
-az network nsg
-az network nsg create
-az network nsg delete
-az network nsg list
-az network nsg rule
-az network nsg show
-az network nsg update
-az network nsg wait
 az network private-dns
 az network private-dns link
 az network private-dns record-set
@@ -2111,7 +1835,6 @@ az network private-endpoint dns-zone-group
 az network private-endpoint ip-config
 az network private-endpoint list-types
 az network private-endpoint update
-az network private-endpoint wait
 az network private-endpoint-connection
 az network private-endpoint-connection approve
 az network private-endpoint-connection delete
@@ -2134,23 +1857,7 @@ az network profile delete
 az network profile list
 az network profile show
 az network profile wait
-az network public-ip
-az network public-ip create
 az network public-ip ddos-protection
-az network public-ip delete
-az network public-ip list
-az network public-ip prefix
-az network public-ip show
-az network public-ip update
-az network public-ip wait
-az network route-table
-az network route-table create
-az network route-table delete
-az network route-table list
-az network route-table route
-az network route-table show
-az network route-table update
-az network route-table wait
 az network routeserver
 az network routeserver create
 az network routeserver delete
@@ -2171,6 +1878,7 @@ az network virtual-appliance connection
 az network virtual-appliance create
 az network virtual-appliance delete
 az network virtual-appliance get-boot-diagnostic-log
+az network virtual-appliance identity
 az network virtual-appliance inbound-security-rule
 az network virtual-appliance list
 az network virtual-appliance reimage
@@ -2180,17 +1888,22 @@ az network virtual-appliance site
 az network virtual-appliance sku
 az network virtual-appliance update
 az network virtual-appliance wait
+az network virtual-network-appliance
+az network virtual-network-appliance create
+az network virtual-network-appliance delete
+az network virtual-network-appliance list
+az network virtual-network-appliance show
+az network virtual-network-appliance update
+az network virtual-network-appliance wait
 az network vnet check-ip-address
 az network vnet list-endpoint-services
 az network vnet peering
-az network vnet subnet
-az network vnet update
-az network vnet wait
 az network vnet-gateway aad
 az network vnet-gateway get-failover-all-tests-detail
 az network vnet-gateway get-failover-single-test-detail
 az network vnet-gateway get-resiliency-information
 az network vnet-gateway get-routes-information
+az network vnet-gateway identity
 az network vnet-gateway ipsec-policy
 az network vnet-gateway list-advertised-routes
 az network vnet-gateway list-bgp-peer-status
@@ -2245,9 +1958,17 @@ az policy attestation show
 az policy attestation update
 az policy definition
 az policy definition create
+az policy definition delete
 az policy definition list
 az policy definition show
 az policy definition update
+az policy definition version
+az policy enrollment
+az policy enrollment create
+az policy enrollment delete
+az policy enrollment list
+az policy enrollment show
+az policy enrollment update
 az policy event
 az policy event list
 az policy exemption
@@ -2268,41 +1989,20 @@ az policy remediation list
 az policy remediation show
 az policy set-definition
 az policy set-definition create
+az policy set-definition delete
 az policy set-definition list
 az policy set-definition show
 az policy set-definition update
+az policy set-definition version
 az policy state
 az policy state list
 az policy state summarize
 az policy state trigger-scan
-az postgres flexible-server advanced-threat-protection-setting
-az postgres flexible-server backup
-az postgres flexible-server db
+az postgres flexible-server autonomous-tuning
 az postgres flexible-server deploy
 az postgres flexible-server fabric-mirroring
-az postgres flexible-server firewall-rule
-az postgres flexible-server geo-restore
-az postgres flexible-server identity
-az postgres flexible-server index-tuning
-az postgres flexible-server list-skus
-az postgres flexible-server long-term-retention
-az postgres flexible-server microsoft-entra-admin
-az postgres flexible-server migration
-az postgres flexible-server parameter
-az postgres flexible-server private-endpoint-connection
-az postgres flexible-server private-link-resource
-az postgres flexible-server replica
-az postgres flexible-server restart
-az postgres flexible-server restore
-az postgres flexible-server revive-dropped
-az postgres flexible-server server-logs
-az postgres flexible-server show-connection-string
-az postgres flexible-server start
-az postgres flexible-server stop
-az postgres flexible-server update
-az postgres flexible-server upgrade
-az postgres flexible-server virtual-endpoint
-az postgres flexible-server wait
+az postgres flexible-server maintenance-event
+az postgres flexible-server migrate-network
 az ppg
 az ppg create
 az ppg delete
@@ -2393,23 +2093,13 @@ az relay wcfrelay delete
 az relay wcfrelay list
 az relay wcfrelay show
 az relay wcfrelay update
-az resource
-az resource create
-az resource delete
-az resource invoke-action
 az resource link
 az resource link create
 az resource link delete
 az resource link list
 az resource link show
 az resource link update
-az resource list
-az resource move
 az resource patch
-az resource show
-az resource tag
-az resource update
-az resource wait
 az resourcemanagement
 az resourcemanagement private-link
 az resourcemanagement private-link create
@@ -2432,16 +2122,19 @@ az restore-point show
 az restore-point wait
 az role assignment list-changelogs
 az role assignment update
-az role definition
 az role definition create
 az role definition delete
-az role definition list
-az role definition show
-az role definition update
+az role deny-assignment
+az role deny-assignment create
+az role deny-assignment delete
+az role deny-assignment list
+az role deny-assignment show
 az search
 az search admin-key
 az search admin-key renew
 az search admin-key show
+az search offering
+az search offering list
 az search private-endpoint-connection
 az search private-endpoint-connection delete
 az search private-endpoint-connection list
@@ -2593,8 +2286,6 @@ az security task show
 az security topology
 az security topology list
 az security topology show
-az security va
-az security va sql
 az security workspace-setting
 az security workspace-setting create
 az security workspace-setting delete
@@ -2680,7 +2371,6 @@ az sf managed-application create
 az sf managed-application delete
 az sf managed-application list
 az sf managed-application show
-az sf managed-application update
 az sf managed-application-type
 az sf managed-application-type create
 az sf managed-application-type delete
@@ -2729,6 +2419,11 @@ az sig gallery-application show
 az sig gallery-application update
 az sig gallery-application version
 az sig gallery-application wait
+az sig identity
+az sig identity assign
+az sig identity remove
+az sig identity show
+az sig identity wait
 az sig image-definition
 az sig image-definition create
 az sig image-definition delete
@@ -2947,6 +2642,7 @@ az sql server audit-policy
 az sql server conn-policy
 az sql server create
 az sql server delete
+az sql server deleted-server
 az sql server dns-alias
 az sql server firewall-rule
 az sql server ipv6-firewall-rule
@@ -3052,47 +2748,33 @@ az staticwebapp users
 az staticwebapp users invite
 az staticwebapp users list
 az staticwebapp users update
-az storage account blob-service-properties
-az storage account check-name
-az storage account encryption-scope
 az storage account file-service-properties
 az storage account file-service-usage
 az storage account generate-sas
 az storage account hns-migration
-az storage account keys
 az storage account local-user
-az storage account management-policy
 az storage account migration
-az storage account network-rule
 az storage account network-security-perimeter-configuration
 az storage account or-policy
 az storage account private-link-resource
 az storage account revoke-delegation-keys
-az storage account show-connection-string
-az storage account show-usage
-az storage account update
-az storage blob
+az storage advanced-platform-metric
 az storage blob copy
-az storage blob delete
 az storage blob delete-batch
-az storage blob download
 az storage blob download-batch
 az storage blob exists
 az storage blob generate-sas
 az storage blob immutability-policy
 az storage blob incremental-copy
 az storage blob lease
-az storage blob list
 az storage blob metadata
 az storage blob restore
 az storage blob service-properties
 az storage blob set-legal-hold
 az storage blob set-tier
-az storage blob show
 az storage blob snapshot
 az storage blob undelete
 az storage blob update
-az storage blob upload
 az storage blob upload-batch
 az storage blob url
 az storage container exists
@@ -3105,13 +2787,6 @@ az storage container policy
 az storage container restore
 az storage container set-permission
 az storage container show-permission
-az storage container-rm
-az storage container-rm create
-az storage container-rm delete
-az storage container-rm exists
-az storage container-rm list
-az storage container-rm show
-az storage container-rm update
 az storage copy
 az storage cors
 az storage cors add
@@ -3184,17 +2859,6 @@ az storage share snapshot
 az storage share stats
 az storage share update
 az storage share url
-az storage share-rm
-az storage share-rm create
-az storage share-rm delete
-az storage share-rm exists
-az storage share-rm list
-az storage share-rm restore
-az storage share-rm show
-az storage share-rm stats
-az storage share-rm update
-az storage sku
-az storage sku list
 az storage table
 az storage table create
 az storage table delete
@@ -3374,7 +3038,6 @@ az ts export
 az ts list
 az ts show
 az ts update
-az version
 az vm application
 az vm application list
 az vm application set
@@ -3392,15 +3055,8 @@ az vm availability-set show
 az vm availability-set start-migration-to-vmss
 az vm availability-set update
 az vm availability-set validate-migration-to-vmss
-az vm boot-diagnostics
-az vm boot-diagnostics disable
-az vm boot-diagnostics enable
 az vm boot-diagnostics get-boot-log
-az vm boot-diagnostics get-boot-log-uris
-az vm capture
 az vm convert
-az vm create
-az vm deallocate
 az vm diagnostics
 az vm diagnostics get-default-config
 az vm diagnostics set
@@ -3411,15 +3067,8 @@ az vm encryption
 az vm encryption disable
 az vm encryption enable
 az vm encryption show
-az vm extension
-az vm extension delete
 az vm extension image
-az vm extension list
-az vm extension set
-az vm extension show
 az vm extension wait
-az vm generalize
-az vm get-instance-view
 az vm host
 az vm host create
 az vm host delete
@@ -3433,10 +3082,6 @@ az vm host restart
 az vm host show
 az vm host update
 az vm host wait
-az vm identity
-az vm identity assign
-az vm identity remove
-az vm identity show
 az vm image
 az vm image list
 az vm image list-offers
@@ -3445,9 +3090,7 @@ az vm image list-skus
 az vm image show
 az vm image terms
 az vm install-patches
-az vm list-ip-addresses
 az vm list-usage
-az vm list-vm-resize-options
 az vm migrate-to-vmss
 az vm monitor
 az vm monitor log
@@ -3460,16 +3103,7 @@ az vm nic show
 az vm open-port
 az vm perform-maintenance
 az vm reapply
-az vm redeploy
-az vm reimage
 az vm resize
-az vm restart
-az vm run-command
-az vm run-command create
-az vm run-command delete
-az vm run-command invoke
-az vm run-command list
-az vm run-command show
 az vm run-command update
 az vm run-command wait
 az vm secret
@@ -3477,7 +3111,6 @@ az vm secret add
 az vm secret format
 az vm secret list
 az vm secret remove
-az vm simulate-eviction
 az vm unmanaged-disk
 az vm unmanaged-disk attach
 az vm unmanaged-disk detach
@@ -3487,15 +3120,10 @@ az vm user
 az vm user delete
 az vm user reset-ssh
 az vm user update
-az vm wait
-az vmss
 az vmss application
 az vmss application list
 az vmss application set
 az vmss create
-az vmss deallocate
-az vmss delete
-az vmss delete-instances
 az vmss diagnostics
 az vmss diagnostics get-default-config
 az vmss diagnostics set
@@ -3506,52 +3134,11 @@ az vmss encryption
 az vmss encryption disable
 az vmss encryption enable
 az vmss encryption show
-az vmss extension
-az vmss extension delete
 az vmss extension image
-az vmss extension list
-az vmss extension set
-az vmss extension show
-az vmss extension upgrade
-az vmss get-instance-view
-az vmss get-os-upgrade-history
-az vmss identity
-az vmss identity assign
-az vmss identity show
-az vmss list
+az vmss get-resiliency-view
 az vmss list-instance-connection-info
-az vmss list-instance-public-ips
-az vmss list-instances
-az vmss list-skus
-az vmss nic
-az vmss nic list
-az vmss nic list-vm-nics
-az vmss nic show
-az vmss perform-maintenance
-az vmss reimage
-az vmss restart
-az vmss rolling-upgrade
-az vmss rolling-upgrade cancel
-az vmss rolling-upgrade get-latest
-az vmss rolling-upgrade start
-az vmss run-command
-az vmss run-command create
-az vmss run-command delete
-az vmss run-command invoke
-az vmss run-command list
-az vmss run-command show
-az vmss run-command update
 az vmss run-command wait
-az vmss scale
-az vmss set-orchestration-service-state
-az vmss show
-az vmss simulate-eviction
-az vmss start
-az vmss stop
 az vmss update
-az vmss update-domain-walk
-az vmss update-instances
-az vmss wait
 az webapp
 az webapp auth
 az webapp auth show
@@ -3629,7 +3216,6 @@ az webapp traffic-routing
 az webapp traffic-routing clear
 az webapp traffic-routing set
 az webapp traffic-routing show
-az webapp up
 az webapp update
 az webapp vnet-integration
 az webapp vnet-integration add
