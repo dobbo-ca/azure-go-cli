@@ -82,6 +82,6 @@ func NewContainerCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd)
+	cmd.AddCommand(listCmd, showCmd, createCmd, deleteCmd, NewGenerateSASCommand())
 	return cmd
 }

@@ -102,6 +102,6 @@ func NewBlobCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("container-name")
 	deleteCmd.MarkFlagRequired("name")
 
-	cmd.AddCommand(listCmd, showCmd, uploadCmd, downloadCmd, deleteCmd)
+	cmd.AddCommand(listCmd, showCmd, uploadCmd, downloadCmd, deleteCmd, NewGenerateSASCommand())
 	return cmd
 }

@@ -77,6 +77,7 @@ func NewAccountCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
+<<<<<<< HEAD
 	updateCmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update a storage account",
@@ -158,6 +159,7 @@ func NewAccountCommand() *cobra.Command {
 	cmd.AddCommand(
 		listCmd, showCmd, createCmd, deleteCmd,
 		updateCmd, showConnStrCmd, failoverCmd, checkNameCmd, showUsageCmd,
+		NewGenerateSASCommand(),
 		keys.NewKeysCommand(),
 		networkrule.NewNetworkRuleCommand(),
 		managementpolicy.NewManagementPolicyCommand(),
