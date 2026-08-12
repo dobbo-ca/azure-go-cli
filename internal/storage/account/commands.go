@@ -77,7 +77,6 @@ func NewAccountCommand() *cobra.Command {
 	deleteCmd.MarkFlagRequired("name")
 	deleteCmd.MarkFlagRequired("resource-group")
 
-<<<<<<< HEAD
 	updateCmd := &cobra.Command{
 		Use:   "update",
 		Short: "Update a storage account",
