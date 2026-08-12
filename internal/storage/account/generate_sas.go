@@ -30,6 +30,7 @@ func NewGenerateSASCommand() *cobra.Command {
 	cmd.Flags().String("account-name", "", "Storage account name. Environment variable: AZURE_STORAGE_ACCOUNT")
 	cmd.Flags().String("account-key", "", "Storage account key. Environment variable: AZURE_STORAGE_KEY")
 	cmd.Flags().String("connection-string", "", "Storage account connection string. Environment variable: AZURE_STORAGE_CONNECTION_STRING")
+	cmd.Flags().String("blob-endpoint", "", "Storage data service endpoint. Use for a sovereign cloud, a private endpoint, or a local emulator. Environment variable: AZURE_STORAGE_SERVICE_ENDPOINT")
 	cmd.Flags().String("encryption-scope", "", "A predefined encryption scope used to encrypt the data on the service")
 
 	cmd.MarkFlagRequired("services")
@@ -51,6 +52,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	accountName, _ := cmd.Flags().GetString("account-name")
 	accountKey, _ := cmd.Flags().GetString("account-key")
 	connectionString, _ := cmd.Flags().GetString("connection-string")
+	blobEndpoint, _ := cmd.Flags().GetString("blob-endpoint")
 	encryptionScope, _ := cmd.Flags().GetString("encryption-scope")
 
 	expiry, err := sas.ParseTime(expiryStr)
@@ -63,6 +65,11 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 		if err != nil {
 			return fmt.Errorf("--start: %w", err)
 		}
+	}
+
+	// --blob-endpoint can supply the account name on its own.
+	if accountName == "" {
+		accountName = sas.AccountFromEndpoint(sas.RawServiceEndpoint(blobEndpoint))
 	}
 
 	creds, err := sas.Resolve(ctx, accountName, accountKey, connectionString)

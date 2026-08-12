@@ -39,6 +39,7 @@ func NewGenerateSASCommand() *cobra.Command {
 	cmd.Flags().String("account-name", "", "Storage account name. Environment variable: AZURE_STORAGE_ACCOUNT")
 	cmd.Flags().String("account-key", "", "Storage account key. Environment variable: AZURE_STORAGE_KEY")
 	cmd.Flags().String("connection-string", "", "Storage account connection string. Environment variable: AZURE_STORAGE_CONNECTION_STRING")
+	cmd.Flags().String("blob-endpoint", "", "Storage data service endpoint. Use for a sovereign cloud, a private endpoint, or a local emulator. Environment variable: AZURE_STORAGE_SERVICE_ENDPOINT")
 	cmd.Flags().String("encryption-scope", "", "A predefined encryption scope used to encrypt the data on the service")
 
 	cmd.MarkFlagRequired("name")
@@ -65,6 +66,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	accountName, _ := cmd.Flags().GetString("account-name")
 	accountKey, _ := cmd.Flags().GetString("account-key")
 	connectionString, _ := cmd.Flags().GetString("connection-string")
+	blobEndpoint, _ := cmd.Flags().GetString("blob-endpoint")
 	encryptionScope, _ := cmd.Flags().GetString("encryption-scope")
 
 	if policyName == "" && permissions == "" {
@@ -100,6 +102,11 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 		return fmt.Errorf("incorrect usage: need to specify '--as-user' when '--user-delegation-oid' is provided")
 	}
 
+	// --blob-endpoint can supply the account name on its own.
+	if accountName == "" {
+		accountName = sas.AccountFromEndpoint(sas.RawServiceEndpoint(blobEndpoint))
+	}
+
 	protocol := ""
 	if httpsOnly {
 		protocol = "https"
@@ -109,6 +116,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 		ContainerName:      containerName,
 		Permissions:        permissions,
 		Identifier:         policyName,
+		ServiceEndpoint:    blobEndpoint,
 		IPRange:            ip,
 		Protocol:           protocol,
 		EncryptionScope:    encryptionScope,

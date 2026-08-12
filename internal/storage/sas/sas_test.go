@@ -115,3 +115,63 @@ func TestValidateAsUser(t *testing.T) {
 		t.Errorf("plain key usage must pass, got %v", err)
 	}
 }
+
+func TestServiceEndpoint(t *testing.T) {
+	cases := []struct {
+		name, flag, env, account, want string
+	}{
+		{
+			name:    "defaults to the public blob suffix",
+			account: "myaccount",
+			want:    "https://myaccount.blob.core.windows.net",
+		},
+		{
+			name:    "flag wins over the default",
+			flag:    "http://127.0.0.1:10000/devstoreaccount1",
+			account: "devstoreaccount1",
+			want:    "http://127.0.0.1:10000/devstoreaccount1",
+		},
+		{
+			name:    "trailing slash is trimmed so callers can always append one",
+			flag:    "http://127.0.0.1:10000/devstoreaccount1/",
+			account: "devstoreaccount1",
+			want:    "http://127.0.0.1:10000/devstoreaccount1",
+		},
+		{
+			name:    "env var is used when the flag is absent",
+			env:     "https://myaccount.blob.core.chinacloudapi.cn",
+			account: "myaccount",
+			want:    "https://myaccount.blob.core.chinacloudapi.cn",
+		},
+		{
+			name:    "flag beats env var",
+			flag:    "http://127.0.0.1:10000/devstoreaccount1",
+			env:     "https://ignored.example",
+			account: "devstoreaccount1",
+			want:    "http://127.0.0.1:10000/devstoreaccount1",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("AZURE_STORAGE_SERVICE_ENDPOINT", c.env)
+			if got := ServiceEndpoint(c.flag, c.account); got != c.want {
+				t.Errorf("ServiceEndpoint(%q, %q) = %q, want %q", c.flag, c.account, got, c.want)
+			}
+		})
+	}
+}
+
+func TestAccountFromEndpoint(t *testing.T) {
+	cases := []struct{ in, want string }{
+		{"https://myaccount.blob.core.windows.net", "myaccount"},
+		{"https://myaccount.blob.core.windows.net/", "myaccount"},
+		{"http://127.0.0.1:10000/devstoreaccount1", "devstoreaccount1"},
+		{"http://127.0.0.1:10000/devstoreaccount1/", "devstoreaccount1"},
+		{"", ""},
+	}
+	for _, c := range cases {
+		if got := AccountFromEndpoint(c.in); got != c.want {
+			t.Errorf("AccountFromEndpoint(%q) = %q, want %q", c.in, got, c.want)
+		}
+	}
+}

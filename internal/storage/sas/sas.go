@@ -9,6 +9,8 @@ import (
 	"bytes"
 	"fmt"
 	"net"
+	"net/url"
+	"os"
 	"strings"
 	"time"
 
@@ -127,4 +129,59 @@ func OutputFormat(cmd *cobra.Command) string {
 		return "json"
 	}
 	return format
+}
+
+// PublicBlobSuffix is the blob endpoint suffix for the public Azure cloud.
+const PublicBlobSuffix = ".blob.core.windows.net"
+
+// ServiceEndpoint resolves the blob service endpoint, without a trailing slash.
+//
+// Precedence matches azure-cli's --blob-endpoint / account_url handling
+// (__init__.py:304-315): the flag wins, then AZURE_STORAGE_SERVICE_ENDPOINT,
+// then the public-cloud default derived from the account name.
+//
+// This is what makes a non-public endpoint reachable at all: a sovereign cloud,
+// a private endpoint addressed directly, or the Azurite emulator. Without it
+// the account name is the only input and the public suffix is unavoidable.
+func ServiceEndpoint(flagEndpoint, accountName string) string {
+	if ep := RawServiceEndpoint(flagEndpoint); ep != "" {
+		return ep
+	}
+	return "https://" + accountName + PublicBlobSuffix
+}
+
+// RawServiceEndpoint returns the explicitly configured endpoint, or "" when
+// none was given. Unlike ServiceEndpoint it does not fall back to the public
+// cloud, so callers can tell "user supplied an endpoint" from "assume public" -
+// which is what lets --blob-endpoint alone supply the account name.
+func RawServiceEndpoint(flagEndpoint string) string {
+	if flagEndpoint == "" {
+		flagEndpoint = os.Getenv("AZURE_STORAGE_SERVICE_ENDPOINT")
+	}
+	return strings.TrimSuffix(flagEndpoint, "/")
+}
+
+// AccountFromEndpoint extracts the storage account name from a service endpoint,
+// so --blob-endpoint alone is enough and --account-name can be omitted.
+//
+// Two shapes, as in parseBlobURL: the public form carries the account as the
+// first host label (https://acct.blob.core.windows.net), while an emulator or
+// IP-addressed endpoint carries it as the first path segment
+// (http://127.0.0.1:10000/devstoreaccount1).
+func AccountFromEndpoint(endpoint string) string {
+	if endpoint == "" {
+		return ""
+	}
+	u, err := url.Parse(strings.TrimSuffix(endpoint, "/"))
+	if err != nil {
+		return ""
+	}
+	if p := strings.Trim(u.Path, "/"); p != "" {
+		return strings.Split(p, "/")[0]
+	}
+	host := u.Hostname()
+	if strings.HasSuffix(host, PublicBlobSuffix) || strings.Contains(host, ".") {
+		return strings.Split(host, ".")[0]
+	}
+	return host
 }

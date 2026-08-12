@@ -44,6 +44,7 @@ func NewGenerateSASCommand() *cobra.Command {
 	cmd.Flags().String("account-name", "", "Storage account name. Environment variable: AZURE_STORAGE_ACCOUNT")
 	cmd.Flags().String("account-key", "", "Storage account key. Environment variable: AZURE_STORAGE_KEY")
 	cmd.Flags().String("connection-string", "", "Storage account connection string. Environment variable: AZURE_STORAGE_CONNECTION_STRING")
+	cmd.Flags().String("blob-endpoint", "", "Storage data service endpoint. Use for a sovereign cloud, a private endpoint, or a local emulator. Environment variable: AZURE_STORAGE_SERVICE_ENDPOINT")
 	cmd.Flags().String("encryption-scope", "", "A predefined encryption scope used to encrypt the data on the service")
 
 	cmd.MarkFlagRequired("permissions")
@@ -74,6 +75,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	accountName, _ := cmd.Flags().GetString("account-name")
 	accountKey, _ := cmd.Flags().GetString("account-key")
 	connectionString, _ := cmd.Flags().GetString("connection-string")
+	blobEndpoint, _ := cmd.Flags().GetString("blob-endpoint")
 	encryptionScope, _ := cmd.Flags().GetString("encryption-scope")
 
 	// --blob-url is an alternative to naming the blob and container. It also
@@ -94,6 +96,11 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	}
 	if containerName == "" || blobName == "" {
 		return fmt.Errorf("specify --name and --container-name, or --blob-url")
+	}
+	// --blob-endpoint can supply the account name on its own, so
+	// --account-name is not required alongside it.
+	if accountName == "" && blobURL == "" {
+		accountName = sas.AccountFromEndpoint(sas.RawServiceEndpoint(blobEndpoint))
 	}
 
 	var expiry time.Time
@@ -138,6 +145,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 		ContentLanguage:    contentLanguage,
 		ContentType:        contentType,
 		Snapshot:           snapshot,
+		ServiceEndpoint:    blobEndpoint,
 		AuthorizedObjectID: delegationOID,
 		Start:              start,
 		Expiry:             expiry,
@@ -168,7 +176,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	quoted := sas.Quote(token, "&%()$=',~")
 	if fullURIFlag {
 		if endpoint == "" {
-			endpoint = "https://" + opts.AccountName + ".blob.core.windows.net"
+			endpoint = sas.ServiceEndpoint(blobEndpoint, opts.AccountName)
 		}
 		return output.PrintFormatted(cmd, fullURI(endpoint, containerName, blobName, snapshot, quoted), sas.OutputFormat(cmd))
 	}

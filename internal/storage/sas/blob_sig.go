@@ -13,7 +13,11 @@ import (
 // BlobScopeOptions are the inputs shared by container-scope and blob-scope SAS.
 // Leave BlobName empty for a container SAS.
 type BlobScopeOptions struct {
-	AccountName        string
+	AccountName string
+	// ServiceEndpoint is the blob service base URL, without a trailing slash.
+	// Only the --as-user path reads it, to reach GetUserDelegationCredential;
+	// shared-key signing is entirely local. Empty means the public cloud.
+	ServiceEndpoint    string
 	ContainerName      string
 	BlobName           string
 	Permissions        string
@@ -106,7 +110,7 @@ func SignBlobScope(ctx context.Context, o BlobScopeOptions, accountKey string, a
 		EncryptionScope:    o.EncryptionScope,
 	}
 
-	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", o.AccountName)
+	serviceURL := ServiceEndpoint(o.ServiceEndpoint, o.AccountName) + "/"
 
 	if asUser {
 		cred, err := azure.GetCredential()
