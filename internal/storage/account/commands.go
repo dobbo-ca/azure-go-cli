@@ -158,6 +158,7 @@ func NewAccountCommand() *cobra.Command {
 	cmd.AddCommand(
 		listCmd, showCmd, createCmd, deleteCmd,
 		updateCmd, showConnStrCmd, failoverCmd, checkNameCmd, showUsageCmd,
+		NewGenerateSASCommand(),
 		keys.NewKeysCommand(),
 		networkrule.NewNetworkRuleCommand(),
 		managementpolicy.NewManagementPolicyCommand(),
