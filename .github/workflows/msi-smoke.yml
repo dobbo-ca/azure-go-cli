@@ -1,0 +1,202 @@
+name: MSI Smoke Test
+
+# Installs the Windows MSI on a real windows-latest runner: install, upgrade,
+# uninstall. Nothing else in this repo runs on Windows, so this is the only
+# check that proves the packaging in packaging/windows/ actually works. It is
+# deliberately kept out of the release pipeline: it gates changes to the
+# packaging, not every release.
+#
+# NOTE: the runner image already has Microsoft's Azure CLI installed, and our
+# MSI APPENDS to the system PATH, so a bare `az` on this runner resolves to
+# Microsoft's az.cmd, not to ours. Every functional assertion below therefore
+# invokes our binary by absolute path, and PATH is checked separately.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packaging/windows/**'
+      - '.github/workflows/msi-smoke.yml'
+      - 'Makefile'
+
+permissions:
+  contents: read
+
+env:
+  # Two versions so the upgrade path is exercised for real, not simulated.
+  OLD_VERSION: v0.0.1
+  NEW_VERSION: v0.0.2
+  INSTALL_DIR: 'C:\Program Files\Azure Go CLI\bin'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Build two windows/amd64 binaries
+        run: |
+          set -euo pipefail
+          # The two builds differ only in the stamped version, so the smoke job
+          # can tell "the new payload landed" from "the old one stayed put".
+          for v in "$OLD_VERSION" "$NEW_VERSION"; do
+            GOOS=windows GOARCH=amd64 go build \
+              -ldflags "-X main.version=${v} -X main.commit=${GITHUB_SHA} -X main.date=smoke" \
+              -o "stage/${v}/az.exe" ./cmd/az/main.go
+          done
+
+      - name: Build both MSIs
+        run: |
+          set -euo pipefail
+          # Same container as the release job: ubuntu-latest ships msitools
+          # 0.103, which predates the <Environment> element we need.
+          docker run --rm -v "$PWD:/w" -w /w -e OLD_VERSION -e NEW_VERSION ubuntu:26.04 bash -euc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq wixl msitools
+            wixl --version
+            packaging/windows/build-msi.sh --version "$OLD_VERSION" --exe "stage/$OLD_VERSION/az.exe" --arch amd64 --out dist-msi
+            packaging/windows/build-msi.sh --version "$NEW_VERSION" --exe "stage/$NEW_VERSION/az.exe" --arch amd64 --out dist-msi
+          '
+          ls -l dist-msi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msi-smoke
+          path: dist-msi/*.msi
+
+  smoke:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: msi-smoke
+          path: dist-msi
+
+      - name: Install ${{ env.OLD_VERSION }}
+        shell: pwsh
+        run: |
+          $msi = (Resolve-Path "dist-msi\az-go-$($env:OLD_VERSION)-windows-amd64.msi").Path
+          $p = Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/norestart', '/l*v', 'install-old.log' -Wait -PassThru
+          # 3010/1641 mean "installed, reboot pending" - a success, not a failure.
+          if ($p.ExitCode -notin 0, 3010, 1641) {
+            Get-Content install-old.log -Tail 80
+            throw "install failed with exit code $($p.ExitCode)"
+          }
+
+      - name: Verify the install
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:INSTALL_DIR 'az.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw "az.exe was not installed to $exe" }
+
+          # The PATH entry must be written to the machine hive, exactly once.
+          $machinePath = [Environment]::GetEnvironmentVariable('Path','Machine')
+          $hits = @($machinePath -split ';' | Where-Object { $_.TrimEnd('\') -ieq $env:INSTALL_DIR })
+          if ($hits.Count -ne 1) { throw "expected 1 machine PATH entry for $env:INSTALL_DIR, found $($hits.Count)" }
+
+          # A shell started after the install must find our az on PATH. It will
+          # NOT be first: this runner ships Microsoft's Azure CLI, which
+          # prepends, while we append. Assert presence, not precedence.
+          $env:Path = [Environment]::GetEnvironmentVariable('Path','Machine') + ';' + [Environment]::GetEnvironmentVariable('Path','User')
+          where.exe az
+          $sources = @(Get-Command az -All -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+          if ($sources -notcontains $exe) { throw "$exe is not reachable via PATH; found: $($sources -join ', ')" }
+
+          # Run OUR binary by absolute path - a bare `az` here is Microsoft's.
+          $out = & $exe version
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { throw "az version exited $LASTEXITCODE" }
+          if ($out -notmatch 'azure-cli-go') { throw "az version did not report azure-cli-go: $out" }
+          if ($out -notmatch [regex]::Escape($env:OLD_VERSION)) { throw "az version did not report $env:OLD_VERSION : $out" }
+
+          # Add/Remove Programs must list exactly one entry.
+          $apps = @(Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+                    ForEach-Object { Get-ItemProperty -LiteralPath $_.PSPath } |
+                    Where-Object { $_.DisplayName -like 'Azure Go CLI*' })
+          if ($apps.Count -ne 1) { throw "expected 1 Add/Remove Programs entry, found $($apps.Count)" }
+          $apps | Select-Object DisplayName, DisplayVersion, Publisher | Format-List
+
+      - name: Upgrade to ${{ env.NEW_VERSION }}
+        shell: pwsh
+        run: |
+          $msi = (Resolve-Path "dist-msi\az-go-$($env:NEW_VERSION)-windows-amd64.msi").Path
+          $p = Start-Process msiexec.exe -ArgumentList '/i', "`"$msi`"", '/qn', '/norestart', '/l*v', 'install-new.log' -Wait -PassThru
+          if ($p.ExitCode -notin 0, 3010, 1641) {
+            Get-Content install-new.log -Tail 80
+            throw "upgrade failed with exit code $($p.ExitCode)"
+          }
+
+      - name: Verify the upgrade
+        shell: pwsh
+        run: |
+          # A major upgrade removes the old product and installs the new one in
+          # one transaction. Failure modes worth catching: the new payload not
+          # landing, a duplicated PATH entry, and the old product left behind
+          # in Add/Remove Programs.
+          $exe = Join-Path $env:INSTALL_DIR 'az.exe'
+          if (-not (Test-Path -LiteralPath $exe)) { throw "az.exe is missing after the upgrade" }
+
+          $out = & $exe version
+          Write-Host $out
+          if ($LASTEXITCODE -ne 0) { throw "az version exited $LASTEXITCODE after the upgrade" }
+          if ($out -notmatch [regex]::Escape($env:NEW_VERSION)) { throw "the old payload survived the upgrade: $out" }
+
+          $machinePath = [Environment]::GetEnvironmentVariable('Path','Machine')
+          $hits = @($machinePath -split ';' | Where-Object { $_.TrimEnd('\') -ieq $env:INSTALL_DIR })
+          if ($hits.Count -ne 1) { throw "PATH entry count is $($hits.Count) after the upgrade, expected 1" }
+
+          $apps = @(Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+                    ForEach-Object { Get-ItemProperty -LiteralPath $_.PSPath } |
+                    Where-Object { $_.DisplayName -like 'Azure Go CLI*' })
+          if ($apps.Count -ne 1) { throw "expected 1 Add/Remove Programs entry after the upgrade, found $($apps.Count)" }
+          $expected = "$($env:NEW_VERSION)".TrimStart('v')
+          if ($apps[0].DisplayVersion -ne $expected) { throw "Add/Remove Programs reports $($apps[0].DisplayVersion), expected $expected" }
+
+      - name: Uninstall
+        shell: pwsh
+        run: |
+          # Uninstall by ProductCode, using the same two-hive lookup that
+          # docs/windows-install.md gives users, so that snippet is exercised too.
+          $app = Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+                               'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall' |
+                 ForEach-Object { Get-ItemProperty -LiteralPath $_.PSPath } |
+                 Where-Object { $_.DisplayName -like 'Azure Go CLI*' } |
+                 Select-Object -First 1
+          if (-not $app) { throw "Azure Go CLI is not installed" }
+          $p = Start-Process msiexec.exe -ArgumentList '/x', $app.PSChildName, '/qn', '/norestart', '/l*v', 'uninstall.log' -Wait -PassThru
+          if ($p.ExitCode -notin 0, 3010, 1641) {
+            Get-Content uninstall.log -Tail 80
+            throw "uninstall failed with exit code $($p.ExitCode)"
+          }
+
+      - name: Verify the uninstall is clean
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:INSTALL_DIR 'az.exe'
+          if (Test-Path -LiteralPath $exe) { throw "az.exe survived the uninstall at $exe" }
+
+          $machinePath = [Environment]::GetEnvironmentVariable('Path','Machine')
+          $hits = @($machinePath -split ';' | Where-Object { $_.TrimEnd('\') -ieq $env:INSTALL_DIR })
+          if ($hits.Count -ne 0) { throw "the PATH entry leaked: still present $($hits.Count) time(s)" }
+
+          $apps = @(Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' |
+                    ForEach-Object { Get-ItemProperty -LiteralPath $_.PSPath } |
+                    Where-Object { $_.DisplayName -like 'Azure Go CLI*' })
+          if ($apps.Count -ne 0) { throw "Add/Remove Programs still lists $($apps.Count) entry/entries" }
+
+      - name: Upload msiexec logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: msiexec-logs
+          path: '*.log'
+          if-no-files-found: ignore

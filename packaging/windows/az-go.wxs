@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Azure Go CLI - per-machine MSI for Windows.
+
+  Built with GNOME msitools `wixl` (>= 0.105, for <Environment> support), which
+  consumes the WiX v3 schema, not v4/v5.
+
+  Required preprocessor variables (-D):
+    Version    MSI ProductVersion, e.g. 1.7.0 (max 255.255.65535, NO pre-release suffix)
+    BinPath    path to the az.exe to embed
+    PFolder    ProgramFiles64Folder (x64)
+  Required flag:
+    -a x64
+
+  Only x64/amd64 is built today (see packaging/windows/build-msi.sh); the
+  Component below is hard-coded Win64="yes", so it must not be built with
+  -a x86 / PFolder=ProgramFilesFolder without also parameterizing Win64.
+
+  UpgradeCode below is FIXED and PERMANENT: it identifies "Azure Go CLI" across
+  every release so MajorUpgrade can find and replace prior installs. Generated
+  once with `uuidgen`. Do NOT ever change this value.
+-->
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product Id="*"
+           Name="Azure Go CLI"
+           Language="1033"
+           Version="$(var.Version)"
+           Manufacturer="dobbo-ca"
+           UpgradeCode="44B0DEF4-1E80-4DD9-BD92-49DAB83FC915">
+
+    <Package InstallerVersion="200"
+             Compressed="yes"
+             InstallScope="perMachine"
+             Manufacturer="dobbo-ca"
+             Description="Azure Go CLI (az) $(var.Version)" />
+
+    <!-- Clean major upgrade: older versions are removed, same version is
+         replaced, downgrades are blocked. -->
+    <MajorUpgrade AllowSameVersionUpgrades="yes"
+                  DowngradeErrorMessage="A newer version of Azure Go CLI is already installed. Uninstall it first." />
+
+    <Media Id="1" Cabinet="az.cab" EmbedCab="yes" />
+
+    <!-- Add/Remove Programs metadata -->
+    <Property Id="ARPHELPLINK" Value="https://github.com/dobbo-ca/azure-go-cli" />
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/dobbo-ca/azure-go-cli" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/dobbo-ca/azure-go-cli/releases" />
+    <Property Id="ARPNOMODIFY" Value="1" />
+    <Property Id="MSIFASTINSTALL" Value="7" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="$(var.PFolder)">
+        <Directory Id="INSTALLDIR" Name="Azure Go CLI">
+          <Directory Id="BINDIR" Name="bin">
+
+            <Component Id="CmpAzExe" Guid="*" Win64="yes">
+              <File Id="FileAzExe" Name="az.exe" Source="$(var.BinPath)" KeyPath="yes" />
+
+              <!-- NOTE the wixl quirk: wixl emits the MSI '-' prefix (remove on
+                   uninstall) when Permanent="yes". This is INVERTED relative to
+                   real WiX v3. Permanent="yes" here yields Name "=-*PATH", i.e.
+                   the documented "set on install, remove on uninstall" behaviour.
+                   If this file is ever ported to real WiX (dotnet wix), flip this
+                   attribute to "no" or the PATH entry will leak on uninstall. -->
+              <Environment Id="EnvPath"
+                           Name="PATH"
+                           Value="[INSTALLDIR]bin"
+                           Action="set"
+                           Part="last"
+                           System="yes"
+                           Permanent="yes"
+                           Separator=";" />
+            </Component>
+
+          </Directory>
+        </Directory>
+      </Directory>
+    </Directory>
+
+    <Feature Id="Complete" Title="Azure Go CLI" Level="1">
+      <ComponentRef Id="CmpAzExe" />
+    </Feature>
+  </Product>
+</Wix>
