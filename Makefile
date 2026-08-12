@@ -1,4 +1,4 @@
-.PHONY: build all clean test help
+.PHONY: build all clean test help msi
 
 # Binary name
 BINARY_NAME=az
@@ -57,6 +57,27 @@ install: build ## Install binary to system
 	@echo "Installing $(BINARY_NAME) to /usr/local/bin..."
 	@sudo cp $(OUTPUT_DIR)/$(BINARY_NAME) /usr/local/bin/
 	@echo "Install complete. Run '$(BINARY_NAME)' to verify."
+
+# MSI ProductVersion can't express the "-N-gSHA[-dirty]" suffix that VERSION
+# carries between tags, so the msi target derives its own version from the
+# nearest tag. Override with `make msi VERSION=v1.7.0` to build a specific one.
+MSI_VERSION?=$(shell git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+ifeq ($(origin VERSION),command line)
+MSI_VER=$(VERSION)
+else
+MSI_VER=$(MSI_VERSION)
+endif
+
+msi: ## Build Windows MSI installer (requires: brew install msitools; override with VERSION=vX.Y.Z)
+	@echo "Building windows/amd64 for MSI packaging..."
+	@mkdir -p $(OUTPUT_DIR)
+	@GOOS=windows GOARCH=amd64 go build $(LDFLAGS) -o $(OUTPUT_DIR)/$(BINARY_NAME)-windows-amd64.exe $(CMD_PATH)/main.go
+	@if [ -z "$(MSI_VER)" ]; then \
+		echo "error: no tag found to derive an MSI version from; pass VERSION=vX.Y.Z" >&2; \
+		exit 1; \
+	fi
+	@packaging/windows/build-msi.sh --version "$(MSI_VER)" --exe $(OUTPUT_DIR)/$(BINARY_NAME)-windows-amd64.exe --arch amd64 --out $(OUTPUT_DIR)
 
 # Default target
 .DEFAULT_GOAL := build

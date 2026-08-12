@@ -36,6 +36,63 @@ jobs:
       app-id: ${{ vars.GH_PUB_APP_CLIENT_ID }}
       app-pem: ${{ secrets.GH_PUB_APP_PEM }}
 
+  msi:
+    needs: release
+    # MSI ProductVersion cannot express prerelease semantics (see
+    # packaging/windows/build-msi.sh), so only build for final releases, same
+    # gate as update-homebrew below.
+    if: ${{ needs.release.outputs.is_release == 'true' && !inputs.dry_run }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download windows/amd64 Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist-windows-amd64
+          path: dist
+
+      - name: Extract az.exe
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: unzip -o "dist/az-go-${VERSION}-windows-amd64.zip" -d stage
+
+      - name: Build MSI
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          # ubuntu-latest (24.04) ships msitools 0.103, which predates the
+          # <Environment> element needed for the PATH entry. Build inside a
+          # 26.04 container to get wixl >= 0.106 instead.
+          docker run --rm -v "$PWD:/w" -w /w -e VERSION ubuntu:26.04 bash -euc '
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y -qq wixl msitools
+            wixl --version
+            packaging/windows/build-msi.sh \
+              --version "$VERSION" \
+              --exe stage/az.exe \
+              --arch amd64 \
+              --out dist-msi
+          '
+
+      - name: Upload MSI to Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          # `gh release upload` targets the release for an existing tag: it
+          # fails if the tag has no release yet (so it can never create a
+          # second release for this run). --clobber is safe here since the
+          # reusable release job only ever uploads *.tar.gz/*.zip/*.sha256,
+          # so a *.msi/*.msi.sha256 name can only collide with a previous
+          # run of this same job (e.g. a re-run after update-homebrew
+          # failed), which is exactly the case we want to overwrite.
+          gh release upload "${VERSION}" \
+            dist-msi/*.msi dist-msi/*.msi.sha256 \
+            --repo "${{ github.repository }}" \
+            --clobber
+
   update-homebrew:
     needs: release
     if: ${{ needs.release.outputs.is_release == 'true' && !inputs.dry_run }}

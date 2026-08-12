@@ -64,6 +64,27 @@ brew install azure-go-cli
 
 Download the latest release for your platform from the [releases page](https://github.com/dobbo-ca/azure-go-cli/releases).
 
+### From MSI (Windows)
+
+```powershell
+$ErrorActionPreference = 'Stop'
+$ProgressPreference = 'SilentlyContinue'
+$assets = (Invoke-RestMethod 'https://api.github.com/repos/dobbo-ca/azure-go-cli/releases/latest').assets
+$asset = $assets | Where-Object { $_.name -like 'az-go-*-windows-amd64.msi' } | Select-Object -First 1
+if (-not $asset) { throw "No Windows MSI found on the latest release" }
+$sha = $assets | Where-Object { $_.name -eq "$($asset.name).sha256" } | Select-Object -First 1
+if (-not $sha) { throw "No .sha256 for $($asset.name)" }
+Invoke-WebRequest -Uri $asset.browser_download_url -OutFile $asset.name
+Invoke-WebRequest -Uri $sha.browser_download_url -OutFile $sha.name
+if ((Get-FileHash $asset.name -Algorithm SHA256).Hash -ine (Get-Content $sha.name).Trim()) { throw "checksum mismatch" }
+$p = Start-Process msiexec.exe -ArgumentList '/i', "`"$PWD\$($asset.name)`"", '/qn', '/norestart' -Wait -Verb RunAs -PassThru
+if ($p.ExitCode -ne 0) { throw "msiexec failed with exit code $($p.ExitCode)" }
+```
+
+Open a new terminal, then check with `where.exe az` and `az version`. The MSI is not code-signed, so expect a UAC prompt from an unknown publisher.
+
+See [`docs/windows-install.md`](docs/windows-install.md) for silent/logged install flags, upgrade/uninstall, and the Microsoft Azure CLI name-conflict note.
+
 ### From Source
 
 ```bash
