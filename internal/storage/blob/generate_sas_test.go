@@ -110,3 +110,60 @@ func TestFullURI(t *testing.T) {
 		})
 	}
 }
+
+func TestParseBlobURL(t *testing.T) {
+	cases := []struct {
+		name                                     string
+		url                                      string
+		account, container, blob, snap, endpoint string
+	}{
+		{
+			name:      "public endpoint: account is the first host label",
+			url:       "https://myaccount.blob.core.windows.net/c/b.txt",
+			account:   "myaccount",
+			container: "c",
+			blob:      "b.txt",
+			endpoint:  "https://myaccount.blob.core.windows.net",
+		},
+		{
+			// Azurite and IP-addressed private endpoints. Reading the account
+			// from the host here yields "127", which signs /blob/127/... and
+			// drops the account from --full-uri. Verified against a live
+			// Azurite: wrong gives 400/403, right gives 200.
+			name:      "IP endpoint: account is the first path segment",
+			url:       "http://127.0.0.1:10000/devstoreaccount1/sastest/hello.txt",
+			account:   "devstoreaccount1",
+			container: "sastest",
+			blob:      "hello.txt",
+			endpoint:  "http://127.0.0.1:10000/devstoreaccount1",
+		},
+		{
+			name:      "virtual directory blob name survives",
+			url:       "https://myaccount.blob.core.windows.net/c/logs/2026/app.log",
+			account:   "myaccount",
+			container: "c",
+			blob:      "logs/2026/app.log",
+			endpoint:  "https://myaccount.blob.core.windows.net",
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got, err := parseBlobURL(c.url)
+			if err != nil {
+				t.Fatalf("parseBlobURL(%q): %v", c.url, err)
+			}
+			if got.accountName != c.account {
+				t.Errorf("accountName = %q, want %q", got.accountName, c.account)
+			}
+			if got.containerName != c.container {
+				t.Errorf("containerName = %q, want %q", got.containerName, c.container)
+			}
+			if got.blobName != c.blob {
+				t.Errorf("blobName = %q, want %q", got.blobName, c.blob)
+			}
+			if got.endpoint != c.endpoint {
+				t.Errorf("endpoint = %q, want %q", got.endpoint, c.endpoint)
+			}
+		})
+	}
+}

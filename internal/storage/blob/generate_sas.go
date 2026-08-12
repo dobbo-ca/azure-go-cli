@@ -80,19 +80,17 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	// carries the account name, so it wins over --account-name.
 	var endpoint string
 	if blobURL != "" {
-		parts, err := azblob.ParseURL(blobURL)
+		ref, err := parseBlobURL(blobURL)
 		if err != nil {
-			return fmt.Errorf("invalid --blob-url: %w", err)
+			return err
 		}
-		accountName = strings.Split(parts.Host, ".")[0]
-		containerName = parts.ContainerName
-		blobName = parts.BlobName
+		accountName = ref.accountName
+		containerName = ref.containerName
+		blobName = ref.blobName
 		if snapshot == "" {
-			snapshot = parts.Snapshot
+			snapshot = ref.snapshot
 		}
-		// Preserve the caller's own scheme+host (sovereign cloud, emulator)
-		// instead of reassembling against the public windows.net suffix.
-		endpoint = parts.Scheme + "://" + parts.Host
+		endpoint = ref.endpoint
 	}
 	if containerName == "" || blobName == "" {
 		return fmt.Errorf("specify --name and --container-name, or --blob-url")
@@ -175,6 +173,50 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 		return output.PrintFormatted(cmd, fullURI(endpoint, containerName, blobName, snapshot, quoted), sas.OutputFormat(cmd))
 	}
 	return output.PrintFormatted(cmd, quoted, sas.OutputFormat(cmd))
+}
+
+// blobRef is a --blob-url decomposed into the pieces this command needs.
+type blobRef struct {
+	accountName   string
+	containerName string
+	blobName      string
+	snapshot      string
+	endpoint      string // scheme://host, plus the account segment for IP-style
+}
+
+// parseBlobURL splits a --blob-url into its parts.
+//
+// Two endpoint shapes exist. The public shape carries the account as the first
+// host label (https://acct.blob.core.windows.net/container/blob). The IP shape,
+// used by the Azurite emulator and by private endpoints addressed by IP,
+// carries it as the first PATH segment
+// (http://127.0.0.1:10000/devstoreaccount1/container/blob).
+//
+// Taking the account from the host in the IP case yields "127", which is wrong
+// twice: it signs the canonical resource /blob/127/... so the service rejects
+// the token, and it drops the account from the emitted --full-uri, producing a
+// 400. Both were observed against Azurite before this was split out.
+func parseBlobURL(blobURL string) (blobRef, error) {
+	parts, err := azblob.ParseURL(blobURL)
+	if err != nil {
+		return blobRef{}, fmt.Errorf("invalid --blob-url: %w", err)
+	}
+
+	ref := blobRef{
+		accountName:   parts.IPEndpointStyleInfo.AccountName,
+		containerName: parts.ContainerName,
+		blobName:      parts.BlobName,
+		snapshot:      parts.Snapshot,
+		// Preserve the caller's own scheme+host (sovereign cloud, emulator)
+		// instead of reassembling against the public windows.net suffix.
+		endpoint: parts.Scheme + "://" + parts.Host,
+	}
+	if ref.accountName == "" {
+		ref.accountName = strings.Split(parts.Host, ".")[0]
+	} else {
+		ref.endpoint += "/" + ref.accountName
+	}
+	return ref, nil
 }
 
 // pathSafe is the safe set for the container/blob path segments.
