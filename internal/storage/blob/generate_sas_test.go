@@ -27,6 +27,8 @@ func TestFullURIPathDecodesToSignedName(t *testing.T) {
 		"logs/2026/app.log", // virtual directory: slashes must survive
 		"a+b&c=d",
 		"café.txt", // multi-byte UTF-8
+		"a(b)$c=d", // sub-delims: azure-cli escapes these
+		"o'brien.txt",
 	}
 	for _, name := range names {
 		t.Run(name, func(t *testing.T) {

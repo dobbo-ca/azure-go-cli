@@ -177,18 +177,30 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	return output.PrintFormatted(cmd, quoted, sas.OutputFormat(cmd))
 }
 
-// pathSafe is azure-cli's encode_url_path safe set (url_quote_util.py:20-24,
-// applied from operations/blob.py:905) MINUS '%'. "/" stays safe so
-// virtual-directory blob names keep their slashes instead of becoming %2F.
+// pathSafe is the safe set for the container/blob path segments.
 //
-// azure-cli marks '%' safe because by the time encode_url_path runs, the name
-// has already been quoted once by BlobClient._format_url, so any '%' present
-// is the start of an existing escape. We quote in a single pass, so keeping
-// '%' safe would pass a literal '%' straight through and emit an invalid URL:
-// a blob named "a%b" became ".../a%b?...", which net/url.Parse rejects with
-// `invalid URL escape "%b"`. Dropping '%' yields "a%25b", matching what
-// azure-cli produces across its two passes.
-const pathSafe = "/()$=',~"
+// It is deliberately just "/", which reproduces azure-cli byte for byte. The
+// name a user passes to -n is a LITERAL blob name, so every character that is
+// not valid in a URL path gets percent-encoded: a space becomes %20 and, by
+// the same rule, a literal '%' becomes %25. Only '/' stays safe, so
+// virtual-directory names keep their slashes instead of becoming %2F.
+//
+// Two earlier safe sets were wrong, both by copying azure-cli's SECOND pass:
+//
+//	"/()$=',~%"  wrong. Passed a literal '%' straight through, emitting an
+//	             unparseable URL for "a%b", and silently retargeting
+//	             "my%20file.txt" at the blob "my file.txt" while the signature
+//	             still covered "my%20file.txt".
+//	"/()$=',~"   valid, but not byte-identical: it left ( ) $ = ' unescaped
+//	             where azure-cli escapes them.
+//
+// azure-cli quotes twice. BlobClient._format_url runs quote(name, safe='~/')
+// and does all the real work; encode_url_path then re-quotes with
+// SAFE_CHARS = "/()$=',~" (url_quote_util.py:14), which is a no-op on
+// already-escaped text. Note SAFE_CHARS contains no '%' at all. Since we quote
+// once, matching azure-cli means matching its FIRST pass: safe='~/'. In both
+// Python and this package '~' is unconditionally safe, so "/" is equivalent.
+const pathSafe = "/"
 
 // fullURI assembles the blob URL with the SAS token appended, matching
 // operations/blob.py:902-905. The path is quoted with azure-cli's safe set;
