@@ -1,6 +1,50 @@
 package blob
 
-import "testing"
+import (
+	"net/url"
+	"strings"
+	"testing"
+)
+
+// TestFullURIPathDecodesToSignedName locks the invariant that makes --full-uri
+// correct: the SAS signature is computed over the raw blob name (it is assigned
+// verbatim to sas.BlobSignatureValues.BlobName), so the URL's path MUST decode
+// back to exactly that string. If it does not, the URL addresses a different
+// blob than the one signed and the service rejects it with an opaque
+// AuthenticationFailed.
+//
+// This is why '%' is not in pathSafe. Marking it safe passed a literal '%'
+// straight through, which either produced an unparseable URL ("a%b") or
+// silently retargeted the request ("my%20file.txt" signed, but addressing
+// "my file.txt").
+func TestFullURIPathDecodesToSignedName(t *testing.T) {
+	names := []string{
+		"plain.txt",
+		"my blob.txt",
+		"a%b",           // bare percent: invalid in a URL unless escaped
+		"my%20file.txt", // looks pre-encoded, but is a literal name
+		"100%.txt",
+		"logs/2026/app.log", // virtual directory: slashes must survive
+		"a+b&c=d",
+		"café.txt", // multi-byte UTF-8
+	}
+	for _, name := range names {
+		t.Run(name, func(t *testing.T) {
+			raw := fullURI("https://acct.blob.core.windows.net", "c", name, "", "sig=abc")
+			u, err := url.Parse(raw)
+			if err != nil {
+				t.Fatalf("fullURI produced an unparseable URL %q: %v", raw, err)
+			}
+			got, ok := strings.CutPrefix(u.Path, "/c/")
+			if !ok {
+				t.Fatalf("path %q does not start with /c/", u.Path)
+			}
+			if got != name {
+				t.Errorf("path decoded to %q, want %q (signature was computed over %q)", got, name, name)
+			}
+		})
+	}
+}
 
 func TestFullURI(t *testing.T) {
 	cases := []struct {
