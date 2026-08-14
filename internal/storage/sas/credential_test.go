@@ -15,14 +15,60 @@ func TestParseConnectionStringKeepsBase64Padding(t *testing.T) {
 }
 
 func TestResolveInputsPrefersConnectionString(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_KEY", "envkey")
 	got := ResolveInputs("flagname", "flagkey",
 		"AccountName=csname;AccountKey=cskey")
 	if got.AccountName != "csname" || got.AccountKey != "cskey" {
 		t.Errorf("connection string should win, got %+v", got)
 	}
+	// A non-empty connection string AccountKey must not be overridden by
+	// AZURE_STORAGE_KEY.
+}
+
+func TestResolveInputsConnectionStringNameOnlyFallsBackToEnvKey(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_KEY", "envkey")
+	got := ResolveInputs("", "", "AccountName=csname")
+	want := Creds{AccountName: "csname", AccountKey: "envkey"}
+	if got != want {
+		t.Errorf("ResolveInputs() = %+v, want %+v", got, want)
+	}
+}
+
+// Mirror of TestResolveInputsConnectionStringNameOnlyFallsBackToEnvKey: a
+// connection string carrying only AccountKey must still pick up
+// AZURE_STORAGE_ACCOUNT. Pinning the variable to a real value rather than ""
+// is what makes this discriminating — with the pre-fix early return, which
+// never reached the env backfill, AccountName came back empty.
+func TestResolveInputsConnectionStringKeyOnlyFallsBackToEnvAccount(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_ACCOUNT", "envname")
+	got := ResolveInputs("", "", "AccountKey=cskey")
+	want := Creds{AccountName: "envname", AccountKey: "cskey"}
+	if got != want {
+		t.Errorf("ResolveInputs() = %+v, want %+v", got, want)
+	}
+}
+
+func TestResolveInputsExplicitAccountKeyOverriddenByConnectionString(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_KEY", "")
+	got := ResolveInputs("", "flagkey", "AccountName=csname")
+	want := Creds{AccountName: "csname", AccountKey: ""}
+	if got != want {
+		t.Errorf("ResolveInputs() = %+v, want %+v", got, want)
+	}
+}
+
+func TestResolveInputsNoKeyTriggersARMLookupPath(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_CONNECTION_STRING", "")
+	t.Setenv("AZURE_STORAGE_KEY", "")
+	got := ResolveInputs("onlyname", "", "")
+	want := Creds{AccountName: "onlyname", AccountKey: ""}
+	if got != want {
+		t.Errorf("ResolveInputs() = %+v, want %+v", got, want)
+	}
 }
 
 func TestResolveInputsFallsBackToEnv(t *testing.T) {
+	t.Setenv("AZURE_STORAGE_CONNECTION_STRING", "")
 	t.Setenv("AZURE_STORAGE_ACCOUNT", "envname")
 	t.Setenv("AZURE_STORAGE_KEY", "envkey")
 	got := ResolveInputs("", "", "")

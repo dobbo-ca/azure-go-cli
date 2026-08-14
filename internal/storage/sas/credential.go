@@ -49,17 +49,19 @@ func ParseConnectionString(cs string) map[string]string {
 // --account-key was supplied, matching _validators.py:152 — so an explicit
 // --account-key is never silently overridden by a stale environment variable.
 //
-// Known divergence: when a connection string supplies AccountName but no
-// AccountKey, azure-cli falls through and fills the key from AZURE_STORAGE_KEY
-// (_validators.py:163-170); this returns early instead, so that case reaches the
-// ARM key lookup. Tracked in azure-go-cli-5we.
+// When a connection string is in play, its AccountName/AccountKey unconditionally
+// overwrite any flag-supplied values (_validators.py:156-160), then fall through
+// into the same env-backfill below — so a connection string with AccountName but
+// no AccountKey still gets a chance to pick up AZURE_STORAGE_KEY
+// (_validators.py:163-172).
 func ResolveInputs(accountName, accountKey, connectionString string) Creds {
 	if connectionString == "" && accountKey == "" {
 		connectionString = os.Getenv("AZURE_STORAGE_CONNECTION_STRING")
 	}
 	if connectionString != "" {
 		parts := ParseConnectionString(connectionString)
-		return Creds{AccountName: parts["AccountName"], AccountKey: parts["AccountKey"]}
+		accountName = parts["AccountName"]
+		accountKey = parts["AccountKey"]
 	}
 	if accountName == "" {
 		accountName = os.Getenv("AZURE_STORAGE_ACCOUNT")
