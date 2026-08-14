@@ -2,13 +2,14 @@ package feature
 
 import (
   "context"
-  "encoding/json"
   "fmt"
   "strings"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
+  "github.com/spf13/cobra"
 )
 
 type FeatureInfo struct {
@@ -18,7 +19,7 @@ type FeatureInfo struct {
   ID       string `json:"id"`
 }
 
-func List(ctx context.Context, provider string) error {
+func List(ctx context.Context, cmd *cobra.Command, provider string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -75,13 +76,7 @@ func List(ctx context.Context, provider string) error {
     return nil
   }
 
-  data, err := json.MarshalIndent(features, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format features: %w", err)
-  }
-
-  fmt.Println(string(data))
-  return nil
+  return output.PrintJSON(cmd, features)
 }
 
 func formatFeature(feature *armfeatures.FeatureResult) FeatureInfo {

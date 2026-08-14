@@ -6,9 +6,11 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, vaultName string) error {
+func List(ctx context.Context, cmd *cobra.Command, vaultName string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -24,40 +26,52 @@ func List(ctx context.Context, vaultName string) error {
 
 	pager := client.NewListSecretPropertiesPager(nil)
 
-	fmt.Printf("%-40s %-20s %-30s\n", "NAME", "ENABLED", "UPDATED")
-	fmt.Println("------------------------------------------------------------------------------------------------")
-
+	var secrets []*azsecrets.SecretProperties
 	for pager.More() {
 		page, err := pager.NextPage(ctx)
 		if err != nil {
 			return fmt.Errorf("failed to get next page: %w", err)
 		}
+		secrets = append(secrets, page.Value...)
+	}
 
-		for _, secret := range page.Value {
-			name := ""
-			if secret.ID != nil {
-				// Extract secret name from ID (last segment of URL path)
-				id := string(*secret.ID)
-				for i := len(id) - 1; i >= 0; i-- {
-					if id[i] == '/' {
-						name = id[i+1:]
-						break
-					}
+	// secret list historically defaulted to table output, unlike the global
+	// default of json, so only honor an explicitly-passed format.
+	format, _ := cmd.Flags().GetString("output")
+	if !cmd.Flags().Changed("output") {
+		format = "table"
+	}
+	if format != "table" {
+		return output.PrintJSON(cmd, secrets)
+	}
+
+	fmt.Printf("%-40s %-20s %-30s\n", "NAME", "ENABLED", "UPDATED")
+	fmt.Println("------------------------------------------------------------------------------------------------")
+
+	for _, secret := range secrets {
+		name := ""
+		if secret.ID != nil {
+			// Extract secret name from ID (last segment of URL path)
+			id := string(*secret.ID)
+			for i := len(id) - 1; i >= 0; i-- {
+				if id[i] == '/' {
+					name = id[i+1:]
+					break
 				}
 			}
-
-			enabled := "false"
-			if secret.Attributes != nil && secret.Attributes.Enabled != nil && *secret.Attributes.Enabled {
-				enabled = "true"
-			}
-
-			updated := ""
-			if secret.Attributes != nil && secret.Attributes.Updated != nil {
-				updated = secret.Attributes.Updated.Format("2006-01-02 15:04:05")
-			}
-
-			fmt.Printf("%-40s %-20s %-30s\n", name, enabled, updated)
 		}
+
+		enabled := "false"
+		if secret.Attributes != nil && secret.Attributes.Enabled != nil && *secret.Attributes.Enabled {
+			enabled = "true"
+		}
+
+		updated := ""
+		if secret.Attributes != nil && secret.Attributes.Updated != nil {
+			updated = secret.Attributes.Updated.Format("2006-01-02 15:04:05")
+		}
+
+		fmt.Printf("%-40s %-20s %-30s\n", name, enabled, updated)
 	}
 
 	return nil

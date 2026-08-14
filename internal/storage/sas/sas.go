@@ -119,13 +119,13 @@ func NewSharedKey(accountName, accountKey string) (*azsas.SharedKeyCredential, e
 	return cred, nil
 }
 
-// OutputFormat reads the global --output flag for a SAS token result.
-//
-// A SAS token is a bare string, and output.PrintFormatted only renders json
-// and tsv, so "table" is mapped to "json" the way internal/role/list.go does.
+// OutputFormat reads the global --output flag for a SAS token result. A SAS
+// token is a bare string; output.PrintFormatted renders it as a scalar
+// ("Result" column for table, a bare line for tsv/yaml), so the format is
+// passed straight through.
 func OutputFormat(cmd *cobra.Command) string {
 	format, _ := cmd.Flags().GetString("output")
-	if format == "table" || format == "" {
+	if format == "" {
 		return "json"
 	}
 	return format

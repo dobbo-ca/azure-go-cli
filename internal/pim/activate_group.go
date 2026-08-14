@@ -2,7 +2,6 @@ package pim
 
 import (
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
@@ -17,7 +16,6 @@ type activateGroupArgs struct {
 	Justification string
 	Duration      int
 	NoInput       bool
-	Output        string
 }
 
 func newActivateGroupCmd() *cobra.Command {
@@ -30,15 +28,13 @@ func newActivateGroupCmd() *cobra.Command {
 			a.Justification, _ = cmd.Flags().GetString("justification")
 			a.Duration, _ = cmd.Flags().GetInt("duration")
 			a.NoInput, _ = cmd.Flags().GetBool("no-input")
-			a.Output, _ = cmd.Flags().GetString("output")
-			return runActivateGroup(a, cmd.OutOrStdout())
+			return runActivateGroup(cmd, a)
 		},
 	}
 	cmd.Flags().String("name", "", "group display name")
 	cmd.Flags().String("justification", "", "reason for activation")
 	cmd.Flags().Int("duration", 0, "activation duration in minutes")
 	cmd.Flags().Bool("no-input", false, "disable interactive prompts")
-	cmd.Flags().String("output", "json", "output format: json or table")
 	return cmd
 }
 
@@ -62,7 +58,7 @@ func validateActivateGroupArgs(a activateGroupArgs, noInput bool) error {
 	return nil
 }
 
-func runActivateGroup(a activateGroupArgs, w io.Writer) error {
+func runActivateGroup(cmd *cobra.Command, a activateGroupArgs) error {
 	// In non-interactive mode validate up-front so the user gets a clear
 	// "missing required flag: --foo" message rather than a generic
 	// prompter error.
@@ -168,5 +164,5 @@ func runActivateGroup(a activateGroupArgs, w io.Writer) error {
 	if resp.Status != nil {
 		subStatus = resp.Status.SubStatus
 	}
-	return renderActivationResult(w, a.Output, subStatus, "—", a.Name, resp.RoleAssignmentEndDateTime, resp.Id)
+	return renderActivationResult(cmd, subStatus, "—", a.Name, resp.RoleAssignmentEndDateTime, resp.Id)
 }

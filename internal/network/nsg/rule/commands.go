@@ -19,7 +19,7 @@ func NewRuleCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			nsgName, _ := cmd.Flags().GetString("nsg-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), nsgName, resourceGroup)
+			return List(context.Background(), cmd, nsgName, resourceGroup)
 		},
 	}
 	listCmd.Flags().String("nsg-name", "", "Network security group name")

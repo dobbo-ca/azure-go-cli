@@ -2,15 +2,16 @@ package feature
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armfeatures"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
+  "github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, provider, featureName string) error {
+func Show(ctx context.Context, cmd *cobra.Command, provider, featureName string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -31,11 +32,5 @@ func Show(ctx context.Context, provider, featureName string) error {
     return fmt.Errorf("failed to get feature: %w", err)
   }
 
-  data, err := json.MarshalIndent(feature, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format feature: %w", err)
-  }
-
-  fmt.Println(string(data))
-  return nil
+  return output.PrintJSON(cmd, feature)
 }

@@ -20,7 +20,7 @@ func NewFeatureCommand() *cobra.Command {
     Long:  "List all preview features or features for a specific provider",
     RunE: func(cmd *cobra.Command, args []string) error {
       provider, _ := cmd.Flags().GetString("provider")
-      return List(context.Background(), provider)
+      return List(context.Background(), cmd, provider)
     },
   }
   listCmd.Flags().StringP("provider", "p", "", "Resource provider namespace (e.g., Microsoft.ContainerService)")
@@ -32,7 +32,7 @@ func NewFeatureCommand() *cobra.Command {
     RunE: func(cmd *cobra.Command, args []string) error {
       provider, _ := cmd.Flags().GetString("provider")
       name, _ := cmd.Flags().GetString("name")
-      return Show(context.Background(), provider, name)
+      return Show(context.Background(), cmd, provider, name)
     },
   }
   showCmd.Flags().StringP("provider", "p", "", "Resource provider namespace (e.g., Microsoft.ContainerService)")
@@ -47,7 +47,7 @@ func NewFeatureCommand() *cobra.Command {
     RunE: func(cmd *cobra.Command, args []string) error {
       provider, _ := cmd.Flags().GetString("provider")
       name, _ := cmd.Flags().GetString("name")
-      return Register(context.Background(), provider, name)
+      return Register(context.Background(), cmd, provider, name)
     },
   }
   registerCmd.Flags().StringP("provider", "p", "", "Resource provider namespace (e.g., Microsoft.ContainerService)")
@@ -62,7 +62,7 @@ func NewFeatureCommand() *cobra.Command {
     RunE: func(cmd *cobra.Command, args []string) error {
       provider, _ := cmd.Flags().GetString("provider")
       name, _ := cmd.Flags().GetString("name")
-      return Unregister(context.Background(), provider, name)
+      return Unregister(context.Background(), cmd, provider, name)
     },
   }
   unregisterCmd.Flags().StringP("provider", "p", "", "Resource provider namespace (e.g., Microsoft.ContainerService)")

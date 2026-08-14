@@ -9,6 +9,7 @@ import (
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -22,7 +23,7 @@ func newValidateForBackupCommand() *cobra.Command {
       vaultName, _ := cmd.Flags().GetString("vault-name")
       backupInstanceFile, _ := cmd.Flags().GetString("backup-instance")
       noWait, _ := cmd.Flags().GetBool("no-wait")
-      return ValidateForBackup(context.Background(), resourceGroup, vaultName, backupInstanceFile, noWait)
+      return ValidateForBackup(context.Background(), cmd, resourceGroup, vaultName, backupInstanceFile, noWait)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -35,7 +36,7 @@ func newValidateForBackupCommand() *cobra.Command {
   return cmd
 }
 
-func ValidateForBackup(ctx context.Context, resourceGroup, vaultName, backupInstanceFile string, noWait bool) error {
+func ValidateForBackup(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, backupInstanceFile string, noWait bool) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -80,11 +81,5 @@ func ValidateForBackup(ctx context.Context, resourceGroup, vaultName, backupInst
     return fmt.Errorf("validate-for-backup operation failed: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format result: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

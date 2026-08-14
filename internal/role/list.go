@@ -15,7 +15,6 @@ import (
 )
 
 func newListCmd() *cobra.Command {
-	var output string
 	var custom bool
 	var scope string
 	var name string
@@ -26,11 +25,17 @@ func newListCmd() *cobra.Command {
 		Long:  "List Azure RBAC role definitions in the subscription",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return listRoleDefinitions(ctx, cmd, output, custom, scope, name)
+			// list historically defaulted to table output, unlike the
+			// global default of json, so only honor an explicitly-passed
+			// format.
+			format, _ := cmd.Flags().GetString("output")
+			if !cmd.Flags().Changed("output") {
+				format = "table"
+			}
+			return listRoleDefinitions(ctx, cmd, format, custom, scope, name)
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json, table, or tsv")
 	cmd.Flags().BoolVar(&custom, "custom", false, "Show only custom roles")
 	cmd.Flags().StringVar(&scope, "scope", "", "Scope to list roles for (defaults to subscription scope)")
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Filter by role definition's name (GUID) or roleName")

@@ -2,13 +2,14 @@ package vm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
 type SKUInfo struct {
@@ -21,7 +22,7 @@ type SKUInfo struct {
 	Restrictions string   `json:"restrictions"`
 }
 
-func ListSKUs(ctx context.Context, location, sizeFilter, resourceType, outputFormat string) error {
+func ListSKUs(ctx context.Context, cmd *cobra.Command, location, sizeFilter, resourceType string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -40,7 +41,7 @@ func ListSKUs(ctx context.Context, location, sizeFilter, resourceType, outputFor
 	// Normalize location to lowercase for comparison
 	location = strings.ToLower(strings.ReplaceAll(location, " ", ""))
 
-	var skus []SKUInfo
+	skus := []SKUInfo{}
 	pager := client.NewListPager(&armcompute.ResourceSKUsClientListOptions{
 		Filter: nil,
 	})
@@ -114,31 +115,40 @@ func ListSKUs(ctx context.Context, location, sizeFilter, resourceType, outputFor
 		}
 	}
 
+	format, _ := cmd.Flags().GetString("output")
+	// list-skus historically defaulted to table output, unlike the global
+	// default of json, so only honor an explicitly-passed format.
+	if !cmd.Flags().Changed("output") {
+		format = "table"
+	}
+
+	if format != "table" {
+		// PrintJSON (not PrintFormatted) keeps struct field declaration
+		// order for "json" instead of alphabetizing keys, while still
+		// delegating table/tsv/yaml/none to PrintFormatted itself. This
+		// branch is only reached when the user explicitly passed a
+		// non-table --output, so cmd's own flag value already matches
+		// format.
+		return output.PrintJSON(cmd, skus)
+	}
+
 	if len(skus) == 0 {
 		fmt.Printf("No SKUs found for location '%s' with the specified filters\n", location)
 		return nil
 	}
 
-	if outputFormat == "json" {
-		data, err := json.MarshalIndent(skus, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to format SKUs: %w", err)
+	// Table output
+	fmt.Printf("%-35s %-20s %-15s %-25s %-20s\n", "Name", "ResourceType", "Tier", "Locations", "Restrictions")
+	fmt.Println(strings.Repeat("-", 120))
+	for _, sku := range skus {
+		locStr := strings.Join(sku.Locations, ", ")
+		if len(locStr) > 25 {
+			locStr = locStr[:22] + "..."
 		}
-		fmt.Println(string(data))
-	} else {
-		// Table output
-		fmt.Printf("%-35s %-20s %-15s %-25s %-20s\n", "Name", "ResourceType", "Tier", "Locations", "Restrictions")
-		fmt.Println(strings.Repeat("-", 120))
-		for _, sku := range skus {
-			locStr := strings.Join(sku.Locations, ", ")
-			if len(locStr) > 25 {
-				locStr = locStr[:22] + "..."
-			}
-			fmt.Printf("%-35s %-20s %-15s %-25s %-20s\n",
-				sku.Name, sku.ResourceType, sku.Tier, locStr, sku.Restrictions)
-		}
-		fmt.Printf("\nTotal: %d SKUs\n", len(skus))
+		fmt.Printf("%-35s %-20s %-15s %-25s %-20s\n",
+			sku.Name, sku.ResourceType, sku.Tier, locStr, sku.Restrictions)
 	}
+	fmt.Printf("\nTotal: %d SKUs\n", len(skus))
 
 	return nil
 }

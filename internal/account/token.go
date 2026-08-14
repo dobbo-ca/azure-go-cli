@@ -2,13 +2,14 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
 // TokenResponse matches the format expected by kubelogin
@@ -21,7 +22,7 @@ type TokenResponse struct {
 }
 
 // GetAccessToken retrieves an access token for a specific resource or scope
-func GetAccessToken(resource string, scopes []string, subscriptionID string) error {
+func GetAccessToken(cmd *cobra.Command, resource string, scopes []string, subscriptionID string) error {
 	ctx := context.Background()
 
 	logger.Debug("get-access-token called")
@@ -81,12 +82,5 @@ func GetAccessToken(resource string, scopes []string, subscriptionID string) err
 		TokenType:    "Bearer",
 	}
 
-	// Output JSON
-	output, err := json.MarshalIndent(response, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal response: %w", err)
-	}
-
-	fmt.Println(string(output))
-	return nil
+	return output.PrintJSON(cmd, response)
 }

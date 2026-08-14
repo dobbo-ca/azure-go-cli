@@ -19,7 +19,7 @@ func NewAddonCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusterName, _ := cmd.Flags().GetString("cluster-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), clusterName, resourceGroup)
+			return List(context.Background(), cmd, clusterName, resourceGroup)
 		},
 	}
 	listCmd.Flags().String("cluster-name", "", "AKS cluster name")
@@ -31,7 +31,7 @@ func NewAddonCommand() *cobra.Command {
 		Use:   "list-available",
 		Short: "List available Kubernetes addons",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return ListAvailable()
+			return ListAvailable(cmd)
 		},
 	}
 
@@ -42,7 +42,7 @@ func NewAddonCommand() *cobra.Command {
 			clusterName, _ := cmd.Flags().GetString("cluster-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			addonName, _ := cmd.Flags().GetString("name")
-			return Show(context.Background(), clusterName, resourceGroup, addonName)
+			return Show(context.Background(), cmd, clusterName, resourceGroup, addonName)
 		},
 	}
 	showCmd.Flags().String("cluster-name", "", "AKS cluster name")

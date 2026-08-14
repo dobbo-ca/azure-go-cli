@@ -20,7 +20,7 @@ func NewOperationCommand() *cobra.Command {
 			clusterName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			operationID, _ := cmd.Flags().GetString("operation-id")
-			return Show(context.Background(), clusterName, resourceGroup, operationID)
+			return Show(context.Background(), cmd, clusterName, resourceGroup, operationID)
 		},
 	}
 	showCmd.Flags().StringP("name", "n", "", "AKS cluster name")
@@ -36,7 +36,7 @@ func NewOperationCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusterName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return ShowLatest(context.Background(), clusterName, resourceGroup)
+			return ShowLatest(context.Background(), cmd, clusterName, resourceGroup)
 		},
 	}
 	showLatestCmd.Flags().StringP("name", "n", "", "AKS cluster name")

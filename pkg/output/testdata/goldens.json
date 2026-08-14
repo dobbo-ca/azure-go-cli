@@ -1,0 +1,200 @@
+[
+    {
+        "name": "group list (representative az group list payload)",
+        "input": [
+            {
+                "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-alpha",
+                "location": "eastus",
+                "managedBy": null,
+                "name": "rg-alpha",
+                "properties": {
+                    "provisioningState": "Succeeded"
+                },
+                "tags": {
+                    "env": "dev"
+                },
+                "type": "Microsoft.Resources/resourceGroups"
+            },
+            {
+                "id": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-beta",
+                "location": "westeurope",
+                "managedBy": null,
+                "name": "rg-beta",
+                "properties": {
+                    "provisioningState": "Succeeded"
+                },
+                "tags": null,
+                "type": "Microsoft.Resources/resourceGroups"
+            }
+        ],
+        "table": "Location    Name\n----------  --------\neastus      rg-alpha\nwesteurope  rg-beta\n",
+        "yaml": "- id: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-alpha\n  location: eastus\n  managedBy: null\n  name: rg-alpha\n  properties:\n    provisioningState: Succeeded\n  tags:\n    env: dev\n  type: Microsoft.Resources/resourceGroups\n- id: /subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-beta\n  location: westeurope\n  managedBy: null\n  name: rg-beta\n  properties:\n    provisioningState: Succeeded\n  tags: null\n  type: Microsoft.Resources/resourceGroups\n",
+        "tsv": "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-alpha\teastus\tNone\trg-alpha\t\t\tMicrosoft.Resources/resourceGroups\n/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-beta\twesteurope\tNone\trg-beta\t\tNone\tMicrosoft.Resources/resourceGroups\n"
+    },
+    {
+        "name": "single object with mixed scalars",
+        "input": {
+            "etag": "W/\"abc\"",
+            "id": "/subscriptions/s/x",
+            "name": "vnet-demo",
+            "location": "eastus",
+            "enableDdosProtection": false,
+            "addressPrefixCount": 2,
+            "throughputMbps": 1.5,
+            "sizeBytes": 34359738368,
+            "provisioningState": "Succeeded",
+            "subnets": [],
+            "tags": {
+                "env": "dev"
+            }
+        },
+        "table": "AddressPrefixCount    EnableDdosProtection    Location    Name       ProvisioningState    SizeBytes    ThroughputMbps\n--------------------  ----------------------  ----------  ---------  -------------------  -----------  ----------------\n2                     False                   eastus      vnet-demo  Succeeded            34359738368  1.5\n",
+        "yaml": "addressPrefixCount: 2\nenableDdosProtection: false\netag: W/\"abc\"\nid: /subscriptions/s/x\nlocation: eastus\nname: vnet-demo\nprovisioningState: Succeeded\nsizeBytes: 34359738368\nsubnets: []\ntags:\n  env: dev\nthroughputMbps: 1.5\n",
+        "tsv": "2\tFalse\tW/\"abc\"\t/subscriptions/s/x\teastus\tvnet-demo\tSucceeded\t34359738368\t0\t\t1.5\n"
+    },
+    {
+        "name": "heterogeneous rows union in first-seen order",
+        "input": [
+            {
+                "b": 1
+            },
+            {
+                "a": 2
+            },
+            {
+                "c": 3
+            }
+        ],
+        "table": "B    A    C\n---  ---  ---\n1\n     2\n          3\n",
+        "yaml": "- b: 1\n- a: 2\n- c: 3\n",
+        "tsv": "1\n2\n3\n"
+    },
+    {
+        "name": "multiselect-list rows become ColumnN",
+        "input": [
+            [
+                "rg-alpha",
+                "eastus"
+            ],
+            [
+                "rg-beta",
+                "westeurope"
+            ]
+        ],
+        "table": "Column1    Column2\n---------  ----------\nrg-alpha   eastus\nrg-beta    westeurope\n",
+        "yaml": "- - rg-alpha\n  - eastus\n- - rg-beta\n  - westeurope\n",
+        "tsv": "rg-alpha\teastus\nrg-beta\twesteurope\n"
+    },
+    {
+        "name": "list of scalars becomes Result",
+        "input": [
+            "rg-alpha",
+            "rg-beta"
+        ],
+        "table": "Result\n--------\nrg-alpha\nrg-beta\n",
+        "yaml": "- rg-alpha\n- rg-beta\n",
+        "tsv": "rg-alpha\nrg-beta\n"
+    },
+    {
+        "name": "scalar becomes Result",
+        "input": "rg-alpha",
+        "table": "Result\n--------\nrg-alpha\n",
+        "yaml": "rg-alpha\n",
+        "tsv": "rg-alpha\n"
+    },
+    {
+        "name": "null result",
+        "input": null,
+        "table": "\n",
+        "yaml": "null\n",
+        "tableDivergenceNote": "DELIBERATE, DOCUMENTED DIVERGENCE from knack: knack's _TableOutput.dump([None]) actually renders 'Result\n--------\n\n' (verified against knack 0.14.0), not this. Go renders a nil result the same as an empty list ('\n') because the common case reaching renderTable(nil) is an unpopulated slice, not a genuine JSON null scalar; see renderTable's doc comment.",
+        "tsv": "",
+        "tsvDivergenceNote": "DELIBERATE, DOCUMENTED DIVERGENCE from knack (D2a): knack's format_tsv renders a top-level null as 'None\\n'. Go renders '' with no --query, for the same reason as the table divergence above — the common case reaching renderTSV(nil, false) is an unpopulated slice marshalled to JSON null, not a genuine scalar null, and azure-cli prints nothing for an empty list. A null produced BY a --query result IS rendered as 'None\\n' (D2b); see renderTSV's doc comment."
+    },
+    {
+        "name": "empty list",
+        "input": [],
+        "table": "\n",
+        "yaml": "[]\n",
+        "tsv": ""
+    },
+    {
+        "name": "all keys skipped",
+        "input": [
+            {
+                "id": "a",
+                "type": "b",
+                "etag": "c"
+            }
+        ],
+        "table": "\n",
+        "yaml": "- etag: c\n  id: a\n  type: b\n",
+        "tsv": "c\ta\tb\n"
+    },
+    {
+        "name": "only nested and null values",
+        "input": [
+            {
+                "tags": {
+                    "a": 1
+                },
+                "sku": null,
+                "zones": []
+            }
+        ],
+        "table": "\n",
+        "yaml": "- sku: null\n  tags:\n    a: 1\n  zones: []\n",
+        "tsv": "None\t\t0\n"
+    },
+    {
+        "name": "unicode and multiline cells",
+        "input": [
+            {
+                "name": "café",
+                "note": "line one\nline two"
+            },
+            {
+                "name": "日本",
+                "note": "x"
+            }
+        ],
+        "table": "Name    Note\n------  --------\ncafé    line one\n        line two\n日本      x\n",
+        "yaml": "- name: café\n  note: \"line one\\nline two\"\n- name: 日本\n  note: x\n",
+        "tsv": "café\tline one\nline two\n日本\tx\n"
+    },
+    {
+        "name": "numbers",
+        "input": [
+            {
+                "a": 1,
+                "b": 1.5,
+                "c": 0.0001,
+                "d": 1000000,
+                "e": true,
+                "f": false
+            }
+        ],
+        "table": "A    B    C       D        E     F\n---  ---  ------  -------  ----  -----\n1    1.5  0.0001  1000000  True  False\n",
+        "yaml": "- a: 1\n  b: 1.5\n  c: 0.0001\n  d: 1000000\n  e: true\n  f: false\n",
+        "tsv": "1\t1.5\t0.0001\t1000000\tTrue\tFalse\n"
+    },
+    {
+        "name": "nested non-empty lists (yaml.v3 native block-sequence indentation)",
+        "input": {
+            "name": "vnet1",
+            "addressPrefixes": [
+                "10.0.0.0/16",
+                "10.1.0.0/16"
+            ],
+            "location": "eastus",
+            "zones": [
+                "1",
+                "2"
+            ]
+        },
+        "table": "Location    Name\n----------  ------\neastus      vnet1\n",
+        "yaml": "addressPrefixes:\n  - 10.0.0.0/16\n  - 10.1.0.0/16\nlocation: eastus\nname: vnet1\nzones:\n  - \"1\"\n  - \"2\"\n",
+        "yamlPyYAMLDivergenceNote": "PyYAML's yaml.safe_dump emits indentless sequences here: 'addressPrefixes:\n- 10.0.0.0/16\n- 10.1.0.0/16\n...'. yaml.v3 always indents nested block sequences one level under their parent key; this is the documented, accepted divergence (see renderYAML's doc comment), not a bug.",
+        "tsv": "2\teastus\tvnet1\t2\n"
+    }
+]

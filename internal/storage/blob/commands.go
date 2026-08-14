@@ -19,7 +19,7 @@ func NewBlobCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			accountName, _ := cmd.Flags().GetString("account-name")
 			containerName, _ := cmd.Flags().GetString("container-name")
-			return List(context.Background(), accountName, containerName)
+			return List(context.Background(), cmd, accountName, containerName)
 		},
 	}
 	listCmd.Flags().String("account-name", "", "Storage account name")

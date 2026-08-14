@@ -2,12 +2,12 @@ package job
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ func newShowCommand() *cobra.Command {
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
       vaultName, _ := cmd.Flags().GetString("vault-name")
       jobID, _ := cmd.Flags().GetString("job-id")
-      return ShowJob(context.Background(), resourceGroup, vaultName, jobID)
+      return ShowJob(context.Background(), cmd, resourceGroup, vaultName, jobID)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -31,7 +31,7 @@ func newShowCommand() *cobra.Command {
   return cmd
 }
 
-func ShowJob(ctx context.Context, resourceGroup, vaultName, jobID string) error {
+func ShowJob(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, jobID string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -52,11 +52,5 @@ func ShowJob(ctx context.Context, resourceGroup, vaultName, jobID string) error 
     return fmt.Errorf("failed to get job: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format job: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

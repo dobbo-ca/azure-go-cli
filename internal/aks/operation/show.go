@@ -8,16 +8,20 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/cdobbyn/azure-go-cli/pkg/query"
+	"github.com/spf13/cobra"
 )
 
 const operationAPIVersion = "2025-02-01"
 
-func Show(ctx context.Context, clusterName, resourceGroup, operationID string) error {
+func Show(ctx context.Context, cmd *cobra.Command, clusterName, resourceGroup, operationID string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -66,16 +70,42 @@ func Show(ctx context.Context, clusterName, resourceGroup, operationID string) e
 		return fmt.Errorf("operation lookup failed: %s: %s", resp.Status, string(body))
 	}
 
-	var pretty bytes.Buffer
-	if err := json.Indent(&pretty, body, "", "  "); err != nil {
+	format, _ := cmd.Flags().GetString("output")
+	queryStr, _ := cmd.Flags().GetString("query")
+
+	if f := strings.ToLower(format); f == "" || f == "json" {
+		// Verbatim path: preserve the server's key order and numeric
+		// literals instead of round-tripping through map[string]interface{},
+		// which would sort keys and coerce large integers through float64.
+		var pretty bytes.Buffer
+		if err := json.Indent(&pretty, body, "", "  "); err != nil {
+			fmt.Println(string(body))
+			return nil
+		}
+		out := pretty.Bytes()
+		if queryStr != "" {
+			var err error
+			out, err = query.ApplyJMESPathToJSON(out, queryStr)
+			if err != nil {
+				return err
+			}
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), string(out))
+		return nil
+	}
+
+	var result any
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.UseNumber()
+	if err := dec.Decode(&result); err != nil {
 		fmt.Println(string(body))
 		return nil
 	}
-	fmt.Println(pretty.String())
-	return nil
+
+	return output.PrintFormatted(cmd, result, format)
 }
 
-func ShowLatest(ctx context.Context, clusterName, resourceGroup string) error {
+func ShowLatest(ctx context.Context, cmd *cobra.Command, clusterName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -109,11 +139,5 @@ func ShowLatest(ctx context.Context, clusterName, resourceGroup string) error {
 		}
 	}
 
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format cluster status: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, result)
 }

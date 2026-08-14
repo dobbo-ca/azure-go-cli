@@ -1,11 +1,11 @@
 package backuppolicy
 
 import (
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -16,7 +16,7 @@ func newGetDefaultPolicyTemplateCommand() *cobra.Command {
     Long:  "Returns a default backup policy JSON template for the specified datasource type",
     RunE: func(cmd *cobra.Command, args []string) error {
       datasourceType, _ := cmd.Flags().GetString("datasource-type")
-      return GetDefaultPolicyTemplate(datasourceType)
+      return GetDefaultPolicyTemplate(cmd, datasourceType)
     },
   }
   cmd.Flags().String("datasource-type", "", "Datasource type (e.g., AzureDatabaseForPostgreSQLFlexibleServer)")
@@ -24,19 +24,13 @@ func newGetDefaultPolicyTemplateCommand() *cobra.Command {
   return cmd
 }
 
-func GetDefaultPolicyTemplate(datasourceType string) error {
+func GetDefaultPolicyTemplate(cmd *cobra.Command, datasourceType string) error {
   template, err := buildDefaultTemplate(datasourceType)
   if err != nil {
     return err
   }
 
-  output, err := json.MarshalIndent(template, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format policy template: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, template)
 }
 
 func buildDefaultTemplate(datasourceType string) (*armdataprotection.BaseBackupPolicyResource, error) {

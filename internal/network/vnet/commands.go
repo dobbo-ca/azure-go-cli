@@ -19,7 +19,7 @@ func NewVNetCommand() *cobra.Command {
 		Short: "List virtual networks",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")
@@ -30,7 +30,7 @@ func NewVNetCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			vnetName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), vnetName, resourceGroup)
+			return Show(context.Background(), cmd, vnetName, resourceGroup)
 		},
 	}
 	showCmd.Flags().StringP("name", "n", "", "Virtual network name")

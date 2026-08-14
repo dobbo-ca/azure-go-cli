@@ -19,7 +19,7 @@ func NewPeeringCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			vnetName, _ := cmd.Flags().GetString("vnet-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), vnetName, resourceGroup)
+			return List(context.Background(), cmd, vnetName, resourceGroup)
 		},
 	}
 	listCmd.Flags().String("vnet-name", "", "Virtual network name")
@@ -34,7 +34,7 @@ func NewPeeringCommand() *cobra.Command {
 			vnetName, _ := cmd.Flags().GetString("vnet-name")
 			peeringName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), vnetName, peeringName, resourceGroup)
+			return Show(context.Background(), cmd, vnetName, peeringName, resourceGroup)
 		},
 	}
 	showCmd.Flags().String("vnet-name", "", "Virtual network name")

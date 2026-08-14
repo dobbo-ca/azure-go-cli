@@ -2,15 +2,16 @@ package group
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armresources"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, resourceGroupName string) error {
+func Show(ctx context.Context, cmd *cobra.Command, resourceGroupName string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -31,11 +32,5 @@ func Show(ctx context.Context, resourceGroupName string) error {
 		return fmt.Errorf("failed to get resource group: %w", err)
 	}
 
-	data, err := json.MarshalIndent(rg, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format resource group: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, rg)
 }

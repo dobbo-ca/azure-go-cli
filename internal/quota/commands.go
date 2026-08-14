@@ -20,11 +20,16 @@ func NewQuotaCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			scope, _ := cmd.Flags().GetString("scope")
 			outputFormat, _ := cmd.Flags().GetString("output")
-			return List(context.Background(), scope, outputFormat)
+			// The global -o flag defaults to "json"; this command's historical
+			// default is "table", so fall back to that only when the user did
+			// not explicitly pass -o/--output.
+			if !cmd.Flags().Changed("output") {
+				outputFormat = "table"
+			}
+			return List(context.Background(), cmd, scope, outputFormat)
 		},
 	}
 	listCmd.Flags().String("scope", "", "Scope for quota (e.g., subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/westeurope)")
-	listCmd.Flags().StringP("output", "o", "table", "Output format: json, table")
 	listCmd.MarkFlagRequired("scope")
 
 	showCmd := &cobra.Command{
@@ -35,12 +40,11 @@ func NewQuotaCommand() *cobra.Command {
 			scope, _ := cmd.Flags().GetString("scope")
 			resourceName, _ := cmd.Flags().GetString("resource-name")
 			outputFormat, _ := cmd.Flags().GetString("output")
-			return Show(context.Background(), scope, resourceName, outputFormat)
+			return Show(context.Background(), cmd, scope, resourceName, outputFormat)
 		},
 	}
 	showCmd.Flags().String("scope", "", "Scope for quota")
 	showCmd.Flags().String("resource-name", "", "Resource name (e.g., standardDSv3Family)")
-	showCmd.Flags().StringP("output", "o", "json", "Output format: json, table")
 	showCmd.MarkFlagRequired("scope")
 	showCmd.MarkFlagRequired("resource-name")
 
@@ -59,7 +63,7 @@ func NewQuotaCommand() *cobra.Command {
 			resourceName, _ := cmd.Flags().GetString("resource-name")
 			limit, _ := cmd.Flags().GetInt32("limit")
 			region, _ := cmd.Flags().GetString("region")
-			return RequestCreate(context.Background(), scope, resourceName, limit, region)
+			return RequestCreate(context.Background(), cmd, scope, resourceName, limit, region)
 		},
 	}
 	requestCreateCmd.Flags().String("scope", "", "Scope for quota (e.g., subscriptions/{subscriptionId}/providers/Microsoft.Compute/locations/westeurope)")
@@ -77,11 +81,16 @@ func NewQuotaCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			scope, _ := cmd.Flags().GetString("scope")
 			outputFormat, _ := cmd.Flags().GetString("output")
-			return RequestList(context.Background(), scope, outputFormat)
+			// The global -o flag defaults to "json"; this command's historical
+			// default is "table", so fall back to that only when the user did
+			// not explicitly pass -o/--output.
+			if !cmd.Flags().Changed("output") {
+				outputFormat = "table"
+			}
+			return RequestList(context.Background(), cmd, scope, outputFormat)
 		},
 	}
 	requestListCmd.Flags().String("scope", "", "Scope for quota requests")
-	requestListCmd.Flags().StringP("output", "o", "table", "Output format: json, table")
 	requestListCmd.MarkFlagRequired("scope")
 
 	requestCmd.AddCommand(requestCreateCmd, requestListCmd)

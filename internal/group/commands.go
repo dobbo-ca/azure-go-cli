@@ -18,7 +18,7 @@ func NewGroupCommand() *cobra.Command {
 		Use:   "list",
 		Short: "List resource groups",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return List(context.Background())
+			return List(context.Background(), cmd)
 		},
 	}
 
@@ -27,7 +27,7 @@ func NewGroupCommand() *cobra.Command {
 		Short: "Show details of a resource group",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
-			return Show(context.Background(), name)
+			return Show(context.Background(), cmd, name)
 		},
 	}
 	showCmd.Flags().StringP("name", "n", "", "Resource group name")

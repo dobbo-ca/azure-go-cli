@@ -9,6 +9,7 @@ import (
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -23,7 +24,7 @@ func newValidateForRestoreCommand() *cobra.Command {
       backupInstanceName, _ := cmd.Flags().GetString("backup-instance-name")
       restoreRequestFile, _ := cmd.Flags().GetString("restore-request-object")
       noWait, _ := cmd.Flags().GetBool("no-wait")
-      return ValidateForRestore(context.Background(), resourceGroup, vaultName, backupInstanceName, restoreRequestFile, noWait)
+      return ValidateForRestore(context.Background(), cmd, resourceGroup, vaultName, backupInstanceName, restoreRequestFile, noWait)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -38,7 +39,7 @@ func newValidateForRestoreCommand() *cobra.Command {
   return cmd
 }
 
-func ValidateForRestore(ctx context.Context, resourceGroup, vaultName, backupInstanceName, restoreRequestFile string, noWait bool) error {
+func ValidateForRestore(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, backupInstanceName, restoreRequestFile string, noWait bool) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -113,11 +114,5 @@ func ValidateForRestore(ctx context.Context, resourceGroup, vaultName, backupIns
     return fmt.Errorf("validate-for-restore operation failed: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format result: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

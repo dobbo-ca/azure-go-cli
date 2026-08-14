@@ -2,12 +2,12 @@ package recoverypoint
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -19,7 +19,7 @@ func newListCommand() *cobra.Command {
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
       vaultName, _ := cmd.Flags().GetString("vault-name")
       backupInstanceName, _ := cmd.Flags().GetString("backup-instance-name")
-      return ListRecoveryPoints(context.Background(), resourceGroup, vaultName, backupInstanceName)
+      return ListRecoveryPoints(context.Background(), cmd, resourceGroup, vaultName, backupInstanceName)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -31,7 +31,7 @@ func newListCommand() *cobra.Command {
   return cmd
 }
 
-func ListRecoveryPoints(ctx context.Context, resourceGroup, vaultName, backupInstanceName string) error {
+func ListRecoveryPoints(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, backupInstanceName string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -57,11 +57,5 @@ func ListRecoveryPoints(ctx context.Context, resourceGroup, vaultName, backupIns
     points = append(points, page.Value...)
   }
 
-  output, err := json.MarshalIndent(points, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format recovery points: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, points)
 }

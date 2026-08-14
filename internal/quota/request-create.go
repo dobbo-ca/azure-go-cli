@@ -2,14 +2,15 @@ package quota
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/quota/armquota"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func RequestCreate(ctx context.Context, scope, resourceName string, limit int32, region string) error {
+func RequestCreate(ctx context.Context, cmd *cobra.Command, scope, resourceName string, limit int32, region string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -58,11 +59,5 @@ func RequestCreate(ctx context.Context, scope, resourceName string, limit int32,
 	fmt.Println("\nQuota request completed successfully!")
 
 	// Display the result
-	data, err := json.MarshalIndent(result, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format result: %w", err)
-	}
-	fmt.Println(string(data))
-
-	return nil
+	return output.PrintJSON(cmd, result)
 }

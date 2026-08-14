@@ -2,14 +2,15 @@ package account
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List() error {
+func List(cmd *cobra.Command) error {
 	// Fetch fresh subscription list from Azure API across all tenants using cached credentials
 	ctx := context.Background()
 	tenantInfos, err := azure.DiscoverAllSubscriptionsFromCache(ctx)
@@ -36,16 +37,10 @@ func List() error {
 		allSubscriptions[i].IsDefault = (allSubscriptions[i].ID == defaultSubID)
 	}
 
-	data, err := json.MarshalIndent(allSubscriptions, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format subscriptions: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, allSubscriptions)
 }
 
-func Show() error {
+func Show(cmd *cobra.Command) error {
 	profile, err := config.Load()
 	if err != nil {
 		return err
@@ -67,13 +62,7 @@ func Show() error {
 		return fmt.Errorf("no subscription found")
 	}
 
-	data, err := json.MarshalIndent(defaultSub, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format subscription: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, defaultSub)
 }
 
 func Set(subscriptionID string) error {

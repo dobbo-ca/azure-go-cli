@@ -7,9 +7,11 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -25,9 +27,7 @@ func List(ctx context.Context, resourceGroup string) error {
 		return fmt.Errorf("failed to create NIC client: %w", err)
 	}
 
-	fmt.Printf("%-40s %-20s %-30s\n", "NAME", "LOCATION", "PRIVATE IP")
-	fmt.Println("------------------------------------------------------------------------------------------------")
-
+	var nics []*armnetwork.Interface
 	if resourceGroup != "" {
 		pager := client.NewListPager(resourceGroup, nil)
 		for pager.More() {
@@ -35,10 +35,7 @@ func List(ctx context.Context, resourceGroup string) error {
 			if err != nil {
 				return fmt.Errorf("failed to get next page: %w", err)
 			}
-
-			for _, nic := range page.Value {
-				printNIC(nic)
-			}
+			nics = append(nics, page.Value...)
 		}
 	} else {
 		pager := client.NewListAllPager(nil)
@@ -47,11 +44,24 @@ func List(ctx context.Context, resourceGroup string) error {
 			if err != nil {
 				return fmt.Errorf("failed to get next page: %w", err)
 			}
-
-			for _, nic := range page.Value {
-				printNIC(nic)
-			}
+			nics = append(nics, page.Value...)
 		}
+	}
+
+	// nic list historically defaulted to table output, unlike the global
+	// default of json, so only honor an explicitly-passed format.
+	format, _ := cmd.Flags().GetString("output")
+	if !cmd.Flags().Changed("output") {
+		format = "table"
+	}
+	if format != "table" {
+		return output.PrintJSON(cmd, nics)
+	}
+
+	fmt.Printf("%-40s %-20s %-30s\n", "NAME", "LOCATION", "PRIVATE IP")
+	fmt.Println("------------------------------------------------------------------------------------------------")
+	for _, nic := range nics {
+		printNIC(nic)
 	}
 
 	return nil

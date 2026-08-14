@@ -2,15 +2,16 @@ package privateendpoint
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, endpointName, resourceGroup string) error {
+func Show(ctx context.Context, cmd *cobra.Command, endpointName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -31,11 +32,5 @@ func Show(ctx context.Context, endpointName, resourceGroup string) error {
 		return fmt.Errorf("failed to get private endpoint: %w", err)
 	}
 
-	data, err := json.MarshalIndent(endpoint, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format private endpoint: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, endpoint)
 }

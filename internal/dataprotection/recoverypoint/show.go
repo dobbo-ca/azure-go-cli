@@ -2,12 +2,12 @@ package recoverypoint
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ func newShowCommand() *cobra.Command {
       vaultName, _ := cmd.Flags().GetString("vault-name")
       backupInstanceName, _ := cmd.Flags().GetString("backup-instance-name")
       recoveryPointID, _ := cmd.Flags().GetString("recovery-point-id")
-      return ShowRecoveryPoint(context.Background(), resourceGroup, vaultName, backupInstanceName, recoveryPointID)
+      return ShowRecoveryPoint(context.Background(), cmd, resourceGroup, vaultName, backupInstanceName, recoveryPointID)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -34,7 +34,7 @@ func newShowCommand() *cobra.Command {
   return cmd
 }
 
-func ShowRecoveryPoint(ctx context.Context, resourceGroup, vaultName, backupInstanceName, recoveryPointID string) error {
+func ShowRecoveryPoint(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, backupInstanceName, recoveryPointID string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -55,11 +55,5 @@ func ShowRecoveryPoint(ctx context.Context, resourceGroup, vaultName, backupInst
     return fmt.Errorf("failed to get recovery point: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format recovery point: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

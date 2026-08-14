@@ -20,7 +20,7 @@ func NewMachineCommand() *cobra.Command {
 			clusterName, _ := cmd.Flags().GetString("cluster-name")
 			nodepoolName, _ := cmd.Flags().GetString("nodepool-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), clusterName, nodepoolName, resourceGroup)
+			return List(context.Background(), cmd, clusterName, nodepoolName, resourceGroup)
 		},
 	}
 	listCmd.Flags().String("cluster-name", "", "AKS cluster name")
@@ -38,7 +38,7 @@ func NewMachineCommand() *cobra.Command {
 			nodepoolName, _ := cmd.Flags().GetString("nodepool-name")
 			machineName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), clusterName, nodepoolName, machineName, resourceGroup)
+			return Show(context.Background(), cmd, clusterName, nodepoolName, machineName, resourceGroup)
 		},
 	}
 	showCmd.Flags().String("cluster-name", "", "AKS cluster name")

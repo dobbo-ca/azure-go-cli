@@ -2,15 +2,16 @@ package snapshot
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, snapshotName, resourceGroup string) error {
+func Show(ctx context.Context, cmd *cobra.Command, snapshotName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -31,11 +32,5 @@ func Show(ctx context.Context, snapshotName, resourceGroup string) error {
 		return fmt.Errorf("failed to get snapshot: %w", err)
 	}
 
-	data, err := json.MarshalIndent(snapshot, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format snapshot: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, snapshot)
 }

@@ -2,15 +2,16 @@ package identity
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/msi/armmsi"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, resourceGroup, subscriptionOverride string) error {
+func List(ctx context.Context, cmd *cobra.Command, resourceGroup, subscriptionOverride string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -55,13 +56,7 @@ func List(ctx context.Context, resourceGroup, subscriptionOverride string) error
 		}
 	}
 
-	data, err := json.MarshalIndent(identities, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format managed identities: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, identities)
 }
 
 func formatIdentity(identity *armmsi.Identity) map[string]interface{} {

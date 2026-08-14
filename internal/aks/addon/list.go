@@ -2,15 +2,16 @@ package addon
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, clusterName, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, clusterName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -32,8 +33,7 @@ func List(ctx context.Context, clusterName, resourceGroup string) error {
 	}
 
 	if cluster.Properties == nil || cluster.Properties.AddonProfiles == nil {
-		fmt.Println("[]")
-		return nil
+		return output.PrintJSON(cmd, []map[string]interface{}{})
 	}
 
 	addons := []map[string]interface{}{}
@@ -50,11 +50,5 @@ func List(ctx context.Context, clusterName, resourceGroup string) error {
 		addons = append(addons, addon)
 	}
 
-	data, err := json.MarshalIndent(addons, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format addons: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, addons)
 }

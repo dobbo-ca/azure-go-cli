@@ -1,10 +1,8 @@
 package pim
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"strconv"
 	"strings"
 
@@ -13,6 +11,7 @@ import (
 	pimvendor "github.com/cdobbyn/azure-go-cli/internal/pim/vendor"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
 )
 
 var errMissingFlag = errors.New("missing required flag")
@@ -25,7 +24,6 @@ type activateResourceArgs struct {
 	Duration        int
 	SetSubscription bool
 	NoInput         bool
-	Output          string
 }
 
 func newActivateResourceCmd() *cobra.Command {
@@ -41,8 +39,7 @@ func newActivateResourceCmd() *cobra.Command {
 			a.Duration, _ = cmd.Flags().GetInt("duration")
 			a.SetSubscription, _ = cmd.Flags().GetBool("set-subscription")
 			a.NoInput, _ = cmd.Flags().GetBool("no-input")
-			a.Output, _ = cmd.Flags().GetString("output")
-			return runActivateResource(a, cmd.OutOrStdout())
+			return runActivateResource(cmd, a)
 		},
 	}
 	cmd.Flags().String("role", "", "role display name (e.g. Contributor)")
@@ -52,7 +49,6 @@ func newActivateResourceCmd() *cobra.Command {
 	cmd.Flags().Int("duration", 0, "activation duration in minutes")
 	cmd.Flags().Bool("set-subscription", false, "set the activated subscription as the default after activation")
 	cmd.Flags().Bool("no-input", false, "disable interactive prompts; missing required flags become errors")
-	cmd.Flags().String("output", "json", "output format: json or table")
 	return cmd
 }
 
@@ -81,7 +77,7 @@ func validateActivateResourceArgs(a activateResourceArgs, noInput bool) error {
 	return nil
 }
 
-func runActivateResource(a activateResourceArgs, w io.Writer) error {
+func runActivateResource(cmd *cobra.Command, a activateResourceArgs) error {
 	// In non-interactive mode validate up-front so the user gets a clear
 	// "missing required flag: --foo" message rather than a generic
 	// prompter error.
@@ -175,7 +171,7 @@ func runActivateResource(a activateResourceArgs, w io.Writer) error {
 	if resp.Properties != nil {
 		status = resp.Properties.Status
 	}
-	return renderActivationResult(w, a.Output, status, scope, a.Role, "", resp.Id)
+	return renderActivationResult(cmd, status, scope, a.Role, "", resp.Id)
 }
 
 func promptForMissingResourceArgs(p *Prompter, a *activateResourceArgs) error {
@@ -288,19 +284,11 @@ func buildScopeIndex(eligible *pimvendor.ResourceAssignmentResponse, p *config.P
 	return index
 }
 
-func renderActivationResult(w io.Writer, outFmt, status, scope, role, expires, requestID string) error {
-	switch strings.ToLower(outFmt) {
-	case "json", "":
-		enc := json.NewEncoder(w)
-		enc.SetIndent("", "  ")
-		return enc.Encode(map[string]string{
-			"status":    status,
-			"scope":     scope,
-			"role":      role,
-			"expiresAt": expires,
-			"requestId": requestID,
-		})
+func renderActivationResult(cmd *cobra.Command, status, scope, role, expires, requestID string) error {
+	format, _ := cmd.Flags().GetString("output")
+	switch strings.ToLower(format) {
 	case "table":
+		w := cmd.OutOrStdout()
 		if strings.HasPrefix(strings.ToLower(status), "pending") {
 			fmt.Fprintf(w, "Pending approval; request %s\n", requestID)
 			return nil
@@ -312,6 +300,12 @@ func renderActivationResult(w io.Writer, outFmt, status, scope, role, expires, r
 		}
 		return nil
 	default:
-		return fmt.Errorf("unknown --output %q", outFmt)
+		return output.PrintFormatted(cmd, map[string]string{
+			"status":    status,
+			"scope":     scope,
+			"role":      role,
+			"expiresAt": expires,
+			"requestId": requestID,
+		}, format)
 	}
 }

@@ -166,7 +166,7 @@ Dependencies: kubectl (install with: sudo az aks install-cli)`,
 		Short: "List AKS clusters",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional)")

@@ -2,15 +2,16 @@ package keyvault
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, vaultName, resourceGroup string) error {
+func Show(ctx context.Context, cmd *cobra.Command, vaultName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -31,11 +32,5 @@ func Show(ctx context.Context, vaultName, resourceGroup string) error {
 		return fmt.Errorf("failed to get key vault: %w", err)
 	}
 
-	data, err := json.MarshalIndent(vault, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format key vault: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, vault)
 }

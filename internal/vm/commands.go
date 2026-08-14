@@ -22,7 +22,7 @@ func NewVMCommand() *cobra.Command {
 		Short: "List virtual machines",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")
@@ -33,7 +33,7 @@ func NewVMCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			name, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), name, resourceGroup)
+			return Show(context.Background(), cmd, name, resourceGroup)
 		},
 	}
 	showCmd.Flags().StringP("name", "n", "", "VM name")
@@ -97,14 +97,12 @@ func NewVMCommand() *cobra.Command {
 			location, _ := cmd.Flags().GetString("location")
 			size, _ := cmd.Flags().GetString("size")
 			resourceType, _ := cmd.Flags().GetString("resource-type")
-			outputFormat, _ := cmd.Flags().GetString("output")
-			return ListSKUs(context.Background(), location, size, resourceType, outputFormat)
+			return ListSKUs(context.Background(), cmd, location, size, resourceType)
 		},
 	}
 	listSkusCmd.Flags().StringP("location", "l", "", "Azure location (e.g., westeurope, eastus)")
 	listSkusCmd.Flags().String("size", "", "Filter by size (e.g., Standard_D4s_v3)")
 	listSkusCmd.Flags().String("resource-type", "virtualMachines", "Resource type to query")
-	listSkusCmd.Flags().StringP("output", "o", "table", "Output format: json, table")
 	listSkusCmd.MarkFlagRequired("location")
 
 	createCmd := &cobra.Command{

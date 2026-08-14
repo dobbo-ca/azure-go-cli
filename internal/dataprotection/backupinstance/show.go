@@ -2,12 +2,12 @@ package backupinstance
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -20,7 +20,7 @@ func newShowCommand() *cobra.Command {
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
       vaultName, _ := cmd.Flags().GetString("vault-name")
       name, _ := cmd.Flags().GetString("name")
-      return ShowBackupInstance(context.Background(), resourceGroup, vaultName, name)
+      return ShowBackupInstance(context.Background(), cmd, resourceGroup, vaultName, name)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -32,7 +32,7 @@ func newShowCommand() *cobra.Command {
   return cmd
 }
 
-func ShowBackupInstance(ctx context.Context, resourceGroup, vaultName, name string) error {
+func ShowBackupInstance(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, name string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -53,11 +53,5 @@ func ShowBackupInstance(ctx context.Context, resourceGroup, vaultName, name stri
     return fmt.Errorf("failed to get backup instance: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format result: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

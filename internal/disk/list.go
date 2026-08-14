@@ -7,9 +7,11 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -25,9 +27,7 @@ func List(ctx context.Context, resourceGroup string) error {
 		return fmt.Errorf("failed to create disk client: %w", err)
 	}
 
-	fmt.Printf("%-40s %-20s %-15s %-15s\n", "NAME", "LOCATION", "SIZE (GB)", "SKU")
-	fmt.Println("--------------------------------------------------------------------------------------------")
-
+	var disks []*armcompute.Disk
 	if resourceGroup != "" {
 		pager := client.NewListByResourceGroupPager(resourceGroup, nil)
 		for pager.More() {
@@ -35,10 +35,7 @@ func List(ctx context.Context, resourceGroup string) error {
 			if err != nil {
 				return fmt.Errorf("failed to get next page: %w", err)
 			}
-
-			for _, disk := range page.Value {
-				printDisk(disk)
-			}
+			disks = append(disks, page.Value...)
 		}
 	} else {
 		pager := client.NewListPager(nil)
@@ -47,11 +44,24 @@ func List(ctx context.Context, resourceGroup string) error {
 			if err != nil {
 				return fmt.Errorf("failed to get next page: %w", err)
 			}
-
-			for _, disk := range page.Value {
-				printDisk(disk)
-			}
+			disks = append(disks, page.Value...)
 		}
+	}
+
+	// disk list historically defaulted to table output, unlike the global
+	// default of json, so only honor an explicitly-passed format.
+	format, _ := cmd.Flags().GetString("output")
+	if !cmd.Flags().Changed("output") {
+		format = "table"
+	}
+	if format != "table" {
+		return output.PrintJSON(cmd, disks)
+	}
+
+	fmt.Printf("%-40s %-20s %-15s %-15s\n", "NAME", "LOCATION", "SIZE (GB)", "SKU")
+	fmt.Println("--------------------------------------------------------------------------------------------")
+	for _, disk := range disks {
+		printDisk(disk)
 	}
 
 	return nil

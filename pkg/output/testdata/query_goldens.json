@@ -1,0 +1,178 @@
+[
+  {
+    "name": "name-location",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "[].{Name:name, Location:location}",
+    "table": "Name      Location\n--------  ----------\nrg-alpha  eastus\nrg-beta   westeurope\n",
+    "tsv": "rg-alpha\teastus\nrg-beta\twesteurope\n"
+  },
+  {
+    "name": "location-name",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "[].{Location:location, Name:name}",
+    "table": "Location    Name\n----------  --------\neastus      rg-alpha\nwesteurope  rg-beta\n",
+    "tsv": "eastus\trg-alpha\nwesteurope\trg-beta\n"
+  },
+  {
+    "name": "index-hash",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "[0].{Name:name, Location:location}",
+    "table": "Name      Location\n--------  ----------\nrg-alpha  eastus\n",
+    "tsv": "rg-alpha\teastus\n"
+  },
+  {
+    "name": "top-level-hash",
+    "input": {
+      "location": "eastus",
+      "name": "rg-alpha"
+    },
+    "query": "{Name:name, Location:location}",
+    "table": "Name      Location\n--------  ----------\nrg-alpha  eastus\n",
+    "tsv": "rg-alpha\teastus\n"
+  },
+  {
+    "name": "hash-then-index",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "[].{Name:name, Location:location} | [0]",
+    "table": "Name      Location\n--------  ----------\nrg-alpha  eastus\n",
+    "tsv": "rg-alpha\teastus\n"
+  },
+  {
+    "name": "pipe-then-hash",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "[] | [].{Name:name, Location:location}",
+    "table": "Name      Location\n--------  ----------\nrg-alpha  eastus\nrg-beta   westeurope\n",
+    "tsv": "rg-alpha\teastus\nrg-beta\twesteurope\n"
+  },
+  {
+    "name": "filter-hash",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "[?name=='rg-alpha'].{Name:name, Location:location}",
+    "table": "Name      Location\n--------  ----------\nrg-alpha  eastus\n",
+    "tsv": "rg-alpha\teastus\n"
+  },
+  {
+    "name": "sort_by-hash-order-not-recovered",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "sort_by(@, &name)[].{Name:name, Location:location}",
+    "table": "Location    Name\n----------  --------\neastus      rg-alpha\nwesteurope  rg-beta\n",
+    "tsv": "eastus\trg-alpha\nwesteurope\trg-beta\n"
+  },
+  {
+    "name": "quoted-alias",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta"
+      }
+    ],
+    "query": "[].{\"My Col\":name, l:location}",
+    "table": "My Col    L\n--------  ----------\nrg-alpha  eastus\nrg-beta   westeurope\n",
+    "tsv": "rg-alpha\teastus\nrg-beta\twesteurope\n"
+  },
+  {
+    "name": "three-columns",
+    "input": [
+      {
+        "location": "eastus",
+        "name": "rg-alpha",
+        "zed": "z1"
+      },
+      {
+        "location": "westeurope",
+        "name": "rg-beta",
+        "zed": "z2"
+      }
+    ],
+    "query": "[].{Z:zed, N:name, L:location}",
+    "table": "Z    N         L\n---  --------  ----------\nz1   rg-alpha  eastus\nz2   rg-beta   westeurope\n",
+    "tsv": "z1\trg-alpha\teastus\nz2\trg-beta\twesteurope\n"
+  },
+  {
+    "name": "nonscalar-dropped",
+    "input": [
+      {
+        "name": "rg-alpha",
+        "tags": {
+          "env": "prod"
+        }
+      },
+      {
+        "name": "rg-beta",
+        "tags": {
+          "env": "dev"
+        }
+      }
+    ],
+    "query": "[].{N:name, T:tags}",
+    "table": "N\n--------\nrg-alpha\nrg-beta\n",
+    "tsv": "rg-alpha\t\nrg-beta\t\n"
+  }
+]
