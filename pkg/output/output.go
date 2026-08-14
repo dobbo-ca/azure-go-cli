@@ -33,6 +33,27 @@ func PrintJSON(cmd *cobra.Command, data interface{}) error {
 	}
 }
 
+// marshalIndentNoEscape behaves like json.MarshalIndent(v, "", "  ") except
+// it does not HTML-escape &, < and > to \u0026, \u003c and
+// \u003e, matching azure-cli's json.dumps(..., ensure_ascii=False)
+// output for those three characters.
+// It does NOT match json.dumps for U+2028/U+2029: Go's encoder still
+// escapes them to \u2028/\u2029 even with SetEscapeHTML(false), while
+// ensure_ascii=False leaves them as raw UTF-8. That divergence remains.
+// json.Encoder.Encode appends a trailing "\n" that MarshalIndent does not,
+// so it is trimmed to keep callers (which already do fmt.Fprintln)
+// byte-identical apart from the escaping.
+func marshalIndentNoEscape(v interface{}) ([]byte, error) {
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	enc.SetEscapeHTML(false)
+	enc.SetIndent("", "  ")
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return bytes.TrimSuffix(buf.Bytes(), []byte("\n")), nil
+}
+
 // printJSONIndented is the historical PrintJSON body: it marshals data
 // directly (preserving struct field declaration order) rather than routing
 // through the generic map[string]interface{} tree PrintFormatted uses.
@@ -40,7 +61,7 @@ func printJSONIndented(cmd *cobra.Command, data interface{}) error {
 	queryStr, _ := cmd.Flags().GetString("query")
 
 	// Marshal to JSON first
-	jsonData, err := json.MarshalIndent(data, "", "  ")
+	jsonData, err := marshalIndentNoEscape(data)
 	if err != nil {
 		return fmt.Errorf("failed to format output: %w", err)
 	}
@@ -76,36 +97,43 @@ func PrintFormatted(cmd *cobra.Command, data interface{}, format string) error {
 		// No --query: decode numbers as json.Number so large integers and
 		// wire-literal decimals (e.g. int64 values above 2^53, "3.0") render
 		// exactly as received instead of round-tripping through float64.
-		// go-jmespath's numeric functions (avg, sum, ...) require float64
-		// arguments, so this decoder is only safe when no query will run
-		// over the result.
 		dec := json.NewDecoder(bytes.NewReader(jsonData))
 		dec.UseNumber()
 		if err := dec.Decode(&result); err != nil {
 			return fmt.Errorf("failed to parse output: %w", err)
 		}
 	} else {
-		if err := json.Unmarshal(jsonData, &result); err != nil {
+		// go-jmespath v0.4.0 is hardcoded to float64: its numeric builtins
+		// (avg, sum, max, ceil, ...) error on a json.Number argument and its
+		// comparators silently evaluate to false. So the UseNumber decode is
+		// used only for the queries query.PreservesNumberLiterals proves are
+		// free of both (no function call, no comparator, anywhere in the AST)
+		// - which is most real --query usage: field paths, projections and
+		// multiselect hashes. Everything else decodes to float64 exactly as
+		// before. See PreservesNumberLiterals for the full argument.
+		dec := json.NewDecoder(bytes.NewReader(jsonData))
+		if query.PreservesNumberLiterals(queryStr) {
+			dec.UseNumber()
+		}
+		if err := dec.Decode(&result); err != nil {
 			return fmt.Errorf("failed to parse output: %w", err)
 		}
 		result, err = query.ApplyJMESPath(result, queryStr)
 		if err != nil {
 			return err
 		}
-		// go-jmespath's numeric builtins (avg, sum, ...) type-assert their
-		// arguments to float64 (see go-jmespath's functions.go), so the query
-		// above necessarily ran over a plain-float64 decode: json.Number is
-		// not one of the types go-jmespath's own type-checker accepts, so
-		// running the query over a UseNumber tree would make avg/sum/... fail
-		// outright rather than just lose precision. Re-encode the query's
-		// result and decode it again with UseNumber so an integer-shaped
-		// wire literal stays an integer literal for rendering (matches
-		// azure-cli; a bare float64 would otherwise render "8080.0" for an
-		// ARM integer field selected by --query).
+		// Re-encode the query's result and decode it again with UseNumber so
+		// an integer-shaped value stays an integer literal for rendering
+		// (matches azure-cli; a bare float64 would otherwise render "8080.0"
+		// for an ARM integer field selected by --query). json.Marshal writes a
+		// json.Number verbatim, so this is a no-op for values that survived
+		// the UseNumber path above.
 		//
-		// DELIBERATE, DOCUMENTED DIVERGENCE from knack: the float64 decode
-		// above already lost precision before this re-encode ever runs, and
-		// re-decoding with UseNumber cannot recover it. Two classes:
+		// REMAINING, DOCUMENTED DIVERGENCE from knack, for the queries
+		// PreservesNumberLiterals refuses (those containing a function call or
+		// a comparator): the float64 decode has already lost precision before
+		// this re-encode runs, and re-decoding with UseNumber cannot recover
+		// it. Three classes:
 		//   - an integer literal outside float64's exact range, i.e. above
 		//     2^53 (or below -2^53), rounds to the nearest representable
 		//     float64 (e.g. 9007199254740993 -> 9007199254740992,
@@ -116,8 +144,16 @@ func PrintFormatted(cmd *cobra.Command, data interface{}, format string) error {
 		//     back from float64 with no way to tell it apart from an integer,
 		//     so it renders without its decimal point (e.g. "3", not knack's
 		//     "3.0"); the same loss applies to -0.0, which renders "0".
-		// With no --query active, PrintFormatted's UseNumber-only decode path
-		// above does not have this problem: both classes render exactly.
+		//   - a wire literal in exponent form from 1e+16 (inclusive) up to
+		//     1e+21 (exclusive) reprints in positional form (1e+16 ->
+		//     10000000000000000), because Go's float64 encoder switches to
+		//     exponent form at 1e+21 while Python's repr switches at 1e+16.
+		//     At or above 1e+21 the two agree again (both print "1e+21").
+		// A separate divergence this cannot address at all: Python jmespath's
+		// sum/max/min/ceil/floor return an int for integral input (knack
+		// prints sum([1,2,3]) as "6", avg([1,2,3]) as "2.0"), while
+		// go-jmespath returns float64 for every one of them, so avg renders
+		// "2" here.
 		if reencoded, err := json.Marshal(result); err == nil {
 			dec := json.NewDecoder(bytes.NewReader(reencoded))
 			dec.UseNumber()
@@ -155,7 +191,7 @@ func PrintFormatted(cmd *cobra.Command, data interface{}, format string) error {
 	case "none":
 		return nil
 	case "json", "":
-		out, err := json.MarshalIndent(result, "", "  ")
+		out, err := marshalIndentNoEscape(result)
 		if err != nil {
 			return fmt.Errorf("failed to format output: %w", err)
 		}
