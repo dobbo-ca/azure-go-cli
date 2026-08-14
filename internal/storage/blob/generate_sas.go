@@ -33,6 +33,7 @@ func NewGenerateSASCommand() *cobra.Command {
 	cmd.Flags().Bool("as-user", false, "Return the SAS signed with the user delegation key. Requires --expiry and --auth-mode login")
 	cmd.Flags().String("auth-mode", "key", "The mode in which to run the command. Allowed values: key, login")
 	cmd.Flags().String("user-delegation-oid", "", "Entra ID of the user authorized to use the resulting SAS URL. Requires --as-user")
+	cmd.Flags().String("user-delegation-tid", "", "The delegated user tenant id in Azure AD. This parameter can only be specified when using OAuth.")
 	cmd.Flags().Bool("full-uri", false, "Indicates that this command return the full blob URI and the shared access signature token")
 	cmd.Flags().String("snapshot", "", "An optional blob snapshot ID. Opaque DateTime value that, when present, specifies the blob snapshot to grant permission")
 	cmd.Flags().String("blob-url", "", "The full endpoint URL to the blob. An alternative to --name plus --container-name")
@@ -64,6 +65,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	asUser, _ := cmd.Flags().GetBool("as-user")
 	authMode, _ := cmd.Flags().GetString("auth-mode")
 	delegationOID, _ := cmd.Flags().GetString("user-delegation-oid")
+	delegationTID, _ := cmd.Flags().GetString("user-delegation-tid")
 	fullURIFlag, _ := cmd.Flags().GetBool("full-uri")
 	snapshot, _ := cmd.Flags().GetString("snapshot")
 	blobURL, _ := cmd.Flags().GetString("blob-url")
@@ -125,6 +127,9 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	if delegationOID != "" && !asUser {
 		return fmt.Errorf("incorrect usage: need to specify '--as-user' when '--user-delegation-oid' is provided")
 	}
+	if delegationTID != "" && delegationOID == "" {
+		return fmt.Errorf("incorrect usage: need to specify '--user-delegation-oid' when '--user-delegation-tid' is provided")
+	}
 
 	protocol := ""
 	if httpsOnly {
@@ -132,23 +137,24 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	}
 
 	opts := sas.BlobScopeOptions{
-		ContainerName:      containerName,
-		BlobName:           blobName,
-		Permissions:        permissions,
-		Identifier:         policyName,
-		IPRange:            ip,
-		Protocol:           protocol,
-		EncryptionScope:    encryptionScope,
-		CacheControl:       cacheControl,
-		ContentDisposition: contentDisposition,
-		ContentEncoding:    contentEncoding,
-		ContentLanguage:    contentLanguage,
-		ContentType:        contentType,
-		Snapshot:           snapshot,
-		ServiceEndpoint:    blobEndpoint,
-		AuthorizedObjectID: delegationOID,
-		Start:              start,
-		Expiry:             expiry,
+		ContainerName:         containerName,
+		BlobName:              blobName,
+		Permissions:           permissions,
+		Identifier:            policyName,
+		IPRange:               ip,
+		Protocol:              protocol,
+		EncryptionScope:       encryptionScope,
+		CacheControl:          cacheControl,
+		ContentDisposition:    contentDisposition,
+		ContentEncoding:       contentEncoding,
+		ContentLanguage:       contentLanguage,
+		ContentType:           contentType,
+		Snapshot:              snapshot,
+		ServiceEndpoint:       blobEndpoint,
+		DelegatedUserObjectID: delegationOID,
+		DelegatedUserTenantID: delegationTID,
+		Start:                 start,
+		Expiry:                expiry,
 	}
 
 	var key string

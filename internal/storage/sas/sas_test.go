@@ -52,9 +52,13 @@ func TestCanonicalReordersAndDedupes(t *testing.T) {
 }
 
 func TestCanonicalRejectsUnknownLetter(t *testing.T) {
-	// 'y' is valid on a blob but not on a container. See azure-go-cli-gig.
-	if _, err := Canonical("ry", ContainerPerms, "permission"); err == nil {
-		t.Fatal("expected 'y' to be rejected for a container")
+	if _, err := Canonical("rq", ContainerPerms, "permission"); err == nil {
+		t.Fatal("expected 'q' to be rejected for a container")
+	}
+	// 'y' (permanent delete) is valid on both a blob and a container.
+	// See azure-go-cli-gig.
+	if _, err := Canonical("ry", ContainerPerms, "permission"); err != nil {
+		t.Fatalf("expected 'y' to be accepted for a container, got %v", err)
 	}
 	if _, err := Canonical("ry", BlobPerms, "permission"); err != nil {
 		t.Fatalf("expected 'y' to be accepted for a blob, got %v", err)
@@ -162,16 +166,44 @@ func TestServiceEndpoint(t *testing.T) {
 }
 
 func TestAccountFromEndpoint(t *testing.T) {
-	cases := []struct{ in, want string }{
-		{"https://myaccount.blob.core.windows.net", "myaccount"},
-		{"https://myaccount.blob.core.windows.net/", "myaccount"},
-		{"http://127.0.0.1:10000/devstoreaccount1", "devstoreaccount1"},
-		{"http://127.0.0.1:10000/devstoreaccount1/", "devstoreaccount1"},
-		{"", ""},
+	cases := []struct{ name, in, want string }{
+		{"public endpoint", "https://myaccount.blob.core.windows.net", "myaccount"},
+		{"public endpoint, trailing slash", "https://myaccount.blob.core.windows.net/", "myaccount"},
+		{"IP-addressed emulator", "http://127.0.0.1:10000/devstoreaccount1", "devstoreaccount1"},
+		{"IP-addressed emulator, trailing slash", "http://127.0.0.1:10000/devstoreaccount1/", "devstoreaccount1"},
+		{"empty endpoint", "", ""},
+		{"path carries container and blob too, account is still the first segment", "http://127.0.0.1:10000/devstoreaccount1/mycontainer/my.blob", "devstoreaccount1"},
+		{"hostname emulator with account in the path", "https://azurite:10000/devstoreaccount1", "devstoreaccount1"},
+		// No path segment to fall back to, so the hostname itself is taken as
+		// the account name - wrong, but that is the pre-existing behaviour
+		// this bead pins rather than changes. See azure-go-cli-h8z.
+		{"hostname emulator with no path", "https://azurite:10000", "azurite"},
+		{"IP-literal emulator with account in the path", "https://10.0.0.4/devstoreaccount1", "devstoreaccount1"},
+		{"IPv6-literal emulator with account in the path", "http://[::1]:10000/devstoreaccount1", "devstoreaccount1"},
+		{"localhost emulator with account in the path", "http://localhost:10000/devstoreaccount1", "devstoreaccount1"},
+		{"sovereign cloud suffix, China", "https://myaccount.blob.core.chinacloudapi.cn", "myaccount"},
+		{"sovereign cloud suffix, US Gov", "https://myaccount.blob.core.usgovcloudapi.net", "myaccount"},
+		{"sovereign cloud suffix, Germany", "https://myaccount.blob.core.cloudapi.de", "myaccount"},
+		// KNOWN LIMITATION: a custom domain has no ".blob.core." label and no
+		// path segment, so the first dot-label of the host is taken as the
+		// account name - here "blob", not the real account. Python
+		// azure-storage-blob's BlobServiceClient.account_name returns None in
+		// this case instead of guessing (_shared/base_client.py:139-148,
+		// verified against the installed package). Pinned deliberately: see
+		// azure-go-cli-h8z.
+		{"custom domain, KNOWN LIMITATION", "https://blob.contoso.com", "blob"},
+		// KNOWN LIMITATION: a bare dotless host with no path is returned
+		// verbatim as the account name. Python returns None here too
+		// (base_client.py:139-148: split on ".blob.core." fails, and the
+		// path-derivation fallback only fires for localhost/127.0.0.1).
+		// Pinned deliberately: see azure-go-cli-h8z.
+		{"dotless host, KNOWN LIMITATION", "https://myaccount", "myaccount"},
 	}
 	for _, c := range cases {
-		if got := AccountFromEndpoint(c.in); got != c.want {
-			t.Errorf("AccountFromEndpoint(%q) = %q, want %q", c.in, got, c.want)
-		}
+		t.Run(c.name, func(t *testing.T) {
+			if got := AccountFromEndpoint(c.in); got != c.want {
+				t.Errorf("AccountFromEndpoint(%q) = %q, want %q", c.in, got, c.want)
+			}
+		})
 	}
 }

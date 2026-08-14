@@ -31,6 +31,7 @@ func NewGenerateSASCommand() *cobra.Command {
 	cmd.Flags().Bool("as-user", false, "Return the SAS signed with the user delegation key. Requires --expiry and --auth-mode login")
 	cmd.Flags().String("auth-mode", "key", "The mode in which to run the command. Allowed values: key, login")
 	cmd.Flags().String("user-delegation-oid", "", "Entra ID of the user authorized to use the resulting SAS URL. Requires --as-user")
+	cmd.Flags().String("user-delegation-tid", "", "The delegated user tenant id in Azure AD. This parameter can only be specified when using OAuth.")
 	cmd.Flags().String("cache-control", "", "Response header value for Cache-Control when the resource is accessed using this SAS")
 	cmd.Flags().String("content-disposition", "", "Response header value for Content-Disposition when the resource is accessed using this SAS")
 	cmd.Flags().String("content-encoding", "", "Response header value for Content-Encoding when the resource is accessed using this SAS")
@@ -58,6 +59,7 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	asUser, _ := cmd.Flags().GetBool("as-user")
 	authMode, _ := cmd.Flags().GetString("auth-mode")
 	delegationOID, _ := cmd.Flags().GetString("user-delegation-oid")
+	delegationTID, _ := cmd.Flags().GetString("user-delegation-tid")
 	cacheControl, _ := cmd.Flags().GetString("cache-control")
 	contentDisposition, _ := cmd.Flags().GetString("content-disposition")
 	contentEncoding, _ := cmd.Flags().GetString("content-encoding")
@@ -101,6 +103,9 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	if delegationOID != "" && !asUser {
 		return fmt.Errorf("incorrect usage: need to specify '--as-user' when '--user-delegation-oid' is provided")
 	}
+	if delegationTID != "" && delegationOID == "" {
+		return fmt.Errorf("incorrect usage: need to specify '--user-delegation-oid' when '--user-delegation-tid' is provided")
+	}
 
 	// --blob-endpoint can supply the account name on its own.
 	if accountName == "" {
@@ -113,21 +118,22 @@ func runGenerateSAS(ctx context.Context, cmd *cobra.Command) error {
 	}
 
 	opts := sas.BlobScopeOptions{
-		ContainerName:      containerName,
-		Permissions:        permissions,
-		Identifier:         policyName,
-		ServiceEndpoint:    blobEndpoint,
-		IPRange:            ip,
-		Protocol:           protocol,
-		EncryptionScope:    encryptionScope,
-		CacheControl:       cacheControl,
-		ContentDisposition: contentDisposition,
-		ContentEncoding:    contentEncoding,
-		ContentLanguage:    contentLanguage,
-		ContentType:        contentType,
-		AuthorizedObjectID: delegationOID,
-		Start:              start,
-		Expiry:             expiry,
+		ContainerName:         containerName,
+		Permissions:           permissions,
+		Identifier:            policyName,
+		ServiceEndpoint:       blobEndpoint,
+		IPRange:               ip,
+		Protocol:              protocol,
+		EncryptionScope:       encryptionScope,
+		CacheControl:          cacheControl,
+		ContentDisposition:    contentDisposition,
+		ContentEncoding:       contentEncoding,
+		ContentLanguage:       contentLanguage,
+		ContentType:           contentType,
+		DelegatedUserObjectID: delegationOID,
+		DelegatedUserTenantID: delegationTID,
+		Start:                 start,
+		Expiry:                expiry,
 	}
 
 	var key string
