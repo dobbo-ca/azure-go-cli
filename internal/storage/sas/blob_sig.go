@@ -3,6 +3,7 @@ package sas
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	azsas "github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/sas"
@@ -17,23 +18,24 @@ type BlobScopeOptions struct {
 	// ServiceEndpoint is the blob service base URL, without a trailing slash.
 	// Only the --as-user path reads it, to reach GetUserDelegationCredential;
 	// shared-key signing is entirely local. Empty means the public cloud.
-	ServiceEndpoint    string
-	ContainerName      string
-	BlobName           string
-	Permissions        string
-	Identifier         string
-	IPRange            string
-	Protocol           string
-	EncryptionScope    string
-	CacheControl       string
-	ContentDisposition string
-	ContentEncoding    string
-	ContentLanguage    string
-	ContentType        string
-	Snapshot           string
-	AuthorizedObjectID string
-	Start              time.Time
-	Expiry             time.Time
+	ServiceEndpoint       string
+	ContainerName         string
+	BlobName              string
+	Permissions           string
+	Identifier            string
+	IPRange               string
+	Protocol              string
+	EncryptionScope       string
+	CacheControl          string
+	ContentDisposition    string
+	ContentEncoding       string
+	ContentLanguage       string
+	ContentType           string
+	Snapshot              string
+	DelegatedUserObjectID string
+	DelegatedUserTenantID string
+	Start                 time.Time
+	Expiry                time.Time
 }
 
 // UserDelegationExpiryLimit is the service cap on a user delegation key.
@@ -63,6 +65,23 @@ func ValidateAsUser(asUser bool, authMode, expiry string, expiryTime time.Time, 
 	return nil
 }
 
+// UserDelegationKeyInfo builds the KeyInfo request body for
+// GetUserDelegationCredential. tid is only set when non-empty, so omitting
+// --user-delegation-tid leaves the DelegatedUserTid element out of the
+// request entirely rather than sending it empty.
+func UserDelegationKeyInfo(start, expiry time.Time, tid string) service.KeyInfo {
+	startStr := start.UTC().Format(azsas.TimeFormat)
+	expiryStr := expiry.UTC().Format(azsas.TimeFormat)
+	info := service.KeyInfo{
+		Start:  &startStr,
+		Expiry: &expiryStr,
+	}
+	if tid != "" {
+		info.DelegatedUserTenantID = &tid
+	}
+	return info
+}
+
 // SignBlobScope signs a container-scope or blob-scope SAS. When asUser is true
 // it fetches a user delegation key over AAD; otherwise it signs with accountKey.
 func SignBlobScope(ctx context.Context, o BlobScopeOptions, accountKey string, asUser bool) (string, error) {
@@ -81,6 +100,19 @@ func SignBlobScope(ctx context.Context, o BlobScopeOptions, accountKey string, a
 		return "", err
 	}
 
+	// azblob cannot sign y (permanent delete) for a container: see
+	// SignContainerSharedKey. For shared key we sign it ourselves; for
+	// --as-user the signature is produced by the SDK's
+	// SignWithUserDelegation, which routes container permissions through the
+	// same parseContainerPermissions, so y is genuinely unavailable there and
+	// we say so instead of leaking `invalid permission: '121'`.
+	if o.BlobName == "" && o.Snapshot == "" && strings.ContainsRune(perms, 'y') {
+		if asUser {
+			return "", fmt.Errorf("--as-user does not support container permission 'y' (permanent delete): a user delegation SAS is signed by the Azure SDK, which does not model permanent delete for container scope. Use shared key auth (--auth-mode key) or drop 'y' from --permissions")
+		}
+		return SignContainerSharedKey(o, perms, ipRange, accountKey)
+	}
+
 	// A snapshot SAS signs resource "bs" rather than "b". The SDK switches on
 	// SnapshotTime being non-zero, so the opaque --snapshot value is parsed here.
 	var snapshotTime time.Time
@@ -92,26 +124,54 @@ func SignBlobScope(ctx context.Context, o BlobScopeOptions, accountKey string, a
 	}
 
 	values := azsas.BlobSignatureValues{
-		SnapshotTime:       snapshotTime,
-		Protocol:           azsas.Protocol(o.Protocol),
-		StartTime:          o.Start,
-		ExpiryTime:         o.Expiry,
-		Permissions:        perms,
-		IPRange:            ipRange,
-		Identifier:         o.Identifier,
-		ContainerName:      o.ContainerName,
-		BlobName:           o.BlobName,
-		CacheControl:       o.CacheControl,
-		ContentDisposition: o.ContentDisposition,
-		ContentEncoding:    o.ContentEncoding,
-		ContentLanguage:    o.ContentLanguage,
-		ContentType:        o.ContentType,
-		AuthorizedObjectID: o.AuthorizedObjectID,
-		EncryptionScope:    o.EncryptionScope,
+		SnapshotTime:                snapshotTime,
+		Protocol:                    azsas.Protocol(o.Protocol),
+		StartTime:                   o.Start,
+		ExpiryTime:                  o.Expiry,
+		Permissions:                 perms,
+		IPRange:                     ipRange,
+		Identifier:                  o.Identifier,
+		ContainerName:               o.ContainerName,
+		BlobName:                    o.BlobName,
+		CacheControl:                o.CacheControl,
+		ContentDisposition:          o.ContentDisposition,
+		ContentEncoding:             o.ContentEncoding,
+		ContentLanguage:             o.ContentLanguage,
+		ContentType:                 o.ContentType,
+		SignedDelegatedUserObjectID: o.DelegatedUserObjectID,
+		EncryptionScope:             o.EncryptionScope,
 	}
 
 	serviceURL := ServiceEndpoint(o.ServiceEndpoint, o.AccountName) + "/"
 
+	// KNOWN LIMITATION, --as-user against a non-public endpoint: azblob
+	// v1.7.0's service/client.go:117 derives the SAS account name for
+	// GetUserDelegationCredential from strings.Split(url.Host, ".")[0] of
+	// this client's URL, ignoring o.AccountName entirely. That is correct
+	// only when the account is the first label of a public hostname
+	// (myaccount.blob.core.windows.net); for an IP-addressed or dotless host
+	// (an emulator, or a private-endpoint IP) it signs against the wrong
+	// name - e.g. "127" for 127.0.0.1 or "azurite:10000" for a bare
+	// hostname:port - and the service rejects the resulting SAS. There is no
+	// fallback to the correctly-parsed IPEndpointStyleInfo.AccountName, and
+	// for a dotless host that field is empty anyway: sas.ParseURL only fills
+	// it when the host is a real IP literal (url_parts.go:58-60, gated by
+	// shared.IsIPEndpointStyle -> net.ParseIP, shared.go:230-244). This is
+	// not fixable by building our own credential here: sas.UserDelegationCredential
+	// is a type alias of the SDK-internal exported.UserDelegationCredential
+	// (sas/account.go:20), so a vendored copy would be a distinct type that
+	// SignWithUserDelegation cannot accept - the whole signing path would
+	// have to be vendored too. Fixed upstream would need azblob to consult
+	// service.ClientOptions or the parsed IPEndpointStyleInfo instead of
+	// re-deriving the name from the host. The derivation is character-
+	// identical in v1.6.3:120, v1.7.0:117 and v1.8.0:127, so bumping does
+	// not help. A workaround that builds the client at a canonical hostname
+	// and rewrites the request in a RoundTripper was considered and
+	// REJECTED: it would decouple the host azcore authenticates from the
+	// host that actually receives the token. Reported upstream instead.
+	// See azure-go-cli-h8z. The shared-key path below is unaffected: it reads
+	// sharedKeyCredential.AccountName() (sas/service.go:145), which is our
+	// own o.AccountName, not derived from the URL.
 	if asUser {
 		cred, err := azure.GetCredential()
 		if err != nil {
@@ -125,12 +185,7 @@ func SignBlobScope(ctx context.Context, o BlobScopeOptions, accountKey string, a
 		if start.IsZero() {
 			start = time.Now().UTC()
 		}
-		startStr := start.UTC().Format(azsas.TimeFormat)
-		expiryStr := o.Expiry.UTC().Format(azsas.TimeFormat)
-		udc, err := client.GetUserDelegationCredential(ctx, service.KeyInfo{
-			Start:  &startStr,
-			Expiry: &expiryStr,
-		}, nil)
+		udc, err := client.GetUserDelegationCredential(ctx, UserDelegationKeyInfo(start, o.Expiry, o.DelegatedUserTenantID), nil)
 		if err != nil {
 			return "", fmt.Errorf("failed to get a user delegation key: %w", err)
 		}

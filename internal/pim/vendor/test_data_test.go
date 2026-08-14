@@ -6,10 +6,29 @@ package pimvendor
 
 import (
 	"fmt"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
-// Dummy JWT
-const TEST_DUMMY_JWT string = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiI2NjIxYjg4OC02YTc5LTRiNjEtYjlmOS1kMzI1YzUxZWE3OWEiLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC9jYmVkZTYzOC1hM2Q5LTQ1OWYtOGY0ZS0yNGNlZDczYjRlNWUvIiwiaWF0IjoxNzMwMTE0NzE2LCJuYmYiOjE3MzAxMTQ3MTYsImV4cCI6MTczMDExODk2NCwiYWNyIjoiMSIsImFpbyI6IkFiUUFTLzlZQUFBQXVURTdHSVBZMmJrTTI4RjJIUnBtRExiSW5tUDZRTitKY3BEcDBrMnZOQ3J0QlNyZHlwbHBVMlZ0QWpxRUdTTWRrNFRtc2RjMUZWU09HNGtWL0pDaW9ydjl3eDJGT3Zob1M5cVBJSS9FcE8rN3d1dHFMYlFrd3JGd09DU2gvYnU3RXpKV1hKTEJUb1Y3Mk5RS20xc0lPeHNmdm9xQkIvbk5ZRy9SNTFEV1VZRG9vUmdsZ0R0cUduNDNEbCthN2licFNadHRudWM2ejV0VUNCQzFicEczK0lkS2lQOVY4WGhTYThtNHNNL2pWZ2s9IiwiYW1yIjpbInJzYSIsIm1mYSJdLCJhcHBpZCI6ImE0ODQ4Y2I0LTE2YTYtNDRhMi05N2QzLWU1YWUxZmRlMjQ4YSIsImFwcGlkYWNyIjoiMCIsImRldmljZWlkIjoiYmI0OTc2OTgtYWUyNS00YjdiLTkxYjktY2FlNTQxY2M4NTlmIiwiZmFtaWx5X25hbWUiOiJhei1waW0tY2xpIiwiZ2l2ZW5fbmFtZSI6ImF6LXBpbS1jbGktdGVzdCIsImdyb3VwcyI6WyIzNjk5MjNiOC0wZTY2LTRlZWEtODViNS01Y2E5OTk3Y2JkYjciXSwiaWR0eXAiOiJ1c2VyIiwiaXBhZGRyIjoiMTI3LjAuMC4xIiwibmFtZSI6ImF6LXBpbS1jbGkgdGVzdCIsIm9pZCI6IjY1OTVlMTgzLWUzMzMtNDY0Ni1hMWQxLWJjZDA2ZGIzZjIxMiIsIm9ucHJlbV9zaWQiOiJTLTEtNS0yMS0xMzM3MDAxMzMzLTEzMzczNjgyNS0xMzM3NDU1NDMtNTkxMzM3IiwicHVpZCI6IjEwMDEzMzczQkMyQkFFRDciLCJyaCI6IjAuQVM5QVBQYnR5OW1qbjBXUFRpVE8xenRPWHFjel9BRzdlRDBOcEdkMmpqTnVpUTR2QU5zLiIsInNjcCI6InVzZXJfaW1wZXJzb25hdGlvbiIsInN1YiI6IlBkWE5UNnhaUUtqb1pSeldKZWRJeEZXUTZzR2g2cU9JWmNjcjJYMC1MckEiLCJ0aWQiOiJkOTc2ZDI1Yy1kOWE1LTRhMTEtYWFhYy04Nzc0YjY3NjYyOGEiLCJ1bmlxdWVfbmFtZSI6ImF6LXBpbS1jbGktdGVzdEBuZXRyMG0uZ2l0aHViLmNvbSIsInVwbiI6ImF6LXBpbS1jbGktdGVzdEBuZXRyMG0uZ2l0aHViLmNvbSIsInV0aSI6IkN0SnhueHF6SGttR0NoZUNGT0ZaQkIiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbImFiY2QxMzM3LTEzMzctMTMzNy0xMzM3LTc2YjE5NGU4NTUwOSJdLCJ4bXNfaWRyZWwiOiIxIDE2IiwieG1zX3RkYnIiOiJFVSJ9.0vjNDIYJirD2FUF8oGIVNw_Q4_VC432qRj3EBqmPeqU"
+// Dummy JWT, generated at runtime so no token material is checked into
+// source control. Only the claims consumed by GetUserInfo (oid, unique_name)
+// need to be present/correct for the tests that use this value.
+var TEST_DUMMY_JWT string = mustGenerateTestJWT()
+
+func mustGenerateTestJWT() string {
+	claims := jwt.MapClaims{
+		"exp":         time.Now().Add(time.Hour).Unix(),
+		"oid":         TEST_DUMMY_PRINCIPAL_ID,
+		"unique_name": TEST_DUMMY_PRINCIPAL_EMAIL,
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	signed, err := token.SignedString([]byte("dummy-test-signing-key"))
+	if err != nil {
+		panic(fmt.Sprintf("mustGenerateTestJWT: %v", err))
+	}
+	return signed
+}
 
 // Dummy principal/subject ID
 const TEST_DUMMY_PRINCIPAL_ID string = "6595e183-e333-4646-a1d1-bcd06db3f212"

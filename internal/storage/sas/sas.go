@@ -25,11 +25,17 @@ import (
 // compiles but shadows the package's own name and reads as a bug.
 
 // Permission letters in the order the service expects them. These mirror the
-// String() methods on sas.AccountPermissions, sas.ContainerPermissions and
-// sas.BlobPermissions, so validation here cannot drift from signing there.
+// String() methods on sas.AccountPermissions and sas.BlobPermissions, so
+// validation here cannot drift from signing there. ContainerPerms additionally
+// carries y (permanent delete), which azblob v1.7.0 does not model for a
+// container (sas.ContainerPermissions, sas/service.go:345-348, has no
+// PermanentDelete field and parseContainerPermissions, service.go:400-437,
+// rejects y with `invalid permission: '121'`) but Python azure-storage-blob
+// does (ContainerSasPermissions._str emits y for permanent_delete). See
+// container_sig.go.
 const (
 	AccountPerms   = "rwdxylacupfti"
-	ContainerPerms = "racwdxltfmeopi"
+	ContainerPerms = "racwdxyltfmeopi"
 	BlobPerms      = "racwdxyltmeopi"
 )
 

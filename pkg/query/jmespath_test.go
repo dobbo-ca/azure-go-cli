@@ -105,3 +105,63 @@ func TestMultiSelectHashKeyOrders(t *testing.T) {
 		})
 	}
 }
+
+// TestPreservesNumberLiterals pins the whitelist. A query answers true only
+// when its whole AST is free of function expressions and comparators, which
+// are the two places go-jmespath v0.4.0 type-asserts a number to float64
+// (functions.go:353 / functions.go:405 and interpreter.go:48-55).
+func TestPreservesNumberLiterals(t *testing.T) {
+	tests := []struct {
+		name  string
+		query string
+		want  bool
+	}{
+		// Safe: pure navigation / construction.
+		{"field", "name", true},
+		{"subexpression", "properties.provisioningState", true},
+		{"index", "[0].id", true},
+		{"slice", "[1:3]", true},
+		{"flatten projection", "[].id", true},
+		{"list projection", "[*].id", true},
+		{"value projection", "a.*", true},
+		{"multiselect hash", "[].{Name: name, Port: port}", true},
+		{"multiselect list", "[].[name, port]", true},
+		{"pipe", "[].{Name: name} | [0]", true},
+		{"current node", "@", true},
+		{"scalar literal", "`1`", true},
+		{"truthiness filter", "[?enabled].name", true},
+		{"or", "a || b", true},
+		{"and", "a && b", true},
+		{"not", "!a", true},
+
+		// Unsafe: comparator anywhere. go-jmespath's <,>,<=,>= return nil for
+		// a json.Number operand and ==/!= compare it with reflect.DeepEqual
+		// against a float64 literal, so these silently mis-filter.
+		{"comparator at root", "a == `1`", false},
+		{"comparator in filter condition", "[?port > `80`].name", false},
+		{"string comparator in filter condition", "[?name == 'x'].id", false},
+		{"comparator under a hash", "{A: a == `1`}", false},
+		{"comparator behind a pipe", "[].{Name: name} | [?Name == 'x']", false},
+
+		// Unsafe: any function. These error outright on a json.Number.
+		{"avg", "avg(a)", false},
+		{"sum", "sum([].port)", false},
+		{"to_number", "to_number(a)", false},
+		{"max", "max(a)", false},
+		{"sort_by", "sort_by(items, &v)", false},
+		{"length even though it is number-safe", "length(@)", false},
+		{"function nested under a hash", "{N: length(a)}", false},
+		{"function nested in a filter condition", "[?contains(name, 'x')].id", false},
+
+		// Degenerate.
+		{"empty query", "", false},
+		{"unparseable query", "{{{", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := PreservesNumberLiterals(tt.query); got != tt.want {
+				t.Errorf("PreservesNumberLiterals(%q) = %v, want %v", tt.query, got, tt.want)
+			}
+		})
+	}
+}
