@@ -2,15 +2,16 @@ package vm
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func Show(ctx context.Context, name, resourceGroup string) error {
+func Show(ctx context.Context, cmd *cobra.Command, name, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -31,11 +32,5 @@ func Show(ctx context.Context, name, resourceGroup string) error {
 		return fmt.Errorf("failed to get VM: %w", err)
 	}
 
-	jsonData, err := json.MarshalIndent(result.VirtualMachine, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal VM data: %w", err)
-	}
-
-	fmt.Println(string(jsonData))
-	return nil
+	return output.PrintJSON(cmd, result.VirtualMachine)
 }

@@ -2,12 +2,12 @@ package backupvault
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -18,14 +18,14 @@ func newListCommand() *cobra.Command {
     Long:  "Lists backup vaults in a resource group or subscription",
     RunE: func(cmd *cobra.Command, args []string) error {
       resourceGroup, _ := cmd.Flags().GetString("resource-group")
-      return ListBackupVaults(context.Background(), resourceGroup)
+      return ListBackupVaults(context.Background(), cmd, resourceGroup)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group (optional; lists all in subscription if omitted)")
   return cmd
 }
 
-func ListBackupVaults(ctx context.Context, resourceGroup string) error {
+func ListBackupVaults(ctx context.Context, cmd *cobra.Command, resourceGroup string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -63,11 +63,5 @@ func ListBackupVaults(ctx context.Context, resourceGroup string) error {
     }
   }
 
-  output, err := json.MarshalIndent(vaults, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format result: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, vaults)
 }

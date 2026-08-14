@@ -19,7 +19,7 @@ func NewNsgCommand() *cobra.Command {
 		Short: "List network security groups",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")

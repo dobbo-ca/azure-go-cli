@@ -2,15 +2,16 @@ package vnet
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -56,13 +57,7 @@ func List(ctx context.Context, resourceGroup string) error {
 		}
 	}
 
-	data, err := json.MarshalIndent(vnets, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format virtual networks: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, vnets)
 }
 
 func formatVNet(vnet *armnetwork.VirtualNetwork) map[string]interface{} {

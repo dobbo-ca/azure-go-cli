@@ -19,7 +19,7 @@ func NewIdentityCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			subscription, _ := cmd.Flags().GetString("subscription")
-			return List(context.Background(), resourceGroup, subscription)
+			return List(context.Background(), cmd, resourceGroup, subscription)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")

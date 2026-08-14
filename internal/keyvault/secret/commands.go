@@ -18,7 +18,7 @@ func NewSecretCommand() *cobra.Command {
 		Short: "List secrets in a key vault",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			vaultName, _ := cmd.Flags().GetString("vault-name")
-			return List(context.Background(), vaultName)
+			return List(context.Background(), cmd, vaultName)
 		},
 	}
 	listCmd.Flags().String("vault-name", "", "Key vault name")

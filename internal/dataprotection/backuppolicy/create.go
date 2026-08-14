@@ -9,6 +9,7 @@ import (
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -22,7 +23,7 @@ func newCreateCommand() *cobra.Command {
       vaultName, _ := cmd.Flags().GetString("vault-name")
       name, _ := cmd.Flags().GetString("name")
       policyFile, _ := cmd.Flags().GetString("policy")
-      return CreateBackupPolicy(context.Background(), resourceGroup, vaultName, name, policyFile)
+      return CreateBackupPolicy(context.Background(), cmd, resourceGroup, vaultName, name, policyFile)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -36,7 +37,7 @@ func newCreateCommand() *cobra.Command {
   return cmd
 }
 
-func CreateBackupPolicy(ctx context.Context, resourceGroup, vaultName, name, policyFile string) error {
+func CreateBackupPolicy(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, name, policyFile string) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -67,11 +68,5 @@ func CreateBackupPolicy(ctx context.Context, resourceGroup, vaultName, name, pol
     return fmt.Errorf("failed to create backup policy: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format result: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

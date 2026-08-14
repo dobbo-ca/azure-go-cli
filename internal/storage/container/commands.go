@@ -19,7 +19,7 @@ func NewContainerCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			accountName, _ := cmd.Flags().GetString("account-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), accountName, resourceGroup)
+			return List(context.Background(), cmd, accountName, resourceGroup)
 		},
 	}
 	listCmd.Flags().String("account-name", "", "Storage account name")
@@ -34,7 +34,7 @@ func NewContainerCommand() *cobra.Command {
 			accountName, _ := cmd.Flags().GetString("account-name")
 			containerName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), accountName, containerName, resourceGroup)
+			return Show(context.Background(), cmd, accountName, containerName, resourceGroup)
 		},
 	}
 	showCmd.Flags().String("account-name", "", "Storage account name")

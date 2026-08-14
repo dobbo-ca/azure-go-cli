@@ -1,7 +1,6 @@
 package pim
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +12,7 @@ import (
 	pimvendor "github.com/cdobbyn/azure-go-cli/internal/pim/vendor"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
 )
 
 // ListRow is one rendered table row, unified across resource and group types.
@@ -30,16 +30,21 @@ func newListCmd() *cobra.Command {
 		Short: "List eligible and active PIM assignments",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			typeFilter, _ := cmd.Flags().GetString("type")
-			outFmt, _ := cmd.Flags().GetString("output")
-			return runList(cmd.Context(), typeFilter, outFmt, cmd.OutOrStdout())
+			return runList(cmd, typeFilter)
 		},
 	}
 	cmd.Flags().String("type", "", "filter by type: resource or group")
-	cmd.Flags().String("output", "table", "output format: table or json")
 	return cmd
 }
 
-func runList(ctx context.Context, typeFilter, outFmt string, w io.Writer) error {
+func runList(cmd *cobra.Command, typeFilter string) error {
+	ctx := cmd.Context()
+	format, _ := cmd.Flags().GetString("output")
+	// list historically defaulted to table output, unlike the global
+	// default of json, so only honor an explicitly-passed format.
+	if !cmd.Flags().Changed("output") {
+		format = "table"
+	}
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return fmt.Errorf("get credential: %w", err)
@@ -53,14 +58,16 @@ func runList(ctx context.Context, typeFilter, outFmt string, w io.Writer) error 
 		return err
 	}
 
-	switch strings.ToLower(outFmt) {
-	case "json":
-		return RenderListJSON(w, rows)
-	case "table", "":
-		return RenderListTable(w, rows)
-	default:
-		return fmt.Errorf("unknown --output %q (use table or json)", outFmt)
+	if strings.ToLower(format) != "table" {
+		if rows == nil {
+			rows = []ListRow{}
+		}
+		// PrintJSON keeps struct field declaration order for "json" instead
+		// of alphabetizing keys, while still delegating table/tsv/yaml/none
+		// to PrintFormatted itself.
+		return output.PrintJSON(cmd, rows)
 	}
+	return RenderListTable(cmd.OutOrStdout(), rows)
 }
 
 func collectRows(ts *TokenSource, client pimvendor.AzureClient, typeFilter string) ([]ListRow, error) {

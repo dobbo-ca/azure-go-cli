@@ -19,7 +19,7 @@ func NewAccountCommand() *cobra.Command {
 		Use:   "list",
 		Short: "List all subscriptions for the logged in account",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return List()
+			return List(cmd)
 		},
 	}
 
@@ -27,7 +27,7 @@ func NewAccountCommand() *cobra.Command {
 		Use:   "show",
 		Short: "Show details of the current/default subscription",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return Show()
+			return Show(cmd)
 		},
 	}
 
@@ -58,7 +58,7 @@ func NewAccountCommand() *cobra.Command {
 			resource, _ := cmd.Flags().GetString("resource")
 			scopes, _ := cmd.Flags().GetStringSlice("scope")
 			subscription, _ := cmd.Flags().GetString("subscription")
-			return GetAccessToken(resource, scopes, subscription)
+			return GetAccessToken(cmd, resource, scopes, subscription)
 		},
 	}
 	getAccessTokenCmd.Flags().String("resource", "", "Azure resource endpoint in Microsoft Entra v1.0")

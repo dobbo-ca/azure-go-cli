@@ -2,15 +2,16 @@ package vpngateway
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -45,13 +46,7 @@ func List(ctx context.Context, resourceGroup string) error {
 		return fmt.Errorf("resource group is required for listing virtual network gateways")
 	}
 
-	data, err := json.MarshalIndent(gateways, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format virtual network gateways: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, gateways)
 }
 
 func formatVpnGateway(gw *armnetwork.VirtualNetworkGateway) map[string]interface{} {

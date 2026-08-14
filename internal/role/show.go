@@ -2,19 +2,17 @@ package role
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
 	"github.com/spf13/cobra"
 )
 
 func newShowCmd() *cobra.Command {
-	var output string
 	var scope string
 	var name string
 	var id string
@@ -39,11 +37,10 @@ func newShowCmd() *cobra.Command {
 				return fmt.Errorf("must specify role via --id, --name, or positional argument")
 			}
 
-			return showRoleDefinition(ctx, roleIdentifier, output, scope)
+			return showRoleDefinition(ctx, cmd, roleIdentifier, scope)
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "json", "Output format: json")
 	cmd.Flags().StringVar(&scope, "scope", "", "Scope to query role from (defaults to subscription scope)")
 	cmd.Flags().StringVarP(&name, "name", "n", "", "The role definition's name (GUID)")
 	cmd.Flags().StringVar(&id, "id", "", "The fully qualified role definition ID")
@@ -51,7 +48,7 @@ func newShowCmd() *cobra.Command {
 	return cmd
 }
 
-func showRoleDefinition(ctx context.Context, roleNameOrID, output, scope string) error {
+func showRoleDefinition(ctx context.Context, cmd *cobra.Command, roleNameOrID, scope string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return fmt.Errorf("failed to get credentials: %w", err)
@@ -130,7 +127,5 @@ func showRoleDefinition(ctx context.Context, roleNameOrID, output, scope string)
 		return fmt.Errorf("role definition '%s' not found", roleNameOrID)
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(role)
+	return output.PrintJSON(cmd, role)
 }

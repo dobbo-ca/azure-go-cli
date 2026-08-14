@@ -7,9 +7,11 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -45,6 +47,16 @@ func List(ctx context.Context, resourceGroup string) error {
 			}
 			vms = append(vms, page.Value...)
 		}
+	}
+
+	// vm list historically defaulted to table output, unlike the global
+	// default of json, so only honor an explicitly-passed format.
+	format, _ := cmd.Flags().GetString("output")
+	if !cmd.Flags().Changed("output") {
+		format = "table"
+	}
+	if format != "table" {
+		return output.PrintJSON(cmd, vms)
 	}
 
 	// Print simple table format

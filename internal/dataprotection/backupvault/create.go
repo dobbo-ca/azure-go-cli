@@ -2,13 +2,13 @@ package backupvault
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -24,7 +24,7 @@ func newCreateCommand() *cobra.Command {
       datastoreType, _ := cmd.Flags().GetString("datastore-type")
       storageType, _ := cmd.Flags().GetString("type")
       noWait, _ := cmd.Flags().GetBool("no-wait")
-      return CreateBackupVault(context.Background(), resourceGroup, vaultName, location, datastoreType, storageType, noWait)
+      return CreateBackupVault(context.Background(), cmd, resourceGroup, vaultName, location, datastoreType, storageType, noWait)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -39,7 +39,7 @@ func newCreateCommand() *cobra.Command {
   return cmd
 }
 
-func CreateBackupVault(ctx context.Context, resourceGroup, vaultName, location, datastoreType, storageType string, noWait bool) error {
+func CreateBackupVault(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName, location, datastoreType, storageType string, noWait bool) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -82,11 +82,5 @@ func CreateBackupVault(ctx context.Context, resourceGroup, vaultName, location, 
     return fmt.Errorf("create backup vault operation failed: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format result: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

@@ -2,19 +2,17 @@ package encryptionset
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 	"text/tabwriter"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
 	"github.com/spf13/cobra"
 )
 
 func newListCmd() *cobra.Command {
-	var output string
 	var resourceGroup string
 
 	cmd := &cobra.Command{
@@ -23,17 +21,23 @@ func newListCmd() *cobra.Command {
 		Long:  "List disk encryption sets in subscription or resource group",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return listDiskEncryptionSets(ctx, output, resourceGroup)
+			// list historically defaulted to table output, unlike the
+			// global default of json, so only honor an explicitly-passed
+			// format.
+			format, _ := cmd.Flags().GetString("output")
+			if !cmd.Flags().Changed("output") {
+				format = "table"
+			}
+			return listDiskEncryptionSets(ctx, cmd, format, resourceGroup)
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json or table")
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "g", "", "Resource group name (lists all if not specified)")
 
 	return cmd
 }
 
-func listDiskEncryptionSets(ctx context.Context, output, resourceGroup string) error {
+func listDiskEncryptionSets(ctx context.Context, cmd *cobra.Command, format, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return fmt.Errorf("failed to get credentials: %w", err)
@@ -73,14 +77,12 @@ func listDiskEncryptionSets(ctx context.Context, output, resourceGroup string) e
 		}
 	}
 
-	if output == "json" {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(sets)
+	if format != "table" {
+		return output.PrintJSON(cmd, sets)
 	}
 
 	// Table output
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
+	w := tabwriter.NewWriter(cmd.OutOrStdout(), 0, 0, 2, ' ', 0)
 	fmt.Fprintln(w, "NAME\tRESOURCE GROUP\tLOCATION\tPROVISIONING STATE")
 
 	for _, set := range sets {

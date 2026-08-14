@@ -2,18 +2,16 @@ package encryptionset
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"os"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
 	"github.com/spf13/cobra"
 )
 
 func newShowCmd() *cobra.Command {
-	var output string
 	var resourceGroup string
 	var name string
 
@@ -23,11 +21,10 @@ func newShowCmd() *cobra.Command {
 		Long:  "Show detailed information about a disk encryption set",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return showDiskEncryptionSet(ctx, output, resourceGroup, name)
+			return showDiskEncryptionSet(ctx, cmd, resourceGroup, name)
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "json", "Output format: json")
 	cmd.Flags().StringVarP(&resourceGroup, "resource-group", "g", "", "Resource group name")
 	cmd.Flags().StringVarP(&name, "name", "n", "", "Disk encryption set name")
 	cmd.MarkFlagRequired("name")
@@ -36,7 +33,7 @@ func newShowCmd() *cobra.Command {
 	return cmd
 }
 
-func showDiskEncryptionSet(ctx context.Context, output, resourceGroup, name string) error {
+func showDiskEncryptionSet(ctx context.Context, cmd *cobra.Command, resourceGroup, name string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return fmt.Errorf("failed to get credentials: %w", err)
@@ -57,7 +54,5 @@ func showDiskEncryptionSet(ctx context.Context, output, resourceGroup, name stri
 		return fmt.Errorf("failed to get disk encryption set: %w", err)
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(set)
+	return output.PrintJSON(cmd, set)
 }

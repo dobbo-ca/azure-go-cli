@@ -19,7 +19,7 @@ func NewNodePoolCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			clusterName, _ := cmd.Flags().GetString("cluster-name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), clusterName, resourceGroup)
+			return List(context.Background(), cmd, clusterName, resourceGroup)
 		},
 	}
 	listCmd.Flags().String("cluster-name", "", "AKS cluster name")
@@ -34,7 +34,7 @@ func NewNodePoolCommand() *cobra.Command {
 			clusterName, _ := cmd.Flags().GetString("cluster-name")
 			nodepoolName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), clusterName, nodepoolName, resourceGroup)
+			return Show(context.Background(), cmd, clusterName, nodepoolName, resourceGroup)
 		},
 	}
 	showCmd.Flags().String("cluster-name", "", "AKS cluster name")

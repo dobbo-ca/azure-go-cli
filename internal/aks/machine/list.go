@@ -2,15 +2,16 @@ package machine
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, clusterName, nodepoolName, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, clusterName, nodepoolName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -40,13 +41,7 @@ func List(ctx context.Context, clusterName, nodepoolName, resourceGroup string) 
 		}
 	}
 
-	data, err := json.MarshalIndent(machines, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format machines: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, machines)
 }
 
 func formatMachine(machine *armcontainerservice.Machine) map[string]interface{} {

@@ -2,12 +2,12 @@ package backupvault
 
 import (
   "context"
-  "encoding/json"
   "fmt"
 
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/dataprotection/armdataprotection/v3"
   "github.com/cdobbyn/azure-go-cli/pkg/azure"
   "github.com/cdobbyn/azure-go-cli/pkg/config"
+  "github.com/cdobbyn/azure-go-cli/pkg/output"
   "github.com/spf13/cobra"
 )
 
@@ -21,7 +21,7 @@ func newUpdateCommand() *cobra.Command {
       vaultName, _ := cmd.Flags().GetString("vault-name")
       tags, _ := cmd.Flags().GetStringToString("tags")
       noWait, _ := cmd.Flags().GetBool("no-wait")
-      return UpdateBackupVault(context.Background(), resourceGroup, vaultName, tags, noWait)
+      return UpdateBackupVault(context.Background(), cmd, resourceGroup, vaultName, tags, noWait)
     },
   }
   cmd.Flags().StringP("resource-group", "g", "", "Name of resource group")
@@ -33,7 +33,7 @@ func newUpdateCommand() *cobra.Command {
   return cmd
 }
 
-func UpdateBackupVault(ctx context.Context, resourceGroup, vaultName string, tags map[string]string, noWait bool) error {
+func UpdateBackupVault(ctx context.Context, cmd *cobra.Command, resourceGroup, vaultName string, tags map[string]string, noWait bool) error {
   cred, err := azure.GetCredential()
   if err != nil {
     return err
@@ -74,11 +74,5 @@ func UpdateBackupVault(ctx context.Context, resourceGroup, vaultName string, tag
     return fmt.Errorf("update backup vault operation failed: %w", err)
   }
 
-  output, err := json.MarshalIndent(result, "", "  ")
-  if err != nil {
-    return fmt.Errorf("failed to format result: %w", err)
-  }
-
-  fmt.Println(string(output))
-  return nil
+  return output.PrintJSON(cmd, result)
 }

@@ -23,7 +23,7 @@ func NewAccountCommand() *cobra.Command {
 		Short: "List storage accounts",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return List(context.Background(), resourceGroup)
+			return List(context.Background(), cmd, resourceGroup)
 		},
 	}
 	listCmd.Flags().StringP("resource-group", "g", "", "Resource group name (optional, lists all if not specified)")
@@ -34,7 +34,7 @@ func NewAccountCommand() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			accountName, _ := cmd.Flags().GetString("name")
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
-			return Show(context.Background(), accountName, resourceGroup)
+			return Show(context.Background(), cmd, accountName, resourceGroup)
 		},
 	}
 	showCmd.Flags().StringP("name", "n", "", "Storage account name")

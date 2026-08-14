@@ -2,12 +2,13 @@ package quota
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/quota/armquota"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
 type QuotaInfo struct {
@@ -18,7 +19,7 @@ type QuotaInfo struct {
 	QuotaPeriod  string `json:"quotaPeriod"`
 }
 
-func List(ctx context.Context, scope, outputFormat string) error {
+func List(ctx context.Context, cmd *cobra.Command, scope, outputFormat string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -29,7 +30,7 @@ func List(ctx context.Context, scope, outputFormat string) error {
 		return fmt.Errorf("failed to create quota client: %w", err)
 	}
 
-	var quotas []QuotaInfo
+	quotas := []QuotaInfo{}
 	pager := client.NewListPager(scope, nil)
 
 	for pager.More() {
@@ -64,19 +65,11 @@ func List(ctx context.Context, scope, outputFormat string) error {
 		}
 	}
 
-	if len(quotas) == 0 {
-		fmt.Printf("No quotas found for scope '%s'\n", scope)
-		return nil
-	}
-
-	if outputFormat == "json" {
-		data, err := json.MarshalIndent(quotas, "", "  ")
-		if err != nil {
-			return fmt.Errorf("failed to format quotas: %w", err)
+	if outputFormat == "table" {
+		if len(quotas) == 0 {
+			fmt.Printf("No quotas found for scope '%s'\n", scope)
+			return nil
 		}
-		fmt.Println(string(data))
-	} else {
-		// Table output
 		fmt.Printf("%-40s %-15s %-15s %-15s %-20s\n", "Name", "Current", "Limit", "Unit", "QuotaPeriod")
 		fmt.Println(strings.Repeat("-", 110))
 		for _, quota := range quotas {
@@ -84,6 +77,11 @@ func List(ctx context.Context, scope, outputFormat string) error {
 				quota.Name, quota.CurrentValue, quota.Limit, quota.Unit, quota.QuotaPeriod)
 		}
 		fmt.Printf("\nTotal: %d quotas\n", len(quotas))
+	} else {
+		// PrintJSON keeps struct field declaration order for "json" instead
+		// of alphabetizing keys, while still delegating table/tsv/yaml/none
+		// to PrintFormatted itself.
+		return output.PrintJSON(cmd, quotas)
 	}
 
 	return nil

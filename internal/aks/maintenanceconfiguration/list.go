@@ -2,15 +2,16 @@ package maintenanceconfiguration
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, clusterName, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, clusterName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -40,13 +41,7 @@ func List(ctx context.Context, clusterName, resourceGroup string) error {
 		}
 	}
 
-	data, err := json.MarshalIndent(configs, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format maintenance configurations: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, configs)
 }
 
 func formatConfig(config *armcontainerservice.MaintenanceConfiguration) map[string]interface{} {

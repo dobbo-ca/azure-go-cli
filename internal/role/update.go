@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/authorization/armauthorization/v3"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
 	"github.com/spf13/cobra"
 )
 
@@ -50,7 +51,7 @@ func newUpdateCmd() *cobra.Command {
 		Long:  "Update an existing Azure RBAC custom role definition from inline JSON or a JSON file (@file)",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return updateRoleDefinition(ctx, roleDefinition, scope)
+			return updateRoleDefinition(ctx, cmd, roleDefinition, scope)
 		},
 	}
 
@@ -61,7 +62,7 @@ func newUpdateCmd() *cobra.Command {
 	return cmd
 }
 
-func updateRoleDefinition(ctx context.Context, roleDefinition, scope string) error {
+func updateRoleDefinition(ctx context.Context, cmd *cobra.Command, roleDefinition, scope string) error {
 	input, err := parseRoleDefinitionInput(roleDefinition)
 	if err != nil {
 		return err
@@ -114,9 +115,7 @@ func updateRoleDefinition(ctx context.Context, roleDefinition, scope string) err
 		return fmt.Errorf("failed to update role definition: %w", err)
 	}
 
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	return enc.Encode(resp.RoleDefinition)
+	return output.PrintJSON(cmd, resp.RoleDefinition)
 }
 
 // parseRoleDefinitionInput reads the --role-definition value, which is either

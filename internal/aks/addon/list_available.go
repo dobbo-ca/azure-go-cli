@@ -1,13 +1,13 @@
 package addon
 
 import (
-	"encoding/json"
-	"fmt"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
 // ListAvailable lists the available addons that can be enabled on an AKS cluster
 // Note: This is a static list based on Azure documentation as there's no API to query available addons
-func ListAvailable() error {
+func ListAvailable(cmd *cobra.Command) error {
 	addons := []map[string]interface{}{
 		{
 			"name":        "http_application_routing",
@@ -51,11 +51,5 @@ func ListAvailable() error {
 		},
 	}
 
-	data, err := json.MarshalIndent(addons, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format available addons: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, addons)
 }

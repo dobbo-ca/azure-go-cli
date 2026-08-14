@@ -2,15 +2,16 @@ package peering
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/network/armnetwork/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/output"
+	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, vnetName, resourceGroup string) error {
+func List(ctx context.Context, cmd *cobra.Command, vnetName, resourceGroup string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return err
@@ -40,13 +41,7 @@ func List(ctx context.Context, vnetName, resourceGroup string) error {
 		}
 	}
 
-	data, err := json.MarshalIndent(peerings, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to format virtual network peerings: %w", err)
-	}
-
-	fmt.Println(string(data))
-	return nil
+	return output.PrintJSON(cmd, peerings)
 }
 
 func formatPeering(peering *armnetwork.VirtualNetworkPeering) map[string]interface{} {

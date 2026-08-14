@@ -66,7 +66,6 @@ func toAssignmentRecords(assignments []*armauthorization.RoleAssignment, names m
 }
 
 func newListCmd() *cobra.Command {
-	var output string
 	var scope string
 	var assignee string
 	var role string
@@ -78,11 +77,17 @@ func newListCmd() *cobra.Command {
 		Long:  "List Azure RBAC role assignments at a given scope",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			ctx := context.Background()
-			return listRoleAssignments(ctx, cmd, output, scope, assignee, role, all)
+			// list historically defaulted to table output, unlike the
+			// global default of json, so only honor an explicitly-passed
+			// format.
+			format, _ := cmd.Flags().GetString("output")
+			if !cmd.Flags().Changed("output") {
+				format = "table"
+			}
+			return listRoleAssignments(ctx, cmd, format, scope, assignee, role, all)
 		},
 	}
 
-	cmd.Flags().StringVarP(&output, "output", "o", "table", "Output format: json, table, or tsv")
 	cmd.Flags().StringVar(&scope, "scope", "", "Scope to list assignments for (defaults to subscription scope)")
 	cmd.Flags().StringVar(&assignee, "assignee", "", "Filter by assignee (user, group, or service principal object ID)")
 	cmd.Flags().StringVar(&role, "role", "", "Filter by role name or ID")
