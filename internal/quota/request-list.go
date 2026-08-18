@@ -45,7 +45,7 @@ func RequestList(ctx context.Context, cmd *cobra.Command, scope, outputFormat st
 
 			props := request.Properties
 			reqInfo := QuotaRequestInfo{
-				Name: getStringValue(request.Name),
+				Name: azure.GetStringValue(request.Name),
 			}
 
 			if props.ProvisioningState != nil {

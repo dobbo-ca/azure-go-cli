@@ -12,14 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func strPtrs(values []string) []*string {
-	ptrs := make([]*string, 0, len(values))
-	for _, v := range values {
-		ptrs = append(ptrs, to.Ptr(v))
-	}
-	return ptrs
-}
-
 func Create(ctx context.Context, cmd *cobra.Command, name string, locations, categories []string, retentionDays int32, storageAccountID, serviceBusRuleID string) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
@@ -35,8 +27,8 @@ func Create(ctx context.Context, cmd *cobra.Command, name string, locations, cat
 	}
 
 	props := &armmonitor.LogProfileProperties{
-		Locations:  strPtrs(locations),
-		Categories: strPtrs(categories),
+		Locations:  to.SliceOfPtrs(locations...),
+		Categories: to.SliceOfPtrs(categories...),
 		RetentionPolicy: &armmonitor.RetentionPolicy{
 			Enabled: to.Ptr(retentionDays > 0),
 			Days:    to.Ptr(retentionDays),

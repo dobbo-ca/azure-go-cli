@@ -158,7 +158,7 @@ func buildUpdatedProperties(input *roleDefinitionInput, existing *armauthorizati
 	}
 
 	if len(input.AssignableScopes) > 0 {
-		props.AssignableScopes = toPtrSlice(input.AssignableScopes)
+		props.AssignableScopes = to.SliceOfPtrs(input.AssignableScopes...)
 	} else if existing.Properties != nil {
 		props.AssignableScopes = existing.Properties.AssignableScopes
 	}
@@ -189,20 +189,20 @@ func buildPermissions(input *roleDefinitionInput) []*armauthorization.Permission
 		perms := make([]*armauthorization.Permission, 0, len(input.Permissions))
 		for _, p := range input.Permissions {
 			perms = append(perms, &armauthorization.Permission{
-				Actions:        toPtrSlice(p.Actions),
-				NotActions:     toPtrSlice(p.NotActions),
-				DataActions:    toPtrSlice(p.DataActions),
-				NotDataActions: toPtrSlice(p.NotDataActions),
+				Actions:        to.SliceOfPtrs(p.Actions...),
+				NotActions:     to.SliceOfPtrs(p.NotActions...),
+				DataActions:    to.SliceOfPtrs(p.DataActions...),
+				NotDataActions: to.SliceOfPtrs(p.NotDataActions...),
 			})
 		}
 		return perms
 	}
 
 	return []*armauthorization.Permission{{
-		Actions:        toPtrSlice(input.Actions),
-		NotActions:     toPtrSlice(input.NotActions),
-		DataActions:    toPtrSlice(input.DataActions),
-		NotDataActions: toPtrSlice(input.NotDataActions),
+		Actions:        to.SliceOfPtrs(input.Actions...),
+		NotActions:     to.SliceOfPtrs(input.NotActions...),
+		DataActions:    to.SliceOfPtrs(input.DataActions...),
+		NotDataActions: to.SliceOfPtrs(input.NotDataActions...),
 	}}
 }
 
@@ -260,14 +260,6 @@ func lastSegment(s string) string {
 		return s[i+1:]
 	}
 	return s
-}
-
-func toPtrSlice(in []string) []*string {
-	out := make([]*string, 0, len(in))
-	for i := range in {
-		out = append(out, to.Ptr(in[i]))
-	}
-	return out
 }
 
 func firstNonEmpty(values ...string) string {
