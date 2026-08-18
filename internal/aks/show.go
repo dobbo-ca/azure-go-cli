@@ -3,8 +3,8 @@ package aks
 import (
 	"context"
 	"fmt"
-	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/containerservice/armcontainerservice/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
@@ -39,11 +39,9 @@ func Show(ctx context.Context, cmd *cobra.Command, clusterName, resourceGroup st
 
 // Helper function to extract resource group from Azure resource ID
 func getResourceGroupFromID(id string) string {
-	parts := strings.Split(id, "/")
-	for i, part := range parts {
-		if strings.EqualFold(part, "resourceGroups") && i+1 < len(parts) {
-			return parts[i+1]
-		}
+	parsed, err := arm.ParseResourceID(id)
+	if err != nil {
+		return ""
 	}
-	return ""
+	return parsed.ResourceGroupName
 }
