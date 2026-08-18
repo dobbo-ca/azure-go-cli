@@ -12,15 +12,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// strPtrs converts a slice of strings into a slice of string pointers.
-func strPtrs(s []string) []*string {
-	ptrs := make([]*string, 0, len(s))
-	for _, v := range s {
-		ptrs = append(ptrs, to.Ptr(v))
-	}
-	return ptrs
-}
-
 func DeleteInstances(ctx context.Context, cmd *cobra.Command, resourceGroup, name string, instanceIDs []string, noWait bool) error {
 	cred, err := azure.GetCredential()
 	if err != nil {
@@ -37,7 +28,7 @@ func DeleteInstances(ctx context.Context, cmd *cobra.Command, resourceGroup, nam
 
 	fmt.Printf("Deleting instances from scale set '%s'...\n", name)
 	poller, err := client.BeginDeleteInstances(ctx, resourceGroup, name, armcompute.VirtualMachineScaleSetVMInstanceRequiredIDs{
-		InstanceIDs: strPtrs(instanceIDs),
+		InstanceIDs: to.SliceOfPtrs(instanceIDs...),
 	}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin delete instances: %w", err)

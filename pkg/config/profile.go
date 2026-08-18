@@ -53,16 +53,6 @@ func GetConfigPath() (string, error) {
 	return configPath, nil
 }
 
-func GetTokenCachePath() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("failed to get home directory: %w", err)
-	}
-
-	cachePath := filepath.Join(home, ConfigDir, TokenCacheFile)
-	return cachePath, nil
-}
-
 func Save(profile *Profile) error {
 	configPath, err := GetConfigPath()
 	if err != nil {

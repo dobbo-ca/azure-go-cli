@@ -27,14 +27,6 @@ var cloudScopes = map[string]string{
 	"azureusgovernment": "https://pasff.usgovcloudapi.net/CheckMyAccess/Linux/.default",
 }
 
-// min returns the minimum of two integers
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // GetAADSSHCertificate requests an SSH certificate from Azure AD
 func GetAADSSHCertificate(ctx context.Context, cred azcore.TokenCredential, keyPair *sshkeys.KeyPair, cloudName string) (string, error) {
 	// Get scope for cloud

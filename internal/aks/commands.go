@@ -115,16 +115,17 @@ Dependencies: kubectl (install with: sudo az aks install-cli)`,
 				return err
 			}
 
-			bufferConfig := bastion.DefaultBufferConfig()
 			connReadKB, _ := cmd.Flags().GetInt("conn-read-buffer")
 			connWriteKB, _ := cmd.Flags().GetInt("conn-write-buffer")
 			chunkReadKB, _ := cmd.Flags().GetInt("chunk-read-buffer")
 			chunkWriteKB, _ := cmd.Flags().GetInt("chunk-write-buffer")
 
-			bufferConfig.ConnReadBufferSize = connReadKB * 1024
-			bufferConfig.ConnWriteBufferSize = connWriteKB * 1024
-			bufferConfig.ChunkReadBufferSize = chunkReadKB * 1024
-			bufferConfig.ChunkWriteBufferSize = chunkWriteKB * 1024
+			bufferConfig := bastion.BufferConfig{
+				ConnReadBufferSize:   connReadKB * 1024,
+				ConnWriteBufferSize:  connWriteKB * 1024,
+				ChunkReadBufferSize:  chunkReadKB * 1024,
+				ChunkWriteBufferSize: chunkWriteKB * 1024,
+			}
 
 			opts := BastionOptions{
 				ClusterName:          clusterName,

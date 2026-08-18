@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
 )

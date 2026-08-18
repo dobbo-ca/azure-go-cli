@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/keyvault/armkeyvault"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
@@ -95,20 +96,9 @@ func formatVault(vault *armkeyvault.Vault) map[string]interface{} {
 }
 
 func getResourceGroupFromID(id string) string {
-	// ID format: /subscriptions/{sub}/resourceGroups/{rg}/providers/...
-	parts := make([]string, 0)
-	for _, part := range []rune(id) {
-		if part == '/' {
-			parts = append(parts, "")
-		} else if len(parts) > 0 {
-			parts[len(parts)-1] += string(part)
-		}
+	parsed, err := arm.ParseResourceID(id)
+	if err != nil {
+		return ""
 	}
-
-	for i, part := range parts {
-		if part == "resourceGroups" && i+1 < len(parts) {
-			return parts[i+1]
-		}
-	}
-	return ""
+	return parsed.ResourceGroupName
 }

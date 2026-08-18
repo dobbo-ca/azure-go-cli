@@ -40,19 +40,3 @@ func GetCredentialWithTenantSupport() (azcore.TokenCredential, error) {
 	// This will use the cached tokens from login - no user interaction
 	return NewMSALSilentCredential(tenantID, *profile.AuthenticationRecord)
 }
-
-// GetCredentialForTenant returns a credential for a specific tenant
-// This is useful when working with resources in a different tenant than the default
-func GetCredentialForTenant(tenantID string) (azcore.TokenCredential, error) {
-	profile, err := config.Load()
-	if err != nil {
-		return nil, fmt.Errorf("not authenticated. Please run 'az login' first: %w", err)
-	}
-
-	if profile.AuthenticationRecord == nil {
-		return nil, fmt.Errorf("no authentication record found. Please run 'az login'")
-	}
-
-	// Create MSAL silent credential for the specified tenant
-	return NewMSALSilentCredential(tenantID, *profile.AuthenticationRecord)
-}

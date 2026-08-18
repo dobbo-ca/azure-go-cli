@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5"
+	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
 	"github.com/cdobbyn/azure-go-cli/pkg/output"
@@ -102,11 +102,11 @@ func ListSKUs(ctx context.Context, cmd *cobra.Command, location, sizeFilter, res
 			}
 
 			skuInfo := SKUInfo{
-				Name:         getStringValue(sku.Name),
-				ResourceType: getStringValue(sku.ResourceType),
-				Tier:         getStringValue(sku.Tier),
-				Size:         getStringValue(sku.Size),
-				Family:       getStringValue(sku.Family),
+				Name:         azure.GetStringValue(sku.Name),
+				ResourceType: azure.GetStringValue(sku.ResourceType),
+				Tier:         azure.GetStringValue(sku.Tier),
+				Size:         azure.GetStringValue(sku.Size),
+				Family:       azure.GetStringValue(sku.Family),
 				Locations:    locations,
 				Restrictions: restrictionInfo,
 			}
@@ -151,11 +151,4 @@ func ListSKUs(ctx context.Context, cmd *cobra.Command, location, sizeFilter, res
 	fmt.Printf("\nTotal: %d SKUs\n", len(skus))
 
 	return nil
-}
-
-func getStringValue(ptr *string) string {
-	if ptr == nil {
-		return ""
-	}
-	return *ptr
 }

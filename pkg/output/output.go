@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -233,7 +234,7 @@ func newKeyOrder(orders [][]string) *keyOrder {
 			continue
 		}
 		if existing, ok := byKeySet[fp]; ok {
-			if !equalStrings(existing, order) {
+			if !slices.Equal(existing, order) {
 				delete(byKeySet, fp)
 				dropped[fp] = true
 			}
@@ -256,18 +257,6 @@ func hasDuplicate(sorted []string) bool {
 		}
 	}
 	return false
-}
-
-func equalStrings(a, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
 }
 
 // keys returns the order in which m's keys should be rendered: the declared

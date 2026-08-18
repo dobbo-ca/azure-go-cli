@@ -1,8 +1,7 @@
 package lock
 
 import (
-  "strings"
-
+  "github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
   "github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/resources/armlocks"
 )
 
@@ -39,11 +38,11 @@ type lockOwner struct {
 // group. It fires before output formatting, so the field shows up in JSON as
 // well as table output, and is absent for subscription-scoped locks.
 func resourceGroupFromID(id string) string {
-  parts := strings.Split(id, "/")
-  if len(parts) < 5 || !strings.EqualFold(parts[3], "resourcegroups") {
+  parsed, err := arm.ParseResourceID(id)
+  if err != nil {
     return ""
   }
-  return parts[4]
+  return parsed.ResourceGroupName
 }
 
 func toLockRecord(o *armlocks.ManagementLockObject) lockRecord {

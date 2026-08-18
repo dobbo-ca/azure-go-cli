@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/storage/armstorage"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
@@ -121,13 +122,11 @@ func FetchAccountKey(ctx context.Context, accountName string) (string, error) {
 
 // resourceGroupFromID pulls the resource group out of an ARM resource ID.
 func resourceGroupFromID(id string) string {
-	parts := strings.Split(id, "/")
-	for i, p := range parts {
-		if strings.EqualFold(p, "resourceGroups") && i+1 < len(parts) {
-			return parts[i+1]
-		}
+	parsed, err := arm.ParseResourceID(id)
+	if err != nil {
+		return ""
 	}
-	return ""
+	return parsed.ResourceGroupName
 }
 
 // Resolve runs the full chain, falling back to an ARM key lookup when a name

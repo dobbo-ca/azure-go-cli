@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Azure/azure-sdk-for-go/sdk/azcore/to"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v6"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
@@ -27,7 +28,7 @@ func UpdateInstances(ctx context.Context, cmd *cobra.Command, resourceGroup, nam
 
 	fmt.Printf("Updating instances in scale set '%s'...\n", name)
 	poller, err := client.BeginUpdateInstances(ctx, resourceGroup, name, armcompute.VirtualMachineScaleSetVMInstanceRequiredIDs{
-		InstanceIDs: strPtrs(instanceIDs),
+		InstanceIDs: to.SliceOfPtrs(instanceIDs...),
 	}, nil)
 	if err != nil {
 		return fmt.Errorf("failed to begin update instances: %w", err)

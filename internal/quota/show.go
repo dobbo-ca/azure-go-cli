@@ -27,7 +27,7 @@ func Show(ctx context.Context, cmd *cobra.Command, scope, resourceName, outputFo
 	}
 
 	if outputFormat == "table" {
-		fmt.Printf("Name: %s\n", getStringValue(quota.Name))
+		fmt.Printf("Name: %s\n", azure.GetStringValue(quota.Name))
 		if quota.Properties != nil {
 			props := quota.Properties
 			if props.Limit != nil {

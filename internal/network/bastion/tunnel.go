@@ -41,16 +41,6 @@ type BufferConfig struct {
 	ChunkWriteBufferSize int // Default: 4KB
 }
 
-// DefaultBufferConfig returns conservative defaults that work with Azure Bastion
-func DefaultBufferConfig() BufferConfig {
-	return BufferConfig{
-		ConnReadBufferSize:   32 * 1024, // 32KB
-		ConnWriteBufferSize:  32 * 1024, // 32KB
-		ChunkReadBufferSize:  8 * 1024,  // 8KB
-		ChunkWriteBufferSize: 8 * 1024,  // 8KB
-	}
-}
-
 // TunnelSSH opens an SSH tunnel with optional username for AAD authentication
 func TunnelSSH(ctx context.Context, bastionName, resourceGroup, targetResourceID string, localPort int, username string, bufferConfig BufferConfig) error {
 	return tunnelWithProtocol(ctx, bastionName, resourceGroup, targetResourceID, 22, localPort, "tcptunnel", username, bufferConfig)

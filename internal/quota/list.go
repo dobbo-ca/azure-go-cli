@@ -46,8 +46,8 @@ func List(ctx context.Context, cmd *cobra.Command, scope, outputFormat string) e
 
 			props := quota.Properties
 			quotaInfo := QuotaInfo{
-				Name: getStringValue(quota.Name),
-				Unit: getStringValue(props.Unit),
+				Name: azure.GetStringValue(quota.Name),
+				Unit: azure.GetStringValue(props.Unit),
 			}
 
 			// Extract limit value from LimitObject
@@ -85,11 +85,4 @@ func List(ctx context.Context, cmd *cobra.Command, scope, outputFormat string) e
 	}
 
 	return nil
-}
-
-func getStringValue(ptr *string) string {
-	if ptr == nil {
-		return ""
-	}
-	return *ptr
 }
