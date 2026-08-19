@@ -8,6 +8,10 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/aks"
 	"github.com/cdobbyn/azure-go-cli/internal/auth"
 	"github.com/cdobbyn/azure-go-cli/internal/dataprotection"
+	"github.com/cdobbyn/azure-go-cli/internal/devops"
+	"github.com/cdobbyn/azure-go-cli/internal/devops/boards"
+	"github.com/cdobbyn/azure-go-cli/internal/devops/pipelines"
+	"github.com/cdobbyn/azure-go-cli/internal/devops/repos"
 	"github.com/cdobbyn/azure-go-cli/internal/disk"
 	"github.com/cdobbyn/azure-go-cli/internal/disk/encryptionset"
 	"github.com/cdobbyn/azure-go-cli/internal/feature"
@@ -76,7 +80,9 @@ func main() {
 		auth.NewLogoutCommand(),
 		account.NewAccountCommand(),
 		aks.NewAKSCommand(),
+		boards.NewBoardsCommand(),
 		dataprotection.NewDataProtectionCommand(),
+		devops.NewDevOpsCommand(),
 		disk.NewDiskCommand(),
 		encryptionset.NewEncryptionSetCommand(),
 		feature.NewFeatureCommand(),
@@ -87,10 +93,12 @@ func main() {
 		monitor.NewMonitorCommand(),
 		network.NewNetworkCommand(),
 		pim.NewPIMCommand(),
+		pipelines.NewPipelinesCommand(),
 		storage.NewStorageCommand(),
 		postgres.NewPostgresCommand(),
 		keyvault.NewKeyVaultCommand(),
 		quota.NewQuotaCommand(),
+		repos.NewReposCommand(),
 		resource.NewResourceCommand(),
 		role.NewRoleCmd(),
 		vm.NewVMCommand(),
