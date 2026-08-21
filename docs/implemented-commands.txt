@@ -224,6 +224,9 @@ az keyvault key purge
 az keyvault key recover
 az keyvault key restore
 az keyvault key rotate
+az keyvault key rotation-policy
+az keyvault key rotation-policy show
+az keyvault key rotation-policy update
 az keyvault key set-attributes
 az keyvault key show
 az keyvault key show-deleted

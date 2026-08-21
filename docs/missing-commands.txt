@@ -1401,11 +1401,13 @@ az keyvault certificate import
 az keyvault certificate issuer
 az keyvault certificate pending
 az keyvault delete-policy
+az keyvault key decrypt
 az keyvault key download
+az keyvault key encrypt
 az keyvault key get-attestation
+az keyvault key get-policy-template
 az keyvault key import
 az keyvault key random
-az keyvault key rotation-policy
 az keyvault key sign
 az keyvault key verify
 az keyvault network-rule
