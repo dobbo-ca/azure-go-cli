@@ -16,12 +16,18 @@ func NewKeyCommand() *cobra.Command {
 		Use:   "create",
 		Short: "Create a key in a key vault",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			vaultName, _ := cmd.Flags().GetString("vault-name")
-			name, _ := cmd.Flags().GetString("name")
-			kty, _ := cmd.Flags().GetString("kty")
-			curve, _ := cmd.Flags().GetString("curve")
-			size, _ := cmd.Flags().GetInt32("size")
-			return Create(context.Background(), cmd, vaultName, name, kty, curve, size)
+			opts := CreateOptions{}
+			opts.VaultName, _ = cmd.Flags().GetString("vault-name")
+			opts.Name, _ = cmd.Flags().GetString("name")
+			opts.Kty, _ = cmd.Flags().GetString("kty")
+			opts.Curve, _ = cmd.Flags().GetString("curve")
+			opts.Size, _ = cmd.Flags().GetInt32("size")
+			opts.Ops, _ = cmd.Flags().GetStringSlice("ops")
+			opts.Expires, _ = cmd.Flags().GetString("expires")
+			opts.NotBefore, _ = cmd.Flags().GetString("not-before")
+			opts.Tags, _ = cmd.Flags().GetStringSlice("tags")
+			opts.Disabled, _ = cmd.Flags().GetBool("disabled")
+			return Create(context.Background(), cmd, opts)
 		},
 	}
 	createCmd.Flags().String("vault-name", "", "Key vault name")
@@ -29,6 +35,11 @@ func NewKeyCommand() *cobra.Command {
 	createCmd.Flags().String("kty", "RSA", "Key type")
 	createCmd.Flags().String("curve", "", "Elliptic curve name")
 	createCmd.Flags().Int32("size", 0, "Key size in bits")
+	createCmd.Flags().StringSlice("ops", nil, "List of permitted JSON web key operations: decrypt, encrypt, import, sign, unwrapKey, verify, wrapKey")
+	createCmd.Flags().String("expires", "", "Expiration UTC datetime (Y-m-d'T'H:M:S'Z')")
+	createCmd.Flags().String("not-before", "", "Key not usable before the provided UTC datetime (Y-m-d'T'H:M:S'Z')")
+	createCmd.Flags().StringSlice("tags", nil, "Resource tags as key=value pairs")
+	createCmd.Flags().Bool("disabled", false, "Create key in disabled state")
 	createCmd.MarkFlagRequired("vault-name")
 	createCmd.MarkFlagRequired("name")
 
