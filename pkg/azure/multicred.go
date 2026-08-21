@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
+	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
 )
 
@@ -15,7 +16,7 @@ func GetCredentialWithTenantSupport() (azcore.TokenCredential, error) {
 		return nil, fmt.Errorf("not authenticated. Please run 'az login' first: %w", err)
 	}
 
-	if profile.AuthenticationRecord == nil {
+	if profile.AuthMode != AuthModeAzureCLI && profile.AuthenticationRecord == nil {
 		return nil, fmt.Errorf("no authentication record found. Please run 'az login'")
 	}
 
@@ -36,7 +37,11 @@ func GetCredentialWithTenantSupport() (azcore.TokenCredential, error) {
 		return nil, fmt.Errorf("no tenant ID found in subscriptions")
 	}
 
-	// Create MSAL silent credential for the default subscription's tenant
+	// Create a tenant-scoped credential for the default subscription's tenant
 	// This will use the cached tokens from login - no user interaction
-	return NewMSALSilentCredential(tenantID, *profile.AuthenticationRecord)
+	var authRecord azidentity.AuthenticationRecord
+	if profile.AuthenticationRecord != nil {
+		authRecord = *profile.AuthenticationRecord
+	}
+	return TenantCredential(tenantID, authRecord)
 }

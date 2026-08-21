@@ -15,12 +15,14 @@ func NewLoginCommand() *cobra.Command {
 			tenantSelection, _ := cmd.Flags().GetBool("tenant-selection")
 			subscription, _ := cmd.Flags().GetString("subscription")
 			tenant, _ := cmd.Flags().GetString("tenant")
-			return Login(context.Background(), tenantSelection, subscription, tenant)
+			useAzureCLI, _ := cmd.Flags().GetBool("use-azure-cli")
+			return Login(context.Background(), tenantSelection, subscription, tenant, useAzureCLI)
 		},
 	}
 
 	cmd.Flags().Bool("tenant-selection", false, "Always show tenant selection (useful with many subscriptions)")
 	cmd.Flags().StringP("tenant", "t", "", "Tenant ID or domain to sign in to (prompts for subscription unless --subscription is given)")
+	cmd.Flags().Bool("use-azure-cli", false, "Borrow tokens from the Python Azure CLI (az) instead of signing in directly - satisfies device-based Conditional Access via its WAM broker on Windows")
 
 	return cmd
 }

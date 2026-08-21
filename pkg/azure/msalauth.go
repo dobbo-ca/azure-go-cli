@@ -17,6 +17,17 @@ type MSALInteractiveCredential struct {
 	scopes []string
 }
 
+// interactiveOpts returns MSAL options for AcquireTokenInteractive, opening
+// the sign-in URL in Microsoft Edge on Windows (see browser_windows.go) so
+// Conditional Access policies that require a device PRT don't reject the
+// token request with AADSTS53003.
+func interactiveOpts() []public.AcquireInteractiveOption {
+	if interactiveOpenURL == nil {
+		return nil
+	}
+	return []public.AcquireInteractiveOption{public.WithOpenURL(interactiveOpenURL)}
+}
+
 // NewMSALInteractiveCredential creates the base credential for "organizations" authentication
 func NewMSALInteractiveCredential() (*MSALInteractiveCredential, error) {
 	// Create MSAL PublicClientApplication with "organizations" authority
@@ -48,7 +59,7 @@ func NewMSALInteractiveCredential() (*MSALInteractiveCredential, error) {
 func (m *MSALInteractiveCredential) Authenticate(ctx context.Context) (azidentity.AuthenticationRecord, error) {
 	// AcquireTokenInteractive opens browser for user authentication
 	// This is equivalent to Python CLI's acquire_token_interactive
-	result, err := m.client.AcquireTokenInteractive(ctx, m.scopes)
+	result, err := m.client.AcquireTokenInteractive(ctx, m.scopes, interactiveOpts()...)
 	if err != nil {
 		return azidentity.AuthenticationRecord{}, fmt.Errorf("interactive authentication failed: %w", err)
 	}
@@ -82,7 +93,7 @@ func (m *MSALInteractiveCredential) GetToken(ctx context.Context, opts policy.To
 	}
 
 	// If silent fails, fall back to interactive
-	result, err := m.client.AcquireTokenInteractive(ctx, m.scopes)
+	result, err := m.client.AcquireTokenInteractive(ctx, m.scopes, interactiveOpts()...)
 	if err != nil {
 		return azcore.AccessToken{}, fmt.Errorf("failed to acquire token: %w", err)
 	}
