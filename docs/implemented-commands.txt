@@ -200,10 +200,18 @@ az identity show
 az keyvault
 az keyvault certificate
 az keyvault certificate backup
+az keyvault certificate create
 az keyvault certificate delete
+az keyvault certificate download
+az keyvault certificate get-default-policy
+az keyvault certificate import
 az keyvault certificate list
 az keyvault certificate list-deleted
 az keyvault certificate list-versions
+az keyvault certificate pending
+az keyvault certificate pending delete
+az keyvault certificate pending merge
+az keyvault certificate pending show
 az keyvault certificate purge
 az keyvault certificate recover
 az keyvault certificate restore
@@ -213,10 +221,15 @@ az keyvault certificate show-deleted
 az keyvault check-name
 az keyvault create
 az keyvault delete
+az keyvault delete-policy
 az keyvault key
 az keyvault key backup
 az keyvault key create
+az keyvault key decrypt
 az keyvault key delete
+az keyvault key download
+az keyvault key encrypt
+az keyvault key import
 az keyvault key list
 az keyvault key list-deleted
 az keyvault key list-versions
@@ -224,11 +237,28 @@ az keyvault key purge
 az keyvault key recover
 az keyvault key restore
 az keyvault key rotate
+az keyvault key rotation-policy
+az keyvault key rotation-policy show
+az keyvault key rotation-policy update
 az keyvault key set-attributes
 az keyvault key show
 az keyvault key show-deleted
+az keyvault key sign
+az keyvault key verify
 az keyvault list
 az keyvault list-deleted
+az keyvault network-rule
+az keyvault network-rule add
+az keyvault network-rule list
+az keyvault network-rule remove
+az keyvault private-endpoint-connection
+az keyvault private-endpoint-connection approve
+az keyvault private-endpoint-connection delete
+az keyvault private-endpoint-connection list
+az keyvault private-endpoint-connection reject
+az keyvault private-endpoint-connection show
+az keyvault private-link-resource
+az keyvault private-link-resource list
 az keyvault purge
 az keyvault recover
 az keyvault secret
@@ -245,6 +275,7 @@ az keyvault secret set
 az keyvault secret set-attributes
 az keyvault secret show
 az keyvault secret show-deleted
+az keyvault set-policy
 az keyvault show
 az keyvault show-deleted
 az keyvault update

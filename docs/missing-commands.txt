@@ -1394,34 +1394,12 @@ az iot hub wait
 az keyvault backup
 az keyvault backup start
 az keyvault certificate contact
-az keyvault certificate create
-az keyvault certificate download
-az keyvault certificate get-default-policy
-az keyvault certificate import
 az keyvault certificate issuer
-az keyvault certificate pending
-az keyvault delete-policy
-az keyvault key download
 az keyvault key get-attestation
-az keyvault key import
+az keyvault key get-policy-template
 az keyvault key random
-az keyvault key rotation-policy
-az keyvault key sign
-az keyvault key verify
-az keyvault network-rule
-az keyvault network-rule add
-az keyvault network-rule list
-az keyvault network-rule remove
 az keyvault network-rule wait
-az keyvault private-endpoint-connection
-az keyvault private-endpoint-connection approve
-az keyvault private-endpoint-connection delete
-az keyvault private-endpoint-connection list
-az keyvault private-endpoint-connection reject
-az keyvault private-endpoint-connection show
 az keyvault private-endpoint-connection wait
-az keyvault private-link-resource
-az keyvault private-link-resource list
 az keyvault region
 az keyvault region add
 az keyvault region list
@@ -1438,7 +1416,6 @@ az keyvault security-domain init-recovery
 az keyvault security-domain restore-blob
 az keyvault security-domain upload
 az keyvault security-domain wait
-az keyvault set-policy
 az keyvault setting
 az keyvault setting list
 az keyvault setting show
