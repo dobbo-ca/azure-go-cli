@@ -148,7 +148,7 @@ func firstNonEmpty(values ...string) string {
 }
 
 func ShowRotationPolicy(ctx context.Context, cmd *cobra.Command, vaultName, name string) error {
-	client, err := rotationPolicyClient(vaultName)
+	client, err := keyClient(vaultName)
 	if err != nil {
 		return err
 	}
@@ -164,7 +164,7 @@ func UpdateRotationPolicy(ctx context.Context, cmd *cobra.Command, vaultName, na
 	if err != nil {
 		return err
 	}
-	client, err := rotationPolicyClient(vaultName)
+	client, err := keyClient(vaultName)
 	if err != nil {
 		return err
 	}
@@ -175,7 +175,8 @@ func UpdateRotationPolicy(ctx context.Context, cmd *cobra.Command, vaultName, na
 	return output.PrintJSON(cmd, resp.KeyRotationPolicy)
 }
 
-func rotationPolicyClient(vaultName string) (*azkeys.Client, error) {
+// keyClient opens a data-plane client for a vault.
+func keyClient(vaultName string) (*azkeys.Client, error) {
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return nil, err
