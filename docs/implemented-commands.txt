@@ -221,6 +221,7 @@ az keyvault certificate show-deleted
 az keyvault check-name
 az keyvault create
 az keyvault delete
+az keyvault delete-policy
 az keyvault key
 az keyvault key backup
 az keyvault key create
@@ -246,6 +247,18 @@ az keyvault key sign
 az keyvault key verify
 az keyvault list
 az keyvault list-deleted
+az keyvault network-rule
+az keyvault network-rule add
+az keyvault network-rule list
+az keyvault network-rule remove
+az keyvault private-endpoint-connection
+az keyvault private-endpoint-connection approve
+az keyvault private-endpoint-connection delete
+az keyvault private-endpoint-connection list
+az keyvault private-endpoint-connection reject
+az keyvault private-endpoint-connection show
+az keyvault private-link-resource
+az keyvault private-link-resource list
 az keyvault purge
 az keyvault recover
 az keyvault secret
@@ -262,6 +275,7 @@ az keyvault secret set
 az keyvault secret set-attributes
 az keyvault secret show
 az keyvault secret show-deleted
+az keyvault set-policy
 az keyvault show
 az keyvault show-deleted
 az keyvault update
