@@ -1,6 +1,7 @@
 package azure
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -8,7 +9,9 @@ import (
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
+	"github.com/cdobbyn/azure-go-cli/pkg/azure/msalruntime"
 	"github.com/cdobbyn/azure-go-cli/pkg/config"
+	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
 
 // AuthModeAzureCLI borrows tokens from the Python Azure CLI (az), which uses
@@ -64,11 +67,16 @@ func authMode() string {
 // the initial sign-in: the Azure CLI credential in azure-cli mode, otherwise
 // the MSAL interactive credential.
 func BaseCredential() (azcore.TokenCredential, error) {
-	if authMode() == AuthModeAzureCLI {
+	switch authMode() {
+	case AuthModeAzureCLI:
 		if err := checkAzureCLIOnPath(); err != nil {
 			return nil, err
 		}
 		return azidentity.NewAzureCLICredential(nil)
+	case AuthModeBroker:
+		if cred, err := brokerCredential("organizations", true); cred != nil || err != nil {
+			return cred, err
+		}
 	}
 	return NewMSALInteractiveCredential()
 }
@@ -77,13 +85,34 @@ func BaseCredential() (azcore.TokenCredential, error) {
 // Azure CLI credential scoped to that tenant in azure-cli mode, otherwise the
 // MSAL silent credential built from the authentication record.
 func TenantCredential(tenantID string, authRecord azidentity.AuthenticationRecord) (azcore.TokenCredential, error) {
-	if authMode() == AuthModeAzureCLI {
+	switch authMode() {
+	case AuthModeAzureCLI:
 		if err := checkAzureCLIOnPath(); err != nil {
 			return nil, err
 		}
 		return azidentity.NewAzureCLICredential(&azidentity.AzureCLICredentialOptions{TenantID: tenantID})
+	case AuthModeBroker:
+		if cred, err := brokerCredential(tenantID, false); cred != nil || err != nil {
+			return cred, err
+		}
 	}
 	return NewMSALSilentCredential(tenantID, authRecord)
+}
+
+// brokerCredential builds a broker credential, or returns (nil, nil) when the
+// broker is no longer available - the profile pins broker mode at login time,
+// and msalruntime.dll can be uninstalled or moved afterwards. Falling through
+// to the MSAL flow beats failing every later command with a load error.
+func brokerCredential(tenantID string, interactive bool) (azcore.TokenCredential, error) {
+	cred, err := NewBrokerCredential(tenantID, interactive)
+	if errors.Is(err, msalruntime.ErrNotAvailable) {
+		logger.Debug("Profile pins broker mode but the broker is unavailable, falling back: %v", err)
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return cred, nil
 }
 
 // checkAzureCLIOnPath fails fast with an actionable error when azure-cli mode

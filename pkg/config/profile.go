@@ -19,9 +19,13 @@ const (
 type Profile struct {
 	Subscriptions        []Subscription                   `json:"subscriptions"`
 	AuthenticationRecord *azidentity.AuthenticationRecord `json:"authenticationRecord,omitempty"`
-	// AuthMode is empty for the default MSAL interactive flow, or "azure-cli"
-	// to borrow tokens from the Python Azure CLI (az) instead.
+	// AuthMode is empty for the default MSAL interactive flow, "azure-cli" to
+	// borrow tokens from the Python Azure CLI (az), or "broker" for the
+	// Windows WAM broker.
 	AuthMode string `json:"authMode,omitempty"`
+	// BrokerAccountID identifies the WAM broker account this login used. Only
+	// set in "broker" mode, where it keys every later silent acquisition.
+	BrokerAccountID string `json:"brokerAccountId,omitempty"`
 }
 
 type Subscription struct {

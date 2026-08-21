@@ -35,9 +35,9 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 
 	// First, trigger authentication by calling Authenticate if available
 	// This gets us the authentication record AND authenticates the user
-	// Credentials that don't support an explicit Authenticate step (e.g. the
-	// azure-cli mode credential, which borrows an already-authenticated
-	// Python Azure CLI session) simply skip it - authRecord stays zero-value.
+	// Only the azure-cli mode credential has no explicit Authenticate step: it
+	// borrows an already-authenticated Python Azure CLI session, so authRecord
+	// stays zero-value. Every other mode must still authenticate here.
 	if authCred, ok := baseCred.(interface {
 		Authenticate(context.Context) (azidentity.AuthenticationRecord, error)
 	}); ok {
@@ -45,6 +45,8 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 		if err != nil {
 			return nil, azidentity.AuthenticationRecord{}, fmt.Errorf("failed to authenticate: %w", err)
 		}
+	} else if authMode() != AuthModeAzureCLI {
+		return nil, azidentity.AuthenticationRecord{}, fmt.Errorf("credential does not support Authenticate method")
 	}
 
 	// Step 2: List ALL tenants using the base credential
@@ -331,6 +333,10 @@ func needsInteractiveAuth(err error) bool {
 	if err == nil {
 		return false
 	}
+	// The broker reports the same condition as a status rather than an AADSTS code.
+	if interactionRequired(err) {
+		return true
+	}
 	errStr := err.Error()
 	return strings.Contains(errStr, "AADSTS50076") || // MFA required
 		strings.Contains(errStr, "AADSTS70043") // refresh token expired (sign-in frequency)
@@ -345,6 +351,12 @@ func AuthenticateForTenant(ctx context.Context, tenantID string) (azcore.TokenCr
 	// the caller surfaces that error telling the user to `az login --tenant`.
 	if authMode() == AuthModeAzureCLI {
 		return TenantCredential(tenantID, azidentity.AuthenticationRecord{})
+	}
+
+	// In broker mode the broker owns the interactive sign-in, scoped to this
+	// tenant so it can satisfy the tenant's MFA policy.
+	if authMode() == AuthModeBroker {
+		return NewBrokerCredential(tenantID, true)
 	}
 
 	authority := fmt.Sprintf("https://login.microsoftonline.com/%s", tenantID)

@@ -91,8 +91,14 @@ func requestSSHCertWithToken(ctx context.Context, bearerToken, scope string, cer
 	cacheFilename := "msal_token_cache.json"
 	azureCLIMode := azure.AuthMode() == azure.AuthModeAzureCLI
 	if !azureCLIMode {
+		// Prefer this session's own cache when it exists, but keep falling
+		// back to the shared file so an AZ_SESSION that never logged in
+		// through us still finds the Azure CLI-compatible cache.
 		if session := os.Getenv("AZ_SESSION"); session != "" {
-			cacheFilename = fmt.Sprintf("msal_token_cache-%s.json", session)
+			sessionFilename := fmt.Sprintf("msal_token_cache-%s.json", session)
+			if _, err := os.Stat(filepath.Join(azureDir, sessionFilename)); err == nil {
+				cacheFilename = sessionFilename
+			}
 		}
 	}
 	cacheFile := filepath.Join(azureDir, cacheFilename)

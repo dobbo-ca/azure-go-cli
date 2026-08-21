@@ -32,11 +32,20 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 	if useAzureCLI {
 		authMode = azure.AuthModeAzureCLI
 		setAuthMode = azure.AuthModeAzureCLI
+	} else if azure.BrokerAvailable() {
+		// Windows with msalruntime.dll installed: sign in through the WAM
+		// broker. Otherwise fall through to the browser flow silently - most
+		// machines don't have the DLL.
+		authMode = azure.AuthModeBroker
+		setAuthMode = azure.AuthModeBroker
 	}
 	azure.SetAuthMode(setAuthMode)
 
 	if useAzureCLI {
 		logger.Println("Borrowing tokens from the Azure CLI (az). Make sure you are already signed in with 'az login'.")
+		logger.Println("")
+	} else if authMode == azure.AuthModeBroker {
+		logger.Println("Signing in with Windows (WAM broker).")
 		logger.Println("")
 	} else {
 		logger.Println("A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize.")
@@ -170,6 +179,9 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 	// from the Python Azure CLI's own cache on every request instead.
 	if !useAzureCLI {
 		profile.AuthenticationRecord = &authRecord
+	}
+	if authMode == azure.AuthModeBroker {
+		profile.BrokerAccountID = azure.BrokerAccountID()
 	}
 
 	if err := config.Save(&profile); err != nil {
