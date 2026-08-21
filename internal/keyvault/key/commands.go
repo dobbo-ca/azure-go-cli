@@ -201,6 +201,44 @@ func NewKeyCommand() *cobra.Command {
 	rotateCmd.MarkFlagRequired("vault-name")
 	rotateCmd.MarkFlagRequired("name")
 
+	rotationPolicyCmd := &cobra.Command{
+		Use:   "rotation-policy",
+		Short: "Manage key rotation policy",
+	}
+
+	rotationPolicyShowCmd := &cobra.Command{
+		Use:   "show",
+		Short: "Get the rotation policy of a Key Vault key",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			vaultName, _ := cmd.Flags().GetString("vault-name")
+			name, _ := cmd.Flags().GetString("name")
+			return ShowRotationPolicy(context.Background(), cmd, vaultName, name)
+		},
+	}
+	rotationPolicyShowCmd.Flags().String("vault-name", "", "Key vault name")
+	rotationPolicyShowCmd.Flags().StringP("name", "n", "", "Key name")
+	rotationPolicyShowCmd.MarkFlagRequired("vault-name")
+	rotationPolicyShowCmd.MarkFlagRequired("name")
+
+	rotationPolicyUpdateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update the rotation policy of a Key Vault key",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			vaultName, _ := cmd.Flags().GetString("vault-name")
+			name, _ := cmd.Flags().GetString("name")
+			value, _ := cmd.Flags().GetString("value")
+			return UpdateRotationPolicy(context.Background(), cmd, vaultName, name, value)
+		},
+	}
+	rotationPolicyUpdateCmd.Flags().String("vault-name", "", "Key vault name")
+	rotationPolicyUpdateCmd.Flags().StringP("name", "n", "", "Key name")
+	rotationPolicyUpdateCmd.Flags().String("value", "", "The rotation policy file definition as JSON, or a path to a file containing JSON policy definition")
+	rotationPolicyUpdateCmd.MarkFlagRequired("vault-name")
+	rotationPolicyUpdateCmd.MarkFlagRequired("name")
+	rotationPolicyUpdateCmd.MarkFlagRequired("value")
+
+	rotationPolicyCmd.AddCommand(rotationPolicyShowCmd, rotationPolicyUpdateCmd)
+
 	cmd.AddCommand(
 		createCmd,
 		showCmd,
@@ -215,6 +253,7 @@ func NewKeyCommand() *cobra.Command {
 		backupCmd,
 		restoreCmd,
 		rotateCmd,
+		rotationPolicyCmd,
 	)
 	return cmd
 }
