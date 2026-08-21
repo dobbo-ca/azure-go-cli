@@ -1394,22 +1394,11 @@ az iot hub wait
 az keyvault backup
 az keyvault backup start
 az keyvault certificate contact
-az keyvault certificate create
-az keyvault certificate download
-az keyvault certificate get-default-policy
-az keyvault certificate import
 az keyvault certificate issuer
-az keyvault certificate pending
 az keyvault delete-policy
-az keyvault key decrypt
-az keyvault key download
-az keyvault key encrypt
 az keyvault key get-attestation
 az keyvault key get-policy-template
-az keyvault key import
 az keyvault key random
-az keyvault key sign
-az keyvault key verify
 az keyvault network-rule
 az keyvault network-rule add
 az keyvault network-rule list
