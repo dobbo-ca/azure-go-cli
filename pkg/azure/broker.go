@@ -22,6 +22,12 @@ const AuthModeBroker = "broker"
 // brokerClientID is the Azure CLI's client ID, as used everywhere else here.
 const brokerClientID = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
 
+// ErrBrokerUnavailable reports that the WAM broker can't serve this machine,
+// either because msalruntime.dll is missing or because the broker itself said
+// so mid-flight. Callers test for it with errors.Is and fall back to the
+// browser flow.
+var ErrBrokerUnavailable = msalruntime.ErrNotAvailable
+
 // currentBrokerAccountID is the broker account ID from this process's
 // sign-in. Login authenticates before a profile exists to read it from.
 var currentBrokerAccountID string

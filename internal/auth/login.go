@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -68,6 +69,21 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 	// 3. For each tenant, get subscriptions silently using cached tokens
 	logger.Info("Retrieving tenants and subscriptions for the selection...")
 	tenantInfos, authRecord, err := azure.DiscoverAllSubscriptionsWithAuth(ctx, cred)
+	if err != nil && authMode == azure.AuthModeBroker && errors.Is(err, azure.ErrBrokerUnavailable) {
+		// The broker started up but then reported that it can't serve this
+		// machine (broker component missing, device not registered, or an
+		// explicit "fall back to native MSAL"). Retry once in the browser
+		// flow rather than failing a login the browser can still complete.
+		logger.Debug("Broker declined mid-login, retrying with browser sign-in: %v", err)
+		logger.Println("Windows sign-in is unavailable here, opening a browser instead.")
+		logger.Println("")
+		authMode = ""
+		azure.SetAuthMode(azure.AuthModeDefault)
+		if cred, err = azure.BaseCredential(); err != nil {
+			return fmt.Errorf("failed to create credential: %w", err)
+		}
+		tenantInfos, authRecord, err = azure.DiscoverAllSubscriptionsWithAuth(ctx, cred)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to discover subscriptions: %w", err)
 	}

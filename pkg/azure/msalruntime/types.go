@@ -42,6 +42,15 @@ const (
 	StatusUserDataRemovalRequired
 	StatusKeyNotFound
 	StatusAccountNotFound
+	// The statuses below are absent from Microsoft's javamsalruntime 0.13.10
+	// contract but present in shipping DLLs (verified against pymsalruntime
+	// 0.20.6's Response_Status enum). The DLL on a user's machine is whatever
+	// some other app installed, so we must recognise them.
+	StatusTransientError
+	StatusAccountSwitch
+	StatusRequiredBrokerMissing
+	StatusDeviceNotRegistered
+	StatusFallbackToNativeMsal
 )
 
 // Error is a failure reported by MSALRuntime, built from an
@@ -69,11 +78,34 @@ func (e *Error) Error() string {
 		msg = "authority is not trusted by the broker"
 	case StatusAccountNotFound:
 		msg = "account not found for this client ID"
+	case StatusTransientError:
+		msg = "transient broker error"
+	case StatusAccountSwitch:
+		msg = "the broker signed in a different account"
+	case StatusRequiredBrokerMissing:
+		msg = "the required broker component is not installed"
+	case StatusDeviceNotRegistered:
+		msg = "this device is not registered with Entra ID"
+	case StatusFallbackToNativeMsal:
+		msg = "the broker asked us to fall back to browser sign-in"
 	default:
 		msg = "broker error"
 	}
 	return fmt.Sprintf("msalruntime: %s (context: %s, status: %d, tag: %d, code: %d)",
 		msg, e.Context, e.Status, e.Tag, e.Code)
+}
+
+// Unwrap reports ErrNotAvailable for the statuses that mean this machine can't
+// broker at all, so callers already testing errors.Is(err, ErrNotAvailable)
+// fall back to the browser flow instead of failing the command. A transient
+// error is deliberately excluded: it's worth retrying, not worth abandoning
+// the broker over.
+func (e *Error) Unwrap() error {
+	switch e.Status {
+	case StatusRequiredBrokerMissing, StatusDeviceNotRegistered, StatusFallbackToNativeMsal:
+		return ErrNotAvailable
+	}
+	return nil
 }
 
 // AuthResult is a token acquired through the broker.
