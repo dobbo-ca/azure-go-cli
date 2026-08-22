@@ -35,6 +35,9 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 
 	// First, trigger authentication by calling Authenticate if available
 	// This gets us the authentication record AND authenticates the user
+	// Only the azure-cli mode credential has no explicit Authenticate step: it
+	// borrows an already-authenticated Python Azure CLI session, so authRecord
+	// stays zero-value. Every other mode must still authenticate here.
 	if authCred, ok := baseCred.(interface {
 		Authenticate(context.Context) (azidentity.AuthenticationRecord, error)
 	}); ok {
@@ -42,7 +45,7 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 		if err != nil {
 			return nil, azidentity.AuthenticationRecord{}, fmt.Errorf("failed to authenticate: %w", err)
 		}
-	} else {
+	} else if authMode() != AuthModeAzureCLI {
 		return nil, azidentity.AuthenticationRecord{}, fmt.Errorf("credential does not support Authenticate method")
 	}
 
@@ -192,10 +195,9 @@ func DiscoverAllSubscriptionsWithAuth(ctx context.Context, baseCred azcore.Token
 // createTenantCredential creates a tenant-specific credential for silent token acquisition
 // This matches Python CLI's approach of creating tenant-specific PublicClientApplication instances
 func createTenantCredential(tenantID string, authRecord azidentity.AuthenticationRecord) (azcore.TokenCredential, error) {
-	// Use custom MSAL credential that calls AcquireTokenSilent
-	// This is exactly what Python CLI does: acquire_token_silent_with_error
-	// NO user interaction - uses cached refresh tokens only
-	return NewMSALSilentCredential(tenantID, authRecord)
+	// NO user interaction - uses cached refresh tokens only (or, in azure-cli
+	// mode, the Python Azure CLI's own cached token for this tenant)
+	return TenantCredential(tenantID, authRecord)
 }
 
 // GetAllSubscriptions flattens all subscriptions from all tenants
@@ -216,12 +218,12 @@ func DiscoverAllSubscriptionsFromCache(ctx context.Context) ([]TenantInfo, error
 		return nil, fmt.Errorf("not authenticated. Please run 'az login' first: %w", err)
 	}
 
-	if profile.AuthenticationRecord == nil {
+	if profile.AuthMode != AuthModeAzureCLI && profile.AuthenticationRecord == nil {
 		return nil, fmt.Errorf("no authentication record found. Please run 'az login'")
 	}
 
 	// Create base credential for listing tenants (use organizations)
-	baseCred, err := NewMSALInteractiveCredential()
+	baseCred, err := BaseCredential()
 	if err != nil {
 		return nil, fmt.Errorf("failed to create credential: %w", err)
 	}
@@ -261,7 +263,11 @@ func DiscoverAllSubscriptionsFromCache(ctx context.Context) ([]TenantInfo, error
 		}
 
 		// Create tenant-specific cached credential (silent - no user interaction)
-		tenantCred, err := NewMSALSilentCredential(tenantID, *profile.AuthenticationRecord)
+		var authRecord azidentity.AuthenticationRecord
+		if profile.AuthenticationRecord != nil {
+			authRecord = *profile.AuthenticationRecord
+		}
+		tenantCred, err := TenantCredential(tenantID, authRecord)
 		if err != nil {
 			continue
 		}
@@ -327,6 +333,10 @@ func needsInteractiveAuth(err error) bool {
 	if err == nil {
 		return false
 	}
+	// The broker reports the same condition as a status rather than an AADSTS code.
+	if interactionRequired(err) {
+		return true
+	}
 	errStr := err.Error()
 	return strings.Contains(errStr, "AADSTS50076") || // MFA required
 		strings.Contains(errStr, "AADSTS70043") // refresh token expired (sign-in frequency)
@@ -335,6 +345,20 @@ func needsInteractiveAuth(err error) bool {
 // AuthenticateForTenant performs interactive browser authentication targeting a specific tenant
 // Used when a tenant requires MFA that wasn't satisfied by the initial login
 func AuthenticateForTenant(ctx context.Context, tenantID string) (azcore.TokenCredential, error) {
+	// In azure-cli mode there's no MSAL browser flow to fall back to - MFA is
+	// handled by the Python Azure CLI's own login. Retry through the same
+	// tenant-scoped Azure CLI credential; if the tenant still needs sign-in,
+	// the caller surfaces that error telling the user to `az login --tenant`.
+	if authMode() == AuthModeAzureCLI {
+		return TenantCredential(tenantID, azidentity.AuthenticationRecord{})
+	}
+
+	// In broker mode the broker owns the interactive sign-in, scoped to this
+	// tenant so it can satisfy the tenant's MFA policy.
+	if authMode() == AuthModeBroker {
+		return NewBrokerCredential(tenantID, true)
+	}
+
 	authority := fmt.Sprintf("https://login.microsoftonline.com/%s", tenantID)
 
 	cacheAccessor, err := GetSharedMSALCache()
@@ -354,7 +378,7 @@ func AuthenticateForTenant(ctx context.Context, tenantID string) (azcore.TokenCr
 	scopes := []string{"https://management.azure.com/.default"}
 
 	// Interactive auth targeting this specific tenant — will trigger MFA
-	result, err := client.AcquireTokenInteractive(ctx, scopes)
+	result, err := client.AcquireTokenInteractive(ctx, scopes, interactiveOpts()...)
 	if err != nil {
 		return nil, fmt.Errorf("interactive authentication failed for tenant %s: %w", tenantID, err)
 	}

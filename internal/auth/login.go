@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -13,21 +14,50 @@ import (
 
 const subscriptionThreshold = 10
 
-func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, tenantFilter string) error {
+func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, tenantFilter string, useAzureCLI bool) error {
 	// Clear any existing profile to ensure fresh login
-	// This prevents old subscription data from persisting if the new login fails
-	if err := config.Delete(); err != nil {
+	// This prevents old subscription data from persisting if the new login fails.
+	// In azure-cli mode, keep msal_token_cache.json - it's the Python Azure
+	// CLI's own cache, which we're about to borrow tokens from, not clear.
+	deleteProfile := config.Delete
+	if useAzureCLI {
+		deleteProfile = config.DeleteKeepAzureCLICache
+	}
+	if err := deleteProfile(); err != nil {
 		// Ignore errors if profile doesn't exist
 		_ = err
 	}
 
-	logger.Println("A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize.")
-	logger.Println("Please continue the login in the web browser.")
-	logger.Println("If no web browser is available or if the web browser fails to open, use device code flow with `az login --use-device-code`.")
-	logger.Println("")
+	authMode := ""
+	setAuthMode := azure.AuthModeDefault
+	if useAzureCLI {
+		authMode = azure.AuthModeAzureCLI
+		setAuthMode = azure.AuthModeAzureCLI
+	} else if azure.BrokerAvailable() {
+		// Windows: sign in through the WAM broker. Otherwise fall through to
+		// the browser flow silently - a broker that won't start is normal, not
+		// an error worth showing.
+		authMode = azure.AuthModeBroker
+		setAuthMode = azure.AuthModeBroker
+	}
+	azure.SetAuthMode(setAuthMode)
 
-	// Use interactive browser credential (matches official Azure CLI behavior)
-	cred, err := azure.GetInteractiveBrowserCredentialWithCache()
+	if useAzureCLI {
+		logger.Println("Borrowing tokens from the Azure CLI (az). Make sure you are already signed in with 'az login'.")
+		logger.Println("")
+	} else if authMode == azure.AuthModeBroker {
+		logger.Println("Signing in with Windows (WAM broker).")
+		logger.Println("")
+	} else {
+		logger.Println("A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize.")
+		logger.Println("Please continue the login in the web browser.")
+		logger.Println("If no web browser is available or if the web browser fails to open, use device code flow with `az login --use-device-code`.")
+		logger.Println("")
+	}
+
+	// Use interactive browser credential (matches official Azure CLI behavior),
+	// or the Azure CLI credential in azure-cli mode
+	cred, err := azure.BaseCredential()
 	if err != nil {
 		return fmt.Errorf("failed to create credential: %w", err)
 	}
@@ -39,6 +69,21 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 	// 3. For each tenant, get subscriptions silently using cached tokens
 	logger.Info("Retrieving tenants and subscriptions for the selection...")
 	tenantInfos, authRecord, err := azure.DiscoverAllSubscriptionsWithAuth(ctx, cred)
+	if err != nil && authMode == azure.AuthModeBroker && errors.Is(err, azure.ErrBrokerUnavailable) {
+		// The broker started up but then reported that it can't serve this
+		// machine (broker component missing, device not registered, or an
+		// explicit "fall back to native MSAL"). Retry once in the browser
+		// flow rather than failing a login the browser can still complete.
+		logger.Debug("Broker declined mid-login, retrying with browser sign-in: %v", err)
+		logger.Println("Windows sign-in is unavailable here, opening a browser instead.")
+		logger.Println("")
+		authMode = ""
+		azure.SetAuthMode(azure.AuthModeDefault)
+		if cred, err = azure.BaseCredential(); err != nil {
+			return fmt.Errorf("failed to create credential: %w", err)
+		}
+		tenantInfos, authRecord, err = azure.DiscoverAllSubscriptionsWithAuth(ctx, cred)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to discover subscriptions: %w", err)
 	}
@@ -143,8 +188,16 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 
 	// Save profile with authentication record and subscriptions
 	profile := config.Profile{
-		Subscriptions:        allSubscriptions,
-		AuthenticationRecord: &authRecord,
+		Subscriptions: allSubscriptions,
+		AuthMode:      authMode,
+	}
+	// azure-cli mode has no MSAL authentication record - tokens are borrowed
+	// from the Python Azure CLI's own cache on every request instead.
+	if !useAzureCLI {
+		profile.AuthenticationRecord = &authRecord
+	}
+	if authMode == azure.AuthModeBroker {
+		profile.BrokerAccountID = azure.BrokerAccountID()
 	}
 
 	if err := config.Save(&profile); err != nil {

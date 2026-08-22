@@ -17,6 +17,7 @@ import (
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 	"github.com/cdobbyn/azure-go-cli/internal/network/bastion/sshkeys"
+	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
 
@@ -77,20 +78,38 @@ func GetAADSSHCertificate(ctx context.Context, cred azcore.TokenCredential, keyP
 func requestSSHCertWithToken(ctx context.Context, bearerToken, scope string, certReq *sshkeys.CertificateRequest, cloudName string) (string, error) {
 	logger.Debug("Requesting SSH certificate using MSAL with claims")
 
-	// Try to use MSAL with cached credentials from Azure CLI
-	// Azure CLI stores tokens in ~/.azure/msal_token_cache.json
+	// Try to use MSAL with cached credentials. In the default login mode this
+	// is our own MSAL cache (same file, same well-known client ID as Azure
+	// CLI); in azure-cli mode it's the Python Azure CLI's cache, since we
+	// never populate our own.
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("failed to get home directory: %w", err)
 	}
 
 	azureDir := filepath.Join(homeDir, ".azure")
-	cacheFile := filepath.Join(azureDir, "msal_token_cache.json")
+	cacheFilename := "msal_token_cache.json"
+	azureCLIMode := azure.AuthMode() == azure.AuthModeAzureCLI
+	if !azureCLIMode {
+		// Prefer this session's own cache when it exists, but keep falling
+		// back to the shared file so an AZ_SESSION that never logged in
+		// through us still finds the Azure CLI-compatible cache.
+		if session := os.Getenv("AZ_SESSION"); session != "" {
+			sessionFilename := fmt.Sprintf("msal_token_cache-%s.json", session)
+			if _, err := os.Stat(filepath.Join(azureDir, sessionFilename)); err == nil {
+				cacheFilename = sessionFilename
+			}
+		}
+	}
+	cacheFile := filepath.Join(azureDir, cacheFilename)
 
 	logger.Debug("Looking for MSAL cache at: %s", cacheFile)
 
 	// Check if cache exists
 	if _, err := os.Stat(cacheFile); os.IsNotExist(err) {
+		if azureCLIMode {
+			return "", fmt.Errorf(`no Python Azure CLI login found at %s. --auth-type aad borrows its cached tokens; sign in with the Python Azure CLI (not this binary) and try again`, cacheFile)
+		}
 		return "", fmt.Errorf(`no Azure CLI login found. Please login first with:
     az login
 
@@ -128,6 +147,9 @@ Then try again. The SSH certificate request requires access to your cached Azure
 	// Get accounts
 	accounts, err := client.Accounts(ctx)
 	if err != nil || len(accounts) == 0 {
+		if azureCLIMode {
+			return "", fmt.Errorf("no cached accounts found in the Python Azure CLI's token cache. Sign in with the Python Azure CLI (not this binary) and try again")
+		}
 		return "", fmt.Errorf("no cached accounts found. Please run 'az login' first")
 	}
 

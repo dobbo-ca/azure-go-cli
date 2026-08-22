@@ -19,6 +19,13 @@ const (
 type Profile struct {
 	Subscriptions        []Subscription                   `json:"subscriptions"`
 	AuthenticationRecord *azidentity.AuthenticationRecord `json:"authenticationRecord,omitempty"`
+	// AuthMode is empty for the default MSAL interactive flow, "azure-cli" to
+	// borrow tokens from the Python Azure CLI (az), or "broker" for the
+	// Windows WAM broker.
+	AuthMode string `json:"authMode,omitempty"`
+	// BrokerAccountID identifies the WAM broker account this login used. Only
+	// set in "broker" mode, where it keys every later silent acquisition.
+	BrokerAccountID string `json:"brokerAccountId,omitempty"`
 }
 
 type Subscription struct {
@@ -165,7 +172,20 @@ func GetTenantID(subscriptionID string) (string, error) {
 	return "", fmt.Errorf("subscription %s not found in profile", subscriptionID)
 }
 
+// Delete removes the saved profile and clears our MSAL cache files.
 func Delete() error {
+	return deleteProfile(false)
+}
+
+// DeleteKeepAzureCLICache removes the saved profile without touching
+// msal_token_cache.json. Used before an azure-cli-mode login, which borrows
+// tokens from that same file if the Python Azure CLI is already signed in -
+// deleting it would log that CLI out instead of leaving it usable.
+func DeleteKeepAzureCLICache() error {
+	return deleteProfile(true)
+}
+
+func deleteProfile(keepMSALCache bool) error {
 	configPath, err := GetConfigPath()
 	if err != nil {
 		return err
@@ -184,14 +204,16 @@ func Delete() error {
 	if err == nil {
 		azureDir := filepath.Join(home, ConfigDir)
 
-		// Remove MSAL token cache (session-aware)
-		msalCacheFilename := "msal_token_cache.json"
-		if session := os.Getenv("AZ_SESSION"); session != "" {
-			msalCacheFilename = fmt.Sprintf("msal_token_cache-%s.json", session)
-		}
-		msalTokenCache := filepath.Join(azureDir, msalCacheFilename)
-		if _, err := os.Stat(msalTokenCache); err == nil {
-			_ = os.Remove(msalTokenCache) // Ignore errors, best effort
+		if !keepMSALCache {
+			// Remove MSAL token cache (session-aware)
+			msalCacheFilename := "msal_token_cache.json"
+			if session := os.Getenv("AZ_SESSION"); session != "" {
+				msalCacheFilename = fmt.Sprintf("msal_token_cache-%s.json", session)
+			}
+			msalTokenCache := filepath.Join(azureDir, msalCacheFilename)
+			if _, err := os.Stat(msalTokenCache); err == nil {
+				_ = os.Remove(msalTokenCache) // Ignore errors, best effort
+			}
 		}
 
 		// Remove MSAL HTTP cache (created by Azure SDK)

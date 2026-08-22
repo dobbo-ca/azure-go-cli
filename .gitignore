@@ -32,3 +32,6 @@ bin/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Microsoft msalruntime.dll, embedded into Windows builds (see pkg/azure/msalruntime)
+!pkg/azure/msalruntime/dll/*.dll
