@@ -34,9 +34,9 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 		authMode = azure.AuthModeAzureCLI
 		setAuthMode = azure.AuthModeAzureCLI
 	} else if azure.BrokerAvailable() {
-		// Windows with msalruntime.dll installed: sign in through the WAM
-		// broker. Otherwise fall through to the browser flow silently - most
-		// machines don't have the DLL.
+		// Windows: sign in through the WAM broker. Otherwise fall through to
+		// the browser flow silently - a broker that won't start is normal, not
+		// an error worth showing.
 		authMode = azure.AuthModeBroker
 		setAuthMode = azure.AuthModeBroker
 	}

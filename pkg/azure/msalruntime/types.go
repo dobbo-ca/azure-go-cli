@@ -1,10 +1,11 @@
 // Package msalruntime is a thin Go binding over Microsoft's msalruntime.dll
 // (the WAM broker) on Windows.
 //
-// The DLL is never shipped with this CLI - its license forbids
-// redistribution. The binding loads whatever copy is already installed on the
-// machine, and every entry point returns an error wrapping ErrNotAvailable
-// when it isn't, so callers can fall back to the browser flow.
+// Windows builds embed Microsoft's msalruntime.dll and extract it on first
+// use, but a copy already on the machine wins (AZ_MSALRUNTIME_DLL, or one
+// beside our executable). Every entry point returns an error wrapping
+// ErrNotAvailable when the broker can't be used at all, so callers fall back
+// to the browser flow.
 package msalruntime
 
 import (

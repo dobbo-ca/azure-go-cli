@@ -15,8 +15,8 @@ import (
 
 // AuthModeBroker signs in through the Windows WAM broker (msalruntime.dll),
 // which satisfies device-based Conditional Access without a browser. Only
-// reachable on Windows, and only when the DLL is already installed - we can't
-// ship it. See BrokerAvailable.
+// reachable on Windows, where the DLL is embedded in the binary. See
+// BrokerAvailable.
 const AuthModeBroker = "broker"
 
 // brokerClientID is the Azure CLI's client ID, as used everywhere else here.

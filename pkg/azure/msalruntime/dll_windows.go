@@ -13,14 +13,20 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// dllName is the broker DLL we bind to. It is never shipped with this CLI;
-// Microsoft's license forbids redistributing it. We load a copy the machine
-// already has, pointed at by AZ_MSALRUNTIME_DLL or sitting next to our own
-// executable.
+// dllName is the broker DLL we bind to. Windows builds embed Microsoft's copy
+// (see embed_windows_*.go) and extract it on first use, but a copy already on
+// the machine wins: AZ_MSALRUNTIME_DLL, then one sitting next to our own
+// executable. That order lets a user pin a newer or older broker without
+// rebuilding.
 const dllName = "msalruntime.dll"
 
-// dllPath resolves the DLL to load: an explicit override, else a copy sitting
-// next to our own executable. Returns "" when neither exists.
+// dllPath resolves an already-present DLL: an explicit override, else a copy
+// sitting next to our own executable. Returns "" when neither exists, in
+// which case Startup extracts the embedded copy.
+//
+// Deliberately cheap: this runs at package init on every command, so it only
+// stats, never writes. Extraction is deferred to Startup, which only the
+// broker path calls.
 //
 // Deliberately never falls back to the bare name: the standard LoadLibrary
 // search order includes the current directory, so a bare name both makes
@@ -116,8 +122,15 @@ var (
 func Startup() error {
 	startupOnce.Do(func() {
 		if resolvedDLLPath == "" {
-			startupErr = fmt.Errorf("%w: %s not found next to this executable; set AZ_MSALRUNTIME_DLL to its full path to use the broker", ErrNotAvailable, dllName)
-			return
+			// Nothing on the machine to prefer, so use our own copy. Safe to
+			// retarget the LazyDLL here: nothing loads it before Startup.
+			path, err := extractEmbeddedDLL()
+			if err != nil {
+				startupErr = err
+				return
+			}
+			resolvedDLLPath = path
+			dll.Name = path
 		}
 		if err := dll.Load(); err != nil {
 			startupErr = fmt.Errorf("%w: %v", ErrNotAvailable, err)
