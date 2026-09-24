@@ -3,12 +3,18 @@ package aks
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"os/exec"
+	"regexp"
 	"runtime"
+	"strings"
 
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
+
+var kubeVersionRe = regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
 
 // InstallCLI installs kubectl to /usr/local/bin
 func InstallCLI(ctx context.Context) error {
@@ -44,38 +50,77 @@ func installKubectl(ctx context.Context, osName, arch string) error {
 		return nil
 	}
 
-	var downloadURL string
 	switch osName {
-	case "darwin":
-		if arch == "arm64" {
-			downloadURL = "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/arm64/kubectl"
-		} else {
-			downloadURL = "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/darwin/amd64/kubectl"
-		}
-	case "linux":
-		if arch == "arm64" {
-			downloadURL = "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
-		} else {
-			downloadURL = "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-		}
+	case "darwin", "linux":
 	default:
 		return fmt.Errorf("unsupported OS: %s", osName)
 	}
+	if arch != "arm64" {
+		arch = "amd64"
+	}
+
+	resp, err := httpGet(ctx, "https://dl.k8s.io/release/stable.txt")
+	if err != nil {
+		return fmt.Errorf("failed to fetch stable version: %w", err)
+	}
+	versionBytes, err := io.ReadAll(io.LimitReader(resp.Body, 64))
+	resp.Body.Close()
+	if err != nil {
+		return fmt.Errorf("failed to read stable version: %w", err)
+	}
+	version := strings.TrimSpace(string(versionBytes))
+	// remote value becomes a URL path
+	if !kubeVersionRe.MatchString(version) {
+		return fmt.Errorf("unexpected kubectl version format: %q", version)
+	}
+
+	downloadURL := fmt.Sprintf("https://dl.k8s.io/release/%s/bin/%s/%s/kubectl", version, osName, arch)
 
 	fmt.Printf("Downloading kubectl...\n")
 	logger.Debug("Download URL: %s", downloadURL)
 
-	// Download and install kubectl
-	cmd := exec.CommandContext(ctx, "sh", "-c",
-		fmt.Sprintf("curl -LO %s && chmod +x kubectl && mv kubectl /usr/local/bin/kubectl", downloadURL))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	if err := cmd.Run(); err != nil {
+	dlResp, err := httpGet(ctx, downloadURL)
+	if err != nil {
 		return fmt.Errorf("failed to download kubectl: %w", err)
+	}
+	defer dlResp.Body.Close()
+
+	f, err := os.CreateTemp("/usr/local/bin", ".kubectl-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temp file: %w", err)
+	}
+	defer os.Remove(f.Name())
+
+	if _, err := io.Copy(f, dlResp.Body); err != nil {
+		f.Close()
+		return fmt.Errorf("failed to write kubectl: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("failed to close kubectl file: %w", err)
+	}
+	if err := os.Chmod(f.Name(), 0o755); err != nil {
+		return fmt.Errorf("failed to chmod kubectl: %w", err)
+	}
+	if err := os.Rename(f.Name(), "/usr/local/bin/kubectl"); err != nil {
+		return fmt.Errorf("failed to install kubectl: %w", err)
 	}
 
 	fmt.Println("kubectl installed successfully")
 	return nil
 }
 
+func httpGet(ctx context.Context, url string) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("unexpected status %d for %s", resp.StatusCode, url)
+	}
+	return resp, nil
+}
