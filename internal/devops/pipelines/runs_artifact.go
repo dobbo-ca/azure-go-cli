@@ -178,15 +178,25 @@ func runsExtractZip(data []byte, dir string) error {
 	if err != nil {
 		return fmt.Errorf("response is not a valid zip archive: %w", err)
 	}
+	// bombs only; big real artifacts pass
+	limit := max(uint64(1<<30), 100*uint64(len(data)))
+	var total uint64
+	for _, f := range zr.File {
+		if f.UncompressedSize64 > limit-total {
+			return fmt.Errorf("zip expands past %d bytes; refusing possible zip bomb", limit)
+		}
+		total += f.UncompressedSize64
+	}
+
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 
 	for _, f := range zr.File {
-		target := filepath.Join(dir, f.Name)
-		if !strings.HasPrefix(target, filepath.Clean(dir)+string(os.PathSeparator)) && target != filepath.Clean(dir) {
+		if !filepath.IsLocal(f.Name) {
 			return fmt.Errorf("zip entry %q escapes destination directory", f.Name)
 		}
+		target := filepath.Join(dir, f.Name)
 
 		if f.FileInfo().IsDir() {
 			if err := os.MkdirAll(target, 0o755); err != nil {
@@ -207,7 +217,13 @@ func runsExtractZip(data []byte, dir string) error {
 			rc.Close()
 			return err
 		}
-		_, copyErr := io.Copy(out, rc)
+		_, copyErr := io.CopyN(out, rc, int64(f.UncompressedSize64))
+		if copyErr == nil {
+			// reach EOF so zip checks CRC and size
+			if _, err := rc.Read(make([]byte, 1)); err != io.EOF {
+				copyErr = fmt.Errorf("zip entry %q is corrupt: %v", f.Name, err)
+			}
+		}
 		rc.Close()
 		out.Close()
 		if copyErr != nil {
