@@ -147,10 +147,11 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 
 		// If the selected tenant needs MFA, authenticate interactively
 		if selectedTenant.NeedsMFA {
-			selectedTenant, err = authenticateMFATenant(ctx, selectedTenant)
+			authedTenant, err := authenticateMFATenant(ctx, selectedTenant)
 			if err != nil {
 				return fmt.Errorf("failed to authenticate for tenant '%s': %w", selectedTenant.DisplayName, err)
 			}
+			selectedTenant = authedTenant
 			// Add newly discovered subscriptions to allSubscriptions
 			allSubscriptions = append(allSubscriptions, selectedTenant.Subscriptions...)
 		}

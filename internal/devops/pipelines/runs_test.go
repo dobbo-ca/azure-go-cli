@@ -1,11 +1,14 @@
 package pipelines
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
@@ -412,5 +415,114 @@ func TestRunsResolveRefHeads(t *testing.T) {
 		if got := coreResolveGitRefHeads(in); got != want {
 			t.Errorf("coreResolveGitRefHeads(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+// TestRunsExtractZip_RejectsDeclaredSizeBomb ports the Semgrep
+// potential-dos-via-decompression-bomb fix: a raw entry can declare a huge
+// UncompressedSize64 while its actual compressed bytes stay tiny, so the
+// check must run on the declared size before any data is copied.
+func TestRunsExtractZip_RejectsDeclaredSizeBomb(t *testing.T) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	body := []byte("tiny")
+	w, err := zw.CreateRaw(&zip.FileHeader{
+		Name:               "bomb.bin",
+		Method:             zip.Store,
+		UncompressedSize64: 1 << 40,
+		CompressedSize64:   uint64(len(body)),
+	})
+	if err != nil {
+		t.Fatalf("CreateRaw: %v", err)
+	}
+	if _, err := w.Write(body); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	dir := t.TempDir()
+	if err := runsExtractZip(buf.Bytes(), dir); err == nil {
+		t.Fatal("expected an error for a declared-size zip bomb")
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("ReadDir: %v", err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("got %d entries, want 0 (nothing written before the size check)", len(entries))
+	}
+}
+
+// TestRunsExtractZip_RejectsZipSlip pins filepath.IsLocal's guard: a path
+// traversal entry name must be rejected before any file is written.
+func TestRunsExtractZip_RejectsZipSlip(t *testing.T) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	fw, err := zw.Create("../x")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := fw.Write([]byte("x")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	if err := runsExtractZip(buf.Bytes(), t.TempDir()); err == nil {
+		t.Fatal("expected an error for a zip-slip entry")
+	}
+}
+
+// TestRunsExtractZip_DotDestination pins that "." keeps working with
+// filepath.IsLocal, regardless of how dir is spelled.
+func TestRunsExtractZip_DotDestination(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	fw, err := zw.Create("ok.txt")
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if _, err := fw.Write([]byte("ok")); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	if err := runsExtractZip(buf.Bytes(), "."); err != nil {
+		t.Fatalf("runsExtractZip(\".\"): %v", err)
+	}
+	if _, err := os.Stat("ok.txt"); err != nil {
+		t.Errorf("expected ok.txt to be extracted: %v", err)
+	}
+}
+
+func TestRunsExtractZip_RejectsBadCRC(t *testing.T) {
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	body := []byte("hello")
+	w, err := zw.CreateRaw(&zip.FileHeader{
+		Name:               "a.txt",
+		Method:             zip.Store,
+		CRC32:              1,
+		UncompressedSize64: uint64(len(body)),
+		CompressedSize64:   uint64(len(body)),
+	})
+	if err != nil {
+		t.Fatalf("CreateRaw: %v", err)
+	}
+	if _, err := w.Write(body); err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+	if err := runsExtractZip(buf.Bytes(), t.TempDir()); err == nil {
+		t.Fatal("expected a checksum error")
 	}
 }

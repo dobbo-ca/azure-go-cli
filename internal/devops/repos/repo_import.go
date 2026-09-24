@@ -2,8 +2,9 @@ package repos
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"net/url"
 	"os"
 	"strings"
@@ -195,7 +196,8 @@ func repoRandomEndpointName() string {
 	const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	b := make([]byte, 10)
 	for i := range b {
-		b[i] = chars[rand.Intn(len(chars))]
+		n, _ := rand.Int(rand.Reader, big.NewInt(int64(len(chars))))
+		b[i] = chars[n.Int64()]
 	}
 	return string(b)
 }

@@ -2,8 +2,9 @@ package aks
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -48,8 +49,9 @@ func Bastion(ctx context.Context, opts BastionOptions) error {
 	// Use random high port if not specified
 	port := opts.Port
 	if port == 0 {
-		rand.Seed(time.Now().UnixNano())
-		port = 49152 + rand.Intn(16384) // Ephemeral port range: 49152-65535
+		// crypto/rand.Int cannot fail since Go 1.24
+		n, _ := rand.Int(rand.Reader, big.NewInt(16384))
+		port = 49152 + int(n.Int64()) // Ephemeral port range: 49152-65535
 		logger.Debug("Using random port: %d", port)
 	}
 

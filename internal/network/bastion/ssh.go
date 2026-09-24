@@ -2,8 +2,9 @@ package bastion
 
 import (
 	"context"
+	"crypto/rand"
 	"fmt"
-	"math/rand"
+	"math/big"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -20,8 +21,9 @@ import (
 // SSH opens an SSH session to a VM through Azure Bastion
 func SSH(ctx context.Context, bastionName, resourceGroup, targetResourceID, authType, username string, bufferConfig BufferConfig) error {
 	// Use random high port for local tunnel
-	rand.Seed(time.Now().UnixNano())
-	localPort := 49152 + rand.Intn(16384) // Ephemeral port range: 49152-65535
+	// crypto/rand.Int cannot fail since Go 1.24
+	n, _ := rand.Int(rand.Reader, big.NewInt(16384))
+	localPort := 49152 + int(n.Int64()) // Ephemeral port range: 49152-65535
 
 	fmt.Printf("Opening SSH tunnel through Bastion %s...\n", bastionName)
 	fmt.Printf("Target: %s\n", targetResourceID)
