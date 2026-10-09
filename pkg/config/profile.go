@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -98,7 +99,7 @@ func Load() (*Profile, error) {
 	}
 
 	var profile Profile
-	if err := json.Unmarshal(data, &profile); err != nil {
+	if err := json.Unmarshal(bytes.TrimPrefix(data, []byte("\xef\xbb\xbf")), &profile); err != nil {
 		return nil, fmt.Errorf("failed to parse profile: %w", err)
 	}
 
