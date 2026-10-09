@@ -6,6 +6,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/vm/bootdiagnostics"
 	"github.com/cdobbyn/azure-go-cli/internal/vm/extension"
 	"github.com/cdobbyn/azure-go-cli/internal/vm/identity"
+	"github.com/cdobbyn/azure-go-cli/internal/vm/image"
 	"github.com/cdobbyn/azure-go-cli/internal/vm/runcommand"
 	"github.com/spf13/cobra"
 )
@@ -269,6 +270,7 @@ func NewVMCommand() *cobra.Command {
 		instanceViewCmd, listIPCmd, resizeOptionsCmd, listSizesCmd,
 		generalizeCmd, simulateEvictionCmd, captureCmd, waitCmd,
 		identity.NewIdentityCommand(),
+		image.NewImageCommand(),
 		extension.NewExtensionCommand(),
 		runcommand.NewRunCommandCommand(),
 		bootdiagnostics.NewBootDiagnosticsCommand(),

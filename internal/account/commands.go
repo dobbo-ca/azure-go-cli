@@ -58,12 +58,14 @@ func NewAccountCommand() *cobra.Command {
 			resource, _ := cmd.Flags().GetString("resource")
 			scopes, _ := cmd.Flags().GetStringSlice("scope")
 			subscription, _ := cmd.Flags().GetString("subscription")
-			return GetAccessToken(cmd, resource, scopes, subscription)
+			tenant, _ := cmd.Flags().GetString("tenant")
+			return GetAccessToken(cmd, resource, scopes, subscription, tenant)
 		},
 	}
 	getAccessTokenCmd.Flags().String("resource", "", "Azure resource endpoint in Microsoft Entra v1.0")
 	getAccessTokenCmd.Flags().StringSlice("scope", nil, "Space-separated scopes in Microsoft Entra v2.0")
 	getAccessTokenCmd.Flags().StringP("subscription", "s", "", "Subscription ID (optional)")
+	getAccessTokenCmd.Flags().StringP("tenant", "t", "", "Tenant ID for which the token is acquired")
 
 	listLocationsCmd := &cobra.Command{
 		Use:   "list-locations",

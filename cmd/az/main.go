@@ -24,9 +24,11 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/network"
 	"github.com/cdobbyn/azure-go-cli/internal/pim"
 	"github.com/cdobbyn/azure-go-cli/internal/postgres"
+	"github.com/cdobbyn/azure-go-cli/internal/provider"
 	"github.com/cdobbyn/azure-go-cli/internal/quota"
 	"github.com/cdobbyn/azure-go-cli/internal/resource"
 	"github.com/cdobbyn/azure-go-cli/internal/role"
+	"github.com/cdobbyn/azure-go-cli/internal/sig"
 	"github.com/cdobbyn/azure-go-cli/internal/storage"
 	"github.com/cdobbyn/azure-go-cli/internal/vm"
 	"github.com/cdobbyn/azure-go-cli/internal/vmss"
@@ -96,11 +98,13 @@ func main() {
 		pipelines.NewPipelinesCommand(),
 		storage.NewStorageCommand(),
 		postgres.NewPostgresCommand(),
+		provider.NewProviderCommand(),
 		keyvault.NewKeyVaultCommand(),
 		quota.NewQuotaCommand(),
 		repos.NewReposCommand(),
 		resource.NewResourceCommand(),
 		role.NewRoleCmd(),
+		sig.NewSigCommand(),
 		vm.NewVMCommand(),
 		vmss.NewVmssCommand(),
 	)
