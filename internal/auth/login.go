@@ -293,7 +293,7 @@ func promptForTenant(tenantInfos []azure.TenantInfo) (*azure.TenantInfo, error) 
 		Size:      10,
 	}
 
-	idx, _, err := prompt.Run()
+	idx, err := runSelect(&prompt)
 	if err != nil {
 		return nil, err
 	}
@@ -339,7 +339,7 @@ func promptForSubscriptionInTenant(tenant *azure.TenantInfo) (*config.Subscripti
 		Size:      10,
 	}
 
-	idx, _, err := prompt.Run()
+	idx, err := runSelect(&prompt)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +474,7 @@ func promptForSubscriptionFlatWithMFA(ctx context.Context, activeTenants []azure
 		Searcher:  searcher,
 	}
 
-	idx, _, err := prompt.Run()
+	idx, err := runSelect(&prompt)
 	if err != nil {
 		return nil, err
 	}
