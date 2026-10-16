@@ -14,6 +14,8 @@ var (
 	logger *slog.Logger
 	// Output is the writer for log messages (defaults to stderr)
 	Output io.Writer = os.Stderr
+	// Stdout is where Print and Println write.
+	Stdout io.Writer = os.Stdout
 	// level is the level the handler was last built with, so that changing the
 	// output writer doesn't silently reset it.
 	level = slog.LevelInfo
@@ -100,10 +102,10 @@ func Error(format string, args ...interface{}) {
 // Print writes directly to stdout (for user-facing messages like prompts)
 // This bypasses logging and is always shown
 func Print(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stdout, format, args...)
+	fmt.Fprintf(Stdout, format, args...)
 }
 
 // Println writes directly to stdout with newline (for user-facing messages)
 func Println(format string, args ...interface{}) {
-	fmt.Fprintf(os.Stdout, format+"\n", args...)
+	fmt.Fprintf(Stdout, format+"\n", args...)
 }
