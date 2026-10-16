@@ -108,6 +108,33 @@ func GetAccessToken(cmd *cobra.Command, resource string, scopes []string, subscr
 	return output.PrintJSON(cmd, response)
 }
 
+// resourceTypes maps --resource-type to the AzureCloud resource, as the
+// Python CLI does through its cloud endpoints.
+var resourceTypes = map[string]string{
+	"aad-graph": "https://graph.windows.net/",
+	"arm":       "https://management.core.windows.net/",
+	"batch":     "https://batch.core.windows.net/",
+	"data-lake": "https://datalake.azure.net/",
+	"media":     "https://rest.media.azure.net",
+	"ms-graph":  "https://graph.microsoft.com/",
+	"oss-rdbms": "https://ossrdbms-aad.database.windows.net",
+}
+
+// resolveResource turns --resource-type into a resource endpoint.
+func resolveResource(resource, resourceType string) (string, error) {
+	if resourceType == "" {
+		return resource, nil
+	}
+	if resource != "" {
+		return "", fmt.Errorf("please specify only one of resource and resource-type, not both")
+	}
+	r, ok := resourceTypes[resourceType]
+	if !ok {
+		return "", fmt.Errorf("invalid --resource-type %q: allowed values: aad-graph, arm, batch, data-lake, media, ms-graph, oss-rdbms", resourceType)
+	}
+	return r, nil
+}
+
 func checkTenantFlags(subscriptionID, tenantID string) error {
 	if subscriptionID != "" && tenantID != "" {
 		return fmt.Errorf("please specify only one of subscription and tenant, not both")
