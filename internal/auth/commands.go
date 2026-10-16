@@ -18,6 +18,7 @@ func NewLoginCommand() *cobra.Command {
 			// to stdout. On stderr, PowerShell wraps every one of them in a
 			// NativeCommandError and a successful login looks like a failure.
 			logger.SetOutput(os.Stdout)
+			defer useConsole()()
 
 			tenantSelection, _ := cmd.Flags().GetBool("tenant-selection")
 			subscription, _ := cmd.Flags().GetString("subscription")
