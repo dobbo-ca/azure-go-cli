@@ -299,6 +299,30 @@ Run with: sudo az aks install-cli`,
 	waitCmd.MarkFlagRequired("name")
 	waitCmd.MarkFlagRequired("resource-group")
 
+	updateCmd := &cobra.Command{
+		Use:   "update",
+		Short: "Update a managed Kubernetes cluster",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name, _ := cmd.Flags().GetString("name")
+			resourceGroup, _ := cmd.Flags().GetString("resource-group")
+			noWait, _ := cmd.Flags().GetBool("no-wait")
+			var opts UpdateOptions
+			opts.OutboundType, _ = cmd.Flags().GetString("outbound-type")
+			if cmd.Flags().Changed("load-balancer-managed-outbound-ip-count") {
+				count, _ := cmd.Flags().GetInt32("load-balancer-managed-outbound-ip-count")
+				opts.ManagedOutboundIPs = &count
+			}
+			return Update(context.Background(), cmd, name, resourceGroup, opts, noWait)
+		},
+	}
+	updateCmd.Flags().StringP("name", "n", "", "AKS cluster name")
+	updateCmd.Flags().StringP("resource-group", "g", "", "Resource group name")
+	updateCmd.Flags().String("outbound-type", "", "Outbound type: loadBalancer, userDefinedRouting, managedNATGateway, userAssignedNATGateway, none, block")
+	updateCmd.Flags().Int32("load-balancer-managed-outbound-ip-count", 0, "Number of managed outbound IPs for the load balancer (1-100)")
+	updateCmd.Flags().Bool("no-wait", false, "Do not wait for the operation to complete")
+	updateCmd.MarkFlagRequired("name")
+	updateCmd.MarkFlagRequired("resource-group")
+
 	cmd.AddCommand(
 		getCredsCmd,
 		bastionCmd,
@@ -314,6 +338,7 @@ Run with: sudo az aks install-cli`,
 		getUpgradesCmd,
 		rotateCertsCmd,
 		waitCmd,
+		updateCmd,
 		newGetTokenCmd(),
 		newConvertKubeconfigCmd(),
 		nodepool.NewNodePoolCommand(),
