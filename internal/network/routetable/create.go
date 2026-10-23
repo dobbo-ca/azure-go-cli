@@ -52,5 +52,9 @@ func Create(ctx context.Context, cmd *cobra.Command, name, resourceGroup, locati
 		return fmt.Errorf("failed to create route table: %w", err)
 	}
 
-	return output.PrintJSON(cmd, result.RouteTable)
+	shaped, err := pyShape(result.RouteTable)
+	if err != nil {
+		return err
+	}
+	return output.PrintJSON(cmd, shaped)
 }
