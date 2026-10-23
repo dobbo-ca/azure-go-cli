@@ -2,6 +2,7 @@ package activitylog
 
 import (
 	"context"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,12 @@ func NewActivityLogCommand() *cobra.Command {
 			resourceGroup, _ := cmd.Flags().GetString("resource-group")
 			resourceID, _ := cmd.Flags().GetString("resource-id")
 			correlationID, _ := cmd.Flags().GetString("correlation-id")
-			return List(context.Background(), cmd, resourceGroup, resourceID, correlationID, startTime, endTime)
+			offset, _ := cmd.Flags().GetString("offset")
+			start, end, err := timeRange(startTime, endTime, offset, time.Now())
+			if err != nil {
+				return err
+			}
+			return List(context.Background(), cmd, resourceGroup, resourceID, correlationID, start.Format(time.RFC3339), end.Format(time.RFC3339))
 		},
 	}
 	listCmd.Flags().String("start-time", "", "ISO8601 e.g. 2024-01-01T00:00:00Z")
@@ -29,8 +35,7 @@ func NewActivityLogCommand() *cobra.Command {
 	listCmd.Flags().StringP("resource-group", "g", "", "Filter by resource group name")
 	listCmd.Flags().String("resource-id", "", "Filter by resource ID")
 	listCmd.Flags().String("correlation-id", "", "Filter by correlation ID")
-	listCmd.MarkFlagRequired("start-time")
-	listCmd.MarkFlagRequired("end-time")
+	listCmd.Flags().String("offset", "6h", "Time range length in ##d##h format, used with --start-time, --end-time or now")
 
 	listCategoriesCmd := &cobra.Command{
 		Use:   "list-categories",
