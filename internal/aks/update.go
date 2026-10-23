@@ -37,6 +37,16 @@ func applyUpdate(mc *armcontainerservice.ManagedCluster, opts UpdateOptions) err
 			return fmt.Errorf("invalid --outbound-type %q, allowed values: %v", opts.OutboundType, armcontainerservice.PossibleOutboundTypeValues())
 		}
 		np.OutboundType = &t
+		// Python az drops profiles the new outbound type rejects.
+		if t != armcontainerservice.OutboundTypeLoadBalancer {
+			if opts.ManagedOutboundIPs != nil {
+				return fmt.Errorf("--load-balancer-managed-outbound-ip-count needs --outbound-type loadBalancer")
+			}
+			np.LoadBalancerProfile = nil
+		}
+		if t != armcontainerservice.OutboundTypeManagedNATGateway {
+			np.NatGatewayProfile = nil
+		}
 	}
 
 	if opts.ManagedOutboundIPs != nil {
