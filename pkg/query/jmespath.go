@@ -565,12 +565,7 @@ func collectHashKeys(node reflect.Value, collect bool, out *[][]string, hashCoun
 	}
 
 	if nodeType == comparatorType {
-		children := node.FieldByName("children")
-		if children.IsValid() && children.Kind() == reflect.Slice {
-			for i := 0; i < children.Len(); i++ {
-				collectHashKeys(children.Index(i), false, out, hashCount, unsafe)
-			}
-		}
+		scanDiscarded(node, hashCount, unsafe)
 		return
 	}
 
@@ -582,7 +577,7 @@ func collectHashKeys(node reflect.Value, collect bool, out *[][]string, hashCoun
 		}
 		collectHashKeys(children.Index(0), collect, out, hashCount, unsafe) // source
 		collectHashKeys(children.Index(1), collect, out, hashCount, unsafe) // projection RHS
-		collectHashKeys(children.Index(2), false, out, hashCount, unsafe)   // condition: discarded
+		scanDiscarded(children.Index(2), hashCount, unsafe) // condition: discarded
 		return
 	}
 
@@ -634,6 +629,29 @@ func collectHashKeys(node reflect.Value, collect bool, out *[][]string, hashCoun
 	}
 
 	*unsafe = true
+}
+
+// scanDiscarded walks a subtree whose value never reaches the output (a
+// comparator, a filter condition). Any node type is safe there, functions
+// included, but a hash still counts toward the "exactly one hash" rule and
+// makes the query unsafe.
+func scanDiscarded(node reflect.Value, hashCount *int, unsafe *bool) {
+	nodeType, ok := astNodeTypeInt(node)
+	if !ok {
+		return
+	}
+	if nodeType == multiSelectHashType {
+		*hashCount++
+		*unsafe = true
+		return
+	}
+	children := node.FieldByName("children")
+	if !children.IsValid() || children.Kind() != reflect.Slice {
+		return
+	}
+	for i := 0; i < children.Len(); i++ {
+		scanDiscarded(children.Index(i), hashCount, unsafe)
+	}
 }
 
 // rhsSelectsIntoValue reports whether the right-hand side of a pipe or

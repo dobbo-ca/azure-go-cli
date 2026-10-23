@@ -35,6 +35,9 @@ func TestMultiSelectHashKeyOrders(t *testing.T) {
 		{"field-prefixed projection hash", "foo[].{Name:name, Location:location}", [][]string{{"Name", "Location"}}},
 		{"dotted hash", "a.b.{Name:name, Location:location}", [][]string{{"Name", "Location"}}},
 		{"filter projection hash", "[?name=='a'].{Name:name, Location:location}", [][]string{{"Name", "Location"}}},
+		{"function in filter condition", "[?contains(operationName.value, 'routeTables')].{t:eventTimestamp, op:operationName.value, who:caller}", [][]string{{"t", "op", "who"}}},
+		{"function in comparator", "[?length(name) > `1`].{b:x, a:y}", [][]string{{"b", "a"}}},
+		{"unsafe: hash inside a function in a filter condition", "[?contains(keys({x:val}), 'x')].{b:x, a:y}", nil},
 		{"pipe then hash", "x | [].{Name:name, Location:location}", [][]string{{"Name", "Location"}}},
 		{"hash then pipe", "[].{Name:name, Location:location} | [0]", [][]string{{"Name", "Location"}}},
 
