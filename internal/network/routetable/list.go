@@ -49,5 +49,9 @@ func List(ctx context.Context, cmd *cobra.Command, resourceGroup string) error {
 		}
 	}
 
-	return output.PrintJSON(cmd, tables)
+	shaped, err := pyShape(tables)
+	if err != nil {
+		return err
+	}
+	return output.PrintJSON(cmd, shaped)
 }

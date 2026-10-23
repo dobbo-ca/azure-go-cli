@@ -68,5 +68,9 @@ func Update(ctx context.Context, cmd *cobra.Command, name, resourceGroup string,
 		return fmt.Errorf("failed to update route table: %w", err)
 	}
 
-	return output.PrintJSON(cmd, result.RouteTable)
+	shaped, err := pyShape(result.RouteTable)
+	if err != nil {
+		return err
+	}
+	return output.PrintJSON(cmd, shaped)
 }

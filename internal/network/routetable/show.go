@@ -32,5 +32,9 @@ func Show(ctx context.Context, cmd *cobra.Command, name, resourceGroup string) e
 		return fmt.Errorf("failed to get route table: %w", err)
 	}
 
-	return output.PrintJSON(cmd, resp.RouteTable)
+	shaped, err := pyShape(resp.RouteTable)
+	if err != nil {
+		return err
+	}
+	return output.PrintJSON(cmd, shaped)
 }
