@@ -27,7 +27,14 @@ func TestApplyUpdate(t *testing.T) {
 		t.Errorf("load balancer profile not updated: %+v", np.LoadBalancerProfile)
 	}
 
-	for _, bad := range []UpdateOptions{{}, {OutboundType: "bogus"}, {ManagedOutboundIPs: to.Ptr[int32](0)}} {
+	if err := applyUpdate(&mc, UpdateOptions{OutboundType: "userDefinedRouting"}); err != nil {
+		t.Fatal(err)
+	}
+	if np.LoadBalancerProfile != nil {
+		t.Errorf("load balancer profile kept for userDefinedRouting: %+v", np.LoadBalancerProfile)
+	}
+
+	for _, bad := range []UpdateOptions{{}, {OutboundType: "bogus"}, {ManagedOutboundIPs: to.Ptr[int32](0)}, {OutboundType: "userDefinedRouting", ManagedOutboundIPs: to.Ptr[int32](1)}} {
 		if err := applyUpdate(&armcontainerservice.ManagedCluster{}, bad); err == nil {
 			t.Errorf("expected error for %+v", bad)
 		}
