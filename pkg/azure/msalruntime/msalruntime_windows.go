@@ -248,8 +248,8 @@ var (
 //
 // The console window is used when this process owns it or when it is a
 // visible conhost window. Under a ConPTY host it is a hidden window owned by
-// the terminal, and a dialog parented there never delivers its completion to us - see window_windows.go. In that case we pump our own
-// hidden window instead.
+// the terminal, and a dialog parented there never delivers its completion to
+// us - see window_windows.go. In that case we pump our own hidden window.
 func resolveParentWindow(hwnd uintptr) (uintptr, func()) {
 	noop := func() {}
 	if hwnd != 0 {
