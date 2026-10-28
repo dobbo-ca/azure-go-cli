@@ -215,6 +215,21 @@ func (ap *authParams) setString(p *windows.LazyProc, value string) error {
 	return toError(errorHandle(r))
 }
 
+func (ap *authParams) setPair(key, value string) error {
+	k, err := utf16Ptr(key)
+	if err != nil {
+		return err
+	}
+	v, err := utf16Ptr(value)
+	if err != nil {
+		return err
+	}
+	r := callRet(procSetAdditionalParam, uintptr(ap.h), uintptr(unsafe.Pointer(k)), uintptr(unsafe.Pointer(v)))
+	runtime.KeepAlive(k)
+	runtime.KeepAlive(v)
+	return toError(errorHandle(r))
+}
+
 func (ap *authParams) release() { discard(release(procReleaseAuthParameters, uintptr(ap.h))) }
 
 // --- parent window --------------------------------------------------------
@@ -260,8 +275,9 @@ func resolveParentWindow(hwnd uintptr) (uintptr, func()) {
 
 // SignInInteractively signs a user in through the broker's UI and returns the
 // resulting token. parentHWND may be 0, in which case the console (or
-// desktop) window is used.
-func SignInInteractively(ctx context.Context, authority, clientID string, scopes []string, parentHWND uintptr) (*AuthResult, error) {
+// desktop) window is used. loginHint preselects an account; extra is sent
+// as in AcquireTokenSilently.
+func SignInInteractively(ctx context.Context, authority, clientID string, scopes []string, parentHWND uintptr, loginHint string, extra map[string]string) (*AuthResult, error) {
 	if err := Startup(); err != nil {
 		return nil, err
 	}
@@ -273,12 +289,17 @@ func SignInInteractively(ctx context.Context, authority, clientID string, scopes
 	if err := ap.setString(procSetRedirectUri, defaultRedirectURI); err != nil {
 		return nil, err
 	}
+	for k, v := range extra {
+		if err := ap.setPair(k, v); err != nil {
+			return nil, err
+		}
+	}
 
 	correlationID, err := utf16Ptr(uuid.NewString())
 	if err != nil {
 		return nil, err
 	}
-	accountHint, err := utf16Ptr("")
+	accountHint, err := utf16Ptr(loginHint)
 	if err != nil {
 		return nil, err
 	}
@@ -305,8 +326,9 @@ func SignInInteractively(ctx context.Context, authority, clientID string, scopes
 
 // AcquireTokenSilently gets a token for an account already known to the
 // broker, without any UI. On a StatusInteractionRequired error the caller
-// should fall back to SignInInteractively.
-func AcquireTokenSilently(ctx context.Context, account *Account, authority, clientID string, scopes []string) (*AuthResult, error) {
+// should fall back to SignInInteractively. extra goes out as additional
+// request parameters, e.g. token_type=ssh-cert.
+func AcquireTokenSilently(ctx context.Context, account *Account, authority, clientID string, scopes []string, extra map[string]string) (*AuthResult, error) {
 	if err := Startup(); err != nil {
 		return nil, err
 	}
@@ -318,6 +340,11 @@ func AcquireTokenSilently(ctx context.Context, account *Account, authority, clie
 		return nil, err
 	}
 	defer ap.release()
+	for k, v := range extra {
+		if err := ap.setPair(k, v); err != nil {
+			return nil, err
+		}
+	}
 
 	correlationID, err := utf16Ptr(uuid.NewString())
 	if err != nil {

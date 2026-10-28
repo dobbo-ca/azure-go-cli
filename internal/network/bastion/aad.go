@@ -13,11 +13,11 @@ import (
 	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
-	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/cache"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
 	"github.com/cdobbyn/azure-go-cli/internal/network/bastion/sshkeys"
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/cdobbyn/azure-go-cli/pkg/config"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
 
@@ -45,37 +45,26 @@ func GetAADSSHCertificate(ctx context.Context, cred azcore.TokenCredential, keyP
 		return "", fmt.Errorf("failed to create certificate request: %w", err)
 	}
 
+	return RequestAADSSHCertificate(ctx, cred, scope, certReq, cloudName)
+}
+
+// RequestAADSSHCertificate requests an SSH certificate for a prepared
+// request, letting callers choose the scope and JWK encoding.
+func RequestAADSSHCertificate(ctx context.Context, cred azcore.TokenCredential, scope string, certReq *sshkeys.CertificateRequest, cloudName string) (string, error) {
 	logger.Debug("Certificate request key_id: %s", certReq.KeyID)
 
-	// First get a regular access token to use for the SSH cert request
-	token, err := cred.GetToken(ctx, policy.TokenRequestOptions{
-		Scopes: []string{scope},
-	})
-	if err != nil {
-		return "", fmt.Errorf("failed to get access token: %w", err)
+	// Broker logins keep no refresh token in the MSAL cache file.
+	if b, ok := cred.(*azure.BrokerCredential); ok {
+		return b.SSHCertificate(ctx, scope, certReq.ReqCnf, certReq.KeyID)
 	}
 
-	// The token.Token should actually be the SSH certificate if the request
-	// was made with the SSH cert scope and the credential supports it
-	// However, the standard Azure SDK doesn't pass the custom data
-	// So we need a workaround: use the token as-is if it's an SSH cert format
-	// or make a custom request
-
-	// Check if token looks like an SSH certificate (starts with "ssh-rsa-cert")
-	if strings.HasPrefix(token.Token, "ssh-rsa-cert") || strings.Contains(token.Token, "ssh-rsa-cert") {
-		logger.Debug("Received SSH certificate from token request")
-		return token.Token, nil
-	}
-
-	logger.Debug("Standard token received, attempting custom SSH cert request...")
-
-	// Fall back to custom HTTP request with certificate request data
-	// This matches what the Azure CLI Python does with profile.get_msal_token(scopes, data)
-	return requestSSHCertWithToken(ctx, token.Token, scope, certReq, cloudName)
+	// Redeem the cached refresh token with the cert request data, as Python
+	// does with profile.get_msal_token(scopes, data).
+	return requestSSHCertWithToken(ctx, scope, certReq, cloudName)
 }
 
 // requestSSHCertWithToken uses MSAL to request an SSH certificate with JWK claims
-func requestSSHCertWithToken(ctx context.Context, bearerToken, scope string, certReq *sshkeys.CertificateRequest, cloudName string) (string, error) {
+func requestSSHCertWithToken(ctx context.Context, scope string, certReq *sshkeys.CertificateRequest, cloudName string) (string, error) {
 	logger.Debug("Requesting SSH certificate using MSAL with claims")
 
 	// Try to use MSAL with cached credentials. In the default login mode this
@@ -153,11 +142,19 @@ Then try again. The SSH certificate request requires access to your cached Azure
 		return "", fmt.Errorf("no cached accounts found. Please run 'az login' first")
 	}
 
-	logger.Debug("Found %d cached accounts, using first account", len(accounts))
+	logger.Debug("Found %d cached accounts", len(accounts))
+
+	// Use the default subscription's user and tenant, as Python does; the
+	// cache can hold other users too.
+	tenantID, userName, homeAccountID := activeLogin()
+	account, err := selectAccount(accounts, homeAccountID, userName, tenantID)
+	if err != nil {
+		return "", err
+	}
 
 	// Python MSAL passes SSH cert data as form parameters in the token request
 	// We replicate this by making a custom token request
-	certificate, err := requestSSHCertViaTokenEndpoint(ctx, cacheFile, accounts[0], scope, certReq, cloudName)
+	certificate, err := requestSSHCertViaTokenEndpoint(ctx, cacheFile, account, tenantID, scope, certReq, cloudName)
 	if err != nil {
 		return "", fmt.Errorf("failed to get SSH certificate: %w", err)
 	}
@@ -473,21 +470,12 @@ func getRefreshTokenFromCache(cacheFile string, account public.Account) (string,
 		}
 	}
 
-	// If no exact match, try to find any refresh token for the Azure CLI client
-	azureCliClientID := "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
-	for key, rt := range cache.RefreshToken {
-		if rt.ClientID == azureCliClientID {
-			logger.Debug("Found refresh token for Azure CLI client: %s", key)
-			return rt.Secret, nil
-		}
-	}
-
 	return "", fmt.Errorf("no refresh token found in cache for account %s", accountID)
 }
 
 // requestSSHCertViaTokenEndpoint makes a direct HTTP request to Azure's token endpoint
 // with SSH certificate data as form parameters. This replicates what Python MSAL does.
-func requestSSHCertViaTokenEndpoint(ctx context.Context, cacheFile string, account public.Account, scope string, certReq *sshkeys.CertificateRequest, cloudName string) (string, error) {
+func requestSSHCertViaTokenEndpoint(ctx context.Context, cacheFile string, account public.Account, tenantID, scope string, certReq *sshkeys.CertificateRequest, cloudName string) (string, error) {
 	logger.Debug("Making custom token request with SSH cert data as form parameters")
 
 	// Get the refresh token from the cache
@@ -498,8 +486,11 @@ func requestSSHCertViaTokenEndpoint(ctx context.Context, cacheFile string, accou
 
 	logger.Debug("Successfully extracted refresh token from cache")
 
-	// Token endpoint
-	tokenEndpoint := "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+	// The subscription's tenant, not /common, which resolves to the home tenant.
+	if tenantID == "" {
+		tenantID = "organizations"
+	}
+	tokenEndpoint := "https://login.microsoftonline.com/" + tenantID + "/oauth2/v2.0/token"
 
 	// Build form data with SSH certificate parameters
 	formData := url.Values{}
@@ -538,6 +529,9 @@ func requestSSHCertViaTokenEndpoint(ctx context.Context, cacheFile string, accou
 
 	if resp.StatusCode != http.StatusOK {
 		logger.Debug("Token response body: %s", string(respBody))
+		if needsInteraction(respBody) {
+			return "", fmt.Errorf("Conditional Access needs an interactive sign-in to issue the SSH certificate. Run 'az login --tenant %s' and complete any MFA prompt, then try again. Details: %s", tenantID, string(respBody))
+		}
 		return "", fmt.Errorf("token request failed with status %d: %s", resp.StatusCode, string(respBody))
 	}
 
@@ -586,4 +580,78 @@ func (f *fileCache) Replace(ctx context.Context, u cache.Unmarshaler, h cache.Re
 		return err
 	}
 	return u.Unmarshal(data)
+}
+
+// activeLogin returns the default subscription's tenant and user, and the
+// home account ID of our own login (empty in azure-cli mode).
+func activeLogin() (tenantID, userName, homeAccountID string) {
+	profile, err := config.Load()
+	if err != nil {
+		return "", "", ""
+	}
+	if rec := profile.AuthenticationRecord; rec != nil && azure.AuthMode() != azure.AuthModeAzureCLI {
+		homeAccountID = rec.HomeAccountID
+	}
+	for i, s := range profile.Subscriptions {
+		if s.IsDefault || i == 0 {
+			tenantID, userName = s.TenantID, s.User.Name
+		}
+		if s.IsDefault {
+			break
+		}
+	}
+	return tenantID, userName, homeAccountID
+}
+
+// selectAccount picks the cached account for the active login. MSAL lists
+// accounts in random order, so taking the first one is not safe.
+func selectAccount(accounts []public.Account, homeAccountID, userName, tenantID string) (public.Account, error) {
+	if homeAccountID != "" {
+		for _, a := range accounts {
+			if a.HomeAccountID == homeAccountID {
+				return a, nil
+			}
+		}
+	}
+	var byName []public.Account
+	for _, a := range accounts {
+		if userName != "" && strings.EqualFold(a.PreferredUsername, userName) {
+			byName = append(byName, a)
+		}
+	}
+	for _, a := range byName {
+		if a.Realm == tenantID {
+			return a, nil
+		}
+	}
+	if len(byName) > 0 {
+		return byName[0], nil
+	}
+	if homeAccountID == "" && userName == "" && len(accounts) == 1 {
+		return accounts[0], nil
+	}
+	return public.Account{}, fmt.Errorf("no cached sign-in found for %s. Please run 'az login' first", userName)
+}
+
+// needsInteraction reports a token error that only an interactive sign-in
+// can fix, such as an MFA or compliant-device Conditional Access policy.
+func needsInteraction(body []byte) bool {
+	var e struct {
+		Error      string `json:"error"`
+		Suberror   string `json:"suberror"`
+		ErrorCodes []int  `json:"error_codes"`
+	}
+	if json.Unmarshal(body, &e) != nil {
+		return false
+	}
+	if e.Error == "interaction_required" || e.Suberror == "basic_action" || e.Suberror == "additional_action" {
+		return true
+	}
+	for _, c := range e.ErrorCodes {
+		switch c {
+		case 50076, 50079, 50158, 53000, 53001, 53002, 53003:
+			return true
+		}
+	}
+	return false
 }

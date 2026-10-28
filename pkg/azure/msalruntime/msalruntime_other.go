@@ -16,12 +16,12 @@ func unsupported() error {
 func Startup() error { return unsupported() }
 
 // SignInInteractively always fails off Windows.
-func SignInInteractively(ctx context.Context, authority, clientID string, scopes []string, parentHWND uintptr) (*AuthResult, error) {
+func SignInInteractively(ctx context.Context, authority, clientID string, scopes []string, parentHWND uintptr, loginHint string, extra map[string]string) (*AuthResult, error) {
 	return nil, unsupported()
 }
 
 // AcquireTokenSilently always fails off Windows.
-func AcquireTokenSilently(ctx context.Context, account *Account, authority, clientID string, scopes []string) (*AuthResult, error) {
+func AcquireTokenSilently(ctx context.Context, account *Account, authority, clientID string, scopes []string, extra map[string]string) (*AuthResult, error) {
 	return nil, unsupported()
 }
 

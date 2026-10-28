@@ -125,6 +125,23 @@ func GetDefaultSubscription() (string, error) {
 	return "", fmt.Errorf("no subscription found")
 }
 
+// DefaultUserName returns the user of the default subscription, or "".
+func DefaultUserName() string {
+	profile, err := Load()
+	if err != nil {
+		return ""
+	}
+	for _, s := range profile.Subscriptions {
+		if s.IsDefault {
+			return s.User.Name
+		}
+	}
+	if len(profile.Subscriptions) > 0 {
+		return profile.Subscriptions[0].User.Name
+	}
+	return ""
+}
+
 // GetSubscription returns the subscription ID to use
 // If subscriptionIDOrName is provided, it looks up the subscription by ID or name
 // Otherwise, it returns the default subscription

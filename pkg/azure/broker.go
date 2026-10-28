@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore"
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
@@ -111,7 +112,7 @@ func (b *BrokerCredential) GetToken(ctx context.Context, opts policy.TokenReques
 
 func (b *BrokerCredential) token(ctx context.Context, scopes []string) (*msalruntime.AuthResult, error) {
 	if b.accountID != "" {
-		res, err := b.silent(ctx, scopes)
+		res, err := b.silent(ctx, scopes, nil)
 		if err == nil {
 			return res, nil
 		}
@@ -123,7 +124,11 @@ func (b *BrokerCredential) token(ctx context.Context, scopes []string) (*msalrun
 		return nil, fmt.Errorf("no broker account for silent token acquisition. Please run 'az login'")
 	}
 
-	res, err := msalruntime.SignInInteractively(ctx, b.authority, brokerClientID, scopes, 0)
+	return b.interactiveSignIn(ctx, scopes, "", nil)
+}
+
+func (b *BrokerCredential) interactiveSignIn(ctx context.Context, scopes []string, loginHint string, extra map[string]string) (*msalruntime.AuthResult, error) {
+	res, err := msalruntime.SignInInteractively(ctx, b.authority, brokerClientID, scopes, 0, loginHint, extra)
 	if err != nil {
 		return nil, err
 	}
@@ -134,13 +139,42 @@ func (b *BrokerCredential) token(ctx context.Context, scopes []string) (*msalrun
 	return res, nil
 }
 
-func (b *BrokerCredential) silent(ctx context.Context, scopes []string) (*msalruntime.AuthResult, error) {
+func (b *BrokerCredential) silent(ctx context.Context, scopes []string, extra map[string]string) (*msalruntime.AuthResult, error) {
 	account, err := msalruntime.ReadAccountByID(ctx, b.accountID)
 	if err != nil {
 		return nil, err
 	}
 	defer account.Close()
-	return msalruntime.AcquireTokenSilently(ctx, account, b.authority, brokerClientID, scopes)
+	return msalruntime.AcquireTokenSilently(ctx, account, b.authority, brokerClientID, scopes, extra)
+}
+
+// SSHCertificate gets an Entra ID SSH certificate for the key in reqCnf
+// through WAM, the same way MSAL Python does on Windows: silently first,
+// then interactively (e.g. for Conditional Access) with the same request.
+func (b *BrokerCredential) SSHCertificate(ctx context.Context, scope, reqCnf, keyID string) (string, error) {
+	if b.accountID == "" {
+		return "", fmt.Errorf("no broker account for silent token acquisition. Please run 'az login'")
+	}
+	scopes := []string{scope}
+	extra := map[string]string{
+		"token_type": "ssh-cert",
+		"req_cnf":    reqCnf,
+		"key_id":     keyID,
+	}
+	res, err := b.silent(ctx, scopes, extra)
+	if err != nil && interactionRequired(err) {
+		logger.Warning("Interactively acquiring token for scope '%s'. Continue the login in the sign-in window.", scope)
+		// Preselect the signed-in user, as azure-cli does with login_hint.
+		res, err = b.interactiveSignIn(ctx, scopes, config.DefaultUserName(), extra)
+	}
+	if err != nil {
+		return "", err
+	}
+	// WAM does not report the token type; cert blobs start with AAAA.
+	if !strings.HasPrefix(res.AccessToken, "AAAA") {
+		return "", fmt.Errorf("broker returned a token that is not an SSH certificate")
+	}
+	return res.AccessToken, nil
 }
 
 // interactionRequired reports whether the broker failed for a reason that
