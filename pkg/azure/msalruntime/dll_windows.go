@@ -89,6 +89,7 @@ var (
 	procReleaseAuthParameters = newProc("MSALRUNTIME_ReleaseAuthParameters")
 	procSetRequestedScopes    = newProc("MSALRUNTIME_SetRequestedScopes")
 	procSetRedirectUri        = newProc("MSALRUNTIME_SetRedirectUri")
+	procSetAdditionalParam    = newProc("MSALRUNTIME_SetAdditionalParameter")
 
 	procReleaseAsyncHandle   = newProc("MSALRUNTIME_ReleaseAsyncHandle")
 	procCancelAsyncOperation = newProc("MSALRUNTIME_CancelAsyncOperation")
