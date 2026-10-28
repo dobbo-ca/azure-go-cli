@@ -239,22 +239,24 @@ var (
 	kernel32             = windows.NewLazySystemDLL("kernel32.dll")
 	procGetAncestor      = user32.NewProc("GetAncestor")
 	procGetDesktopWindow = user32.NewProc("GetDesktopWindow")
+	procIsWindowVisible  = user32.NewProc("IsWindowVisible")
 	procGetConsoleWindow = kernel32.NewProc("GetConsoleWindow")
 )
 
 // resolveParentWindow returns a window for the broker to parent its dialog to,
 // plus a cleanup to run once the sign-in is over.
 //
-// The console window is used only when this process owns it. Under a ConPTY
-// host it belongs to the terminal, and a dialog parented there never delivers
-// its completion to us - see window_windows.go. In that case we pump our own
-// hidden window instead.
+// The console window is used when this process owns it or when it is a
+// visible conhost window. Under a ConPTY host it is a hidden window owned by
+// the terminal, and a dialog parented there never delivers its completion to
+// us - see window_windows.go. In that case we pump our own hidden window.
 func resolveParentWindow(hwnd uintptr) (uintptr, func()) {
 	noop := func() {}
 	if hwnd != 0 {
 		return hwnd, noop
 	}
-	if console := callRet(procGetConsoleWindow); windowIsOurs(console) {
+	// A ConPTY pseudo console window is hidden; a conhost one is not.
+	if console := callRet(procGetConsoleWindow); windowIsOurs(console) || callRet(procIsWindowVisible, console) != 0 {
 		const gaRootOwner = 3
 		if owner := callRet(procGetAncestor, console, gaRootOwner); windowIsOurs(owner) {
 			return owner, noop
