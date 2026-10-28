@@ -13,6 +13,7 @@ This project provides a performant alternative to the official Azure CLI, writte
 
 ### Compute
 - `az vm` - Manage virtual machines (list, show, start, stop, delete, list-skus)
+- `az ssh` - SSH into VMs and Arc servers with Entra ID certificates (vm, config, cert, arc); built in, no extension needed
 
 ### Networking
 - `az network vnet` - Manage virtual networks (CRUD operations)
@@ -149,6 +150,18 @@ az vm stop --name my-vm --resource-group my-rg
 
 # List available VM SKUs
 az vm list-skus --location eastus
+```
+
+### SSH with Entra ID
+
+```bash
+# SSH with a short-lived Entra ID certificate
+az ssh vm --ip 10.0.0.4
+az ssh vm -g my-rg -n my-vm
+
+# Write a config for plain ssh, MobaXterm, rsync, git
+az ssh config --ip 10.0.0.4 --file ./sshconfig
+ssh -F ./sshconfig 10.0.0.4
 ```
 
 ### Network Security

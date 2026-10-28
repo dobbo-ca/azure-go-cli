@@ -29,6 +29,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/resource"
 	"github.com/cdobbyn/azure-go-cli/internal/role"
 	"github.com/cdobbyn/azure-go-cli/internal/sig"
+	"github.com/cdobbyn/azure-go-cli/internal/ssh"
 	"github.com/cdobbyn/azure-go-cli/internal/storage"
 	"github.com/cdobbyn/azure-go-cli/internal/vm"
 	"github.com/cdobbyn/azure-go-cli/internal/vmss"
@@ -105,6 +106,7 @@ func main() {
 		resource.NewResourceCommand(),
 		role.NewRoleCmd(),
 		sig.NewSigCommand(),
+		ssh.NewSSHCommand(),
 		vm.NewVMCommand(),
 		vmss.NewVmssCommand(),
 	)
