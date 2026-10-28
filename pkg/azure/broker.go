@@ -124,7 +124,12 @@ func (b *BrokerCredential) token(ctx context.Context, scopes []string) (*msalrun
 		return nil, fmt.Errorf("no broker account for silent token acquisition. Please run 'az login'")
 	}
 
-	return b.interactiveSignIn(ctx, scopes, "", nil)
+	var extra map[string]string
+	if b.accountID == "" {
+		// Show the picker, not the Windows account.
+		extra = map[string]string{"prompt": "select_account"}
+	}
+	return b.interactiveSignIn(ctx, scopes, "", extra)
 }
 
 func (b *BrokerCredential) interactiveSignIn(ctx context.Context, scopes []string, loginHint string, extra map[string]string) (*msalruntime.AuthResult, error) {
