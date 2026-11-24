@@ -6,22 +6,13 @@ import (
 	"io"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/spf13/cobra"
 )
 
-func Download(ctx context.Context, accountName, containerName, blobName, filePath string) error {
-	cred, err := azure.GetCredential()
+func Download(ctx context.Context, cmd *cobra.Command, containerName, blobName, filePath string) error {
+	client, err := newClient(ctx, cmd)
 	if err != nil {
 		return err
-	}
-
-	// Build blob service URL
-	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", accountName)
-
-	client, err := azblob.NewClient(serviceURL, cred, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create blob client: %w", err)
 	}
 
 	fmt.Printf("Downloading blob '%s' to '%s'...\n", blobName, filePath)
@@ -30,7 +21,7 @@ func Download(ctx context.Context, accountName, containerName, blobName, filePat
 	blobClient := client.ServiceClient().NewContainerClient(containerName).NewBlobClient(blobName)
 	downloadResp, err := blobClient.DownloadStream(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("failed to download blob: %w", err)
+		return fmt.Errorf("failed to download blob: %w", storageError(err))
 	}
 	defer downloadResp.Body.Close()
 

@@ -5,22 +5,13 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
-	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/spf13/cobra"
 )
 
-func Upload(ctx context.Context, accountName, containerName, blobName, filePath string, overwrite bool) error {
-	cred, err := azure.GetCredential()
+func Upload(ctx context.Context, cmd *cobra.Command, containerName, blobName, filePath string, overwrite bool) error {
+	client, err := newClient(ctx, cmd)
 	if err != nil {
 		return err
-	}
-
-	// Build blob service URL
-	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", accountName)
-
-	client, err := azblob.NewClient(serviceURL, cred, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create blob client: %w", err)
 	}
 
 	// Open file
@@ -42,7 +33,7 @@ func Upload(ctx context.Context, accountName, containerName, blobName, filePath 
 	blobClient := client.ServiceClient().NewContainerClient(containerName).NewBlockBlobClient(blobName)
 	_, err = blobClient.UploadFile(ctx, file, nil)
 	if err != nil {
-		return fmt.Errorf("failed to upload blob: %w", err)
+		return fmt.Errorf("failed to upload blob: %w", storageError(err))
 	}
 
 	fmt.Printf("Successfully uploaded blob '%s'\n", blobName)
