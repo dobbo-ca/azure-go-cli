@@ -56,7 +56,7 @@ az login
 az pim activate group --name customer-beta-admins --justification "scheduled maintenance" --duration 90
 ```
 
-`az pim` inherits `AZ_SESSION` automatically through the shared MSAL credential — there is no PIM-specific flag for session isolation. See the [`AZ_SESSION` section](../README.md#isolated-sessions-with-az_session) of the main README for how the per-session profile and token cache files are named.
+`az pim` inherits `AZ_SESSION` automatically through the shared MSAL credential — there is no PIM-specific flag for session isolation. See the [`AZ_SESSION` section](user-guide.md#parallel-sign-ins-with-az_session) of the user guide for how the per-session profile and token cache files are named.
 
 `--set-subscription` is opt-in on `az pim activate resource`. When set, the activated subscription becomes the session's default by rewriting `~/.azure/azureProfile[-<session>].json` — so the next command in the same shell targets the customer environment without an extra `az account set`. Off by default to avoid surprising side-effects.
 

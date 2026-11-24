@@ -24,13 +24,19 @@ func NewLoginCommand() *cobra.Command {
 			subscription, _ := cmd.Flags().GetString("subscription")
 			tenant, _ := cmd.Flags().GetString("tenant")
 			useAzureCLI, _ := cmd.Flags().GetBool("use-azure-cli")
-			return Login(context.Background(), tenantSelection, subscription, tenant, useAzureCLI)
+			brokerFlag, _ := cmd.Flags().GetString("broker")
+			brokerMode, err := resolveBrokerMode(brokerFlag, os.Getenv(brokerEnvVar))
+			if err != nil {
+				return err
+			}
+			return Login(context.Background(), tenantSelection, subscription, tenant, useAzureCLI, brokerMode)
 		},
 	}
 
 	cmd.Flags().Bool("tenant-selection", false, "Always show tenant selection (useful with many subscriptions)")
 	cmd.Flags().StringP("tenant", "t", "", "Tenant ID or domain to sign in to (prompts for subscription unless --subscription is given)")
 	cmd.Flags().Bool("use-azure-cli", false, "Borrow tokens from the Python Azure CLI (az) instead of signing in directly - satisfies device-based Conditional Access via its WAM broker on Windows")
+	cmd.Flags().String("broker", "", "Windows WAM broker use: auto (WAM, browser retry if it fails), always (WAM only, no browser fallback), never (browser only). Default: auto, or never if "+brokerEnvVar+"=false")
 
 	return cmd
 }
