@@ -4,6 +4,21 @@ A fast, lightweight Azure CLI implementation in Go with 100+ commands for managi
 
 This project provides a performant alternative to the official Azure CLI, written in Go using the Azure SDK. It offers comprehensive resource management capabilities across compute, network, storage, database, and identity services.
 
+## Capabilities beyond the Python Azure CLI
+
+These features are not in the official Python Azure CLI, or work differently there. The [user guide](docs/user-guide.md) explains how to use each one, and [`docs/design/`](docs/design/) explains how each one is built.
+
+- **Parallel sign-ins with AZ_SESSION** — keep several terminals signed in to different tenants or accounts, each with its own profile and token cache (default sign-in mode), carried into the kubeconfig written by `az aks bastion`. [Guide](docs/user-guide.md#parallel-sign-ins-with-az_session)
+- **Tenant-first login** — `--tenant-selection` or more than 10 subscriptions asks for a tenant, then a subscription, and MFA tenants sign in inline instead of being skipped. [Guide](docs/user-guide.md#tenant-first-login)
+- **Reusing the Python CLI sign-in (--use-azure-cli)** — borrow tokens from the Python `az` to satisfy device-based Conditional Access. [Guide](docs/user-guide.md#reusing-the-python-cli-sign-in---use-azure-cli)
+- **Windows WAM broker** — WAM is used by default like Python, but this CLI bundles the broker DLL, lets you override it, and retries in the browser if WAM fails. [Guide](docs/user-guide.md#windows-wam-broker)
+- **Built-in kubelogin** — kubectl authenticates to AKS using this binary alone, with no external kubelogin. [Guide](docs/user-guide.md#built-in-kubelogin)
+- **Renaming kubeconfig identifiers** — rename every kubeconfig identifier (including users, and in `-f -` output) so same-named clusters can coexist. [Guide](docs/user-guide.md#renaming-kubeconfig-identifiers)
+- **AKS through Azure Bastion (az aks bastion)** — one command opens the Bastion tunnel, writes a kubeconfig and runs `--cmd` or prints an export line. [Guide](docs/user-guide.md#aks-through-azure-bastion-az-aks-bastion)
+- **Bastion tunnel tuning** — tunable buffers, 30s WebSocket ping/pong and token-exchange retry for `az network bastion tunnel/ssh` and `az aks bastion`. [Guide](docs/user-guide.md#bastion-tunnel-tuning)
+- **Privileged Identity Management (az pim)** — list eligible assignments and activate Azure resource roles and Entra group memberships, which the Python CLI has no command for. [Guide](docs/user-guide.md#privileged-identity-management-az-pim)
+- **Terraform-compatible az version** — `az version` reports a fixed `azure-cli` value for Terraform plus the real `azure-cli-go` version. [Guide](docs/user-guide.md#terraform-compatible-az-version)
+
 ## Features
 
 ### Authentication & Account Management
@@ -113,27 +128,12 @@ az account show
 
 #### Isolated sessions with `AZ_SESSION`
 
-Set the `AZ_SESSION` environment variable to scope the CLI's profile and
-MSAL token cache to a session-specific file, allowing multiple
-authenticated sessions to coexist without overwriting each other:
-
 ```bash
 export AZ_SESSION=customer-a
-az login                          # writes ~/.azure/azureProfile-customer-a.json
-                                  #     and ~/.azure/msal_token_cache-customer-a.json
-
-# In another terminal, a separate session
-export AZ_SESSION=customer-b
-az login                          # uses its own profile and token cache
+az login   # uses ~/.azure/azureProfile-customer-a.json and its own token cache
 ```
 
-When unset, the standard `~/.azure/azureProfile.json` and
-`~/.azure/msal_token_cache.json` are used.
-
-`az aks bastion` pins the active `AZ_SESSION` into the generated
-kubeconfig's `az aks get-token` exec env block, so `kubectl` subprocesses
-launched from any shell continue to use the right session profile/cache
-without needing the env var re-exported.
+See [Parallel sign-ins with AZ_SESSION](docs/user-guide.md#parallel-sign-ins-with-az_session) in the user guide.
 
 ### Virtual Machines
 
@@ -207,32 +207,12 @@ az aks bastion --name my-cluster --resource-group my-rg \
 
 #### Renaming kubeconfig identifiers
 
-When several clusters share the same name (e.g., customer deployments
-called `appcluster-prod-usw2-k8s-20251209`) the context name is ambiguous
-for internal staff. Two flags rewrite every identifier in the kubeconfig
-(`current-context`, `clusters[].name`, `contexts[].name`,
-`contexts[].context.cluster`, `contexts[].context.user`, `users[].name`)
-on both `az aks get-credentials` and `az aks bastion`:
-
 ```bash
-# Literal rename — replaces the cluster name throughout the kubeconfig
-az aks get-credentials -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
-  --context acme-prod
-
-# Regex rename — pattern is matched against the cluster name; the
-# replacement (with $1, $2 capture group support) is propagated to
-# every identifier field.
 az aks get-credentials -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
   --context-regex '^appcluster-(.+)$' --context-replacement 'acme-$1'
-# → context becomes acme-prod-usw2-k8s-20251209
-
-az aks bastion -n appcluster-prod-usw2-k8s-20251209 -g my-rg \
-  --bastion /subscriptions/.../bastionHosts/my-bastion \
-  --context-regex '^appcluster' --context-replacement 'acme'
 ```
 
-`--context-regex` and `--context-replacement` must be supplied together
-and cannot be combined with `--context`.
+See [Renaming kubeconfig identifiers](docs/user-guide.md#renaming-kubeconfig-identifiers) in the user guide.
 
 ### Privileged Identity Management (PIM)
 
@@ -251,7 +231,7 @@ az pim activate group --name customer-acme-admins \
   --justification "Customer hand-off" --duration 120
 ```
 
-See [`docs/pim.md`](docs/pim.md) for the full guide: the four-form `--scope` resolver, `--set-subscription` behavior, validation pre-flight, AZ_SESSION integration for multi-customer workflows, the vendored upstream attribution, and current limitations.
+See [`docs/pim.md`](docs/pim.md) and the [user guide](docs/user-guide.md#privileged-identity-management-az-pim) for the full guide: the four-form `--scope` resolver, `--set-subscription` behavior, validation pre-flight, AZ_SESSION integration for multi-customer workflows, the vendored upstream attribution, and current limitations.
 
 ### Key Vault Secrets
 
@@ -356,6 +336,7 @@ Commit prefixes:
 - **Size**: Smaller binary (~50MB vs 1GB+ for Python-based CLI)
 - **Subset of commands**: Focuses on most commonly used resource management operations
 - **Compatible**: Uses same Azure SDK and authentication as official CLI
+- **Extra capabilities**: See [Capabilities beyond the Python Azure CLI](#capabilities-beyond-the-python-azure-cli)
 
 ## Requirements
 
