@@ -188,6 +188,8 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 		allSubscriptions[i].IsDefault = (allSubscriptions[i].ID == selectedSub.ID)
 	}
 
+	config.SetUser(allSubscriptions, authRecord.Username)
+
 	// Save profile with authentication record and subscriptions
 	profile := config.Profile{
 		Subscriptions: allSubscriptions,

@@ -24,6 +24,9 @@ func List(cmd *cobra.Command) error {
 	profile, err := config.Load()
 	var defaultSubID string
 	if err == nil {
+		if profile.AuthenticationRecord != nil {
+			config.SetUser(allSubscriptions, profile.AuthenticationRecord.Username)
+		}
 		for _, sub := range profile.Subscriptions {
 			if sub.IsDefault {
 				defaultSubID = sub.ID
@@ -101,6 +104,9 @@ func Set(subscriptionID string) error {
 	}
 
 	// Update subscriptions list with fresh data and new default
+	if profile.AuthenticationRecord != nil {
+		config.SetUser(allSubscriptions, profile.AuthenticationRecord.Username)
+	}
 	profile.Subscriptions = allSubscriptions
 
 	if err := config.Save(profile); err != nil {
