@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/cdobbyn/azure-go-cli/internal/account"
@@ -45,6 +47,10 @@ var (
 )
 
 func main() {
+	os.Exit(run(newRootCmd(), os.Args[1:], os.Stderr))
+}
+
+func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "az",
 		Short: "Azure CLI implemented in Go",
@@ -111,8 +117,49 @@ func main() {
 		vmss.NewVmssCommand(),
 	)
 
-	if err := rootCmd.Execute(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
+	return rootCmd
+}
+
+// runError marks an error returned by a command's RunE, as opposed to a
+// flag, argument, or unknown-command error raised by cobra itself.
+type runError struct{ err error }
+
+func (e runError) Error() string { return e.err.Error() }
+func (e runError) Unwrap() error { return e.err }
+
+// markRunErrors wraps every RunE in the tree so run can tell a command's own
+// failure apart from a usage mistake.
+func markRunErrors(c *cobra.Command) {
+	if runE := c.RunE; runE != nil {
+		c.RunE = func(cmd *cobra.Command, args []string) error {
+			if err := runE(cmd, args); err != nil {
+				return runError{err}
+			}
+			return nil
+		}
 	}
+	for _, sub := range c.Commands() {
+		markRunErrors(sub)
+	}
+}
+
+// run executes root and prints any error exactly once. Cobra's own error and
+// usage printing is silenced; usage is shown only for usage mistakes (bad
+// flags, bad arguments, missing required flags), never for runtime errors.
+func run(root *cobra.Command, args []string, stderr io.Writer) int {
+	root.SilenceErrors = true
+	root.SilenceUsage = true
+	markRunErrors(root)
+	root.SetArgs(args)
+
+	cmd, err := root.ExecuteC()
+	if err == nil {
+		return 0
+	}
+	fmt.Fprintf(stderr, "Error: %v\n", err)
+	var re runError
+	if !errors.As(err, &re) && cmd != nil {
+		fmt.Fprint(stderr, cmd.UsageString())
+	}
+	return 1
 }
