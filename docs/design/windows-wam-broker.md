@@ -16,20 +16,44 @@ The differences are behavioural:
 |---|---|---|
 | Broker unavailable | falls back to the browser with a logged warning | falls back to the browser silently (debug log only) |
 | Broker sign-in fails | error returned, no browser retry | one retry in the browser flow; both errors reported if that also fails |
+| Turning WAM off | `core.enable_broker_on_windows=false` (config or `AZURE_CORE_ENABLE_BROKER_ON_WINDOWS`) | `az login --broker never`, or the same env var |
+| Forbidding the browser fallback | not possible | `az login --broker always` |
 | Choosing the broker DLL | none | `AZ_MSALRUNTIME_DLL`, or `msalruntime.dll` next to `az.exe` |
 | DLL source | pip package | embedded in the Windows binary, extracted on first use |
+
+## Broker mode (`--broker`)
+
+`internal/auth/broker_mode.go`:
+
+- `resolveBrokerMode(flag, env)`: the `--broker` flag (`auto|always|never`)
+  wins; otherwise `AZURE_CORE_ENABLE_BROKER_ON_WINDOWS` (Python's env form of
+  `core.enable_broker_on_windows`, same boolean spellings as configparser:
+  false/0/no/off -> `never`, true/1/yes/on -> `auto`); otherwise `auto`.
+  Invalid values are errors.
+- `chooseAuthMode(useAzureCLI, mode, startBroker)`: azure-cli mode never starts
+  the broker and rejects `always`; `never` returns the default mode without
+  calling `startBroker` (the DLL is not loaded or extracted); `auto` falls back
+  silently when `StartBroker` fails; `always` returns an error (Windows-only
+  message on other platforms, otherwise wrapping the startup error).
+- `Login` calls `chooseAuthMode` before deleting the profile, so a failed
+  `--broker always` leaves the existing login intact. The browser retry below
+  is skipped when the mode is `always`.
+- The mode itself is not persisted; the resulting `AuthMode` is, as before.
 
 ## Data flow
 
 ```
 az login (internal/auth/login.go)
-  azure.BrokerAvailable()  -> msalruntime.Startup()
-      |-- no: browser flow (silent, debug log only)
-      `-- yes: authMode = broker
+  chooseAuthMode(--broker / env)
+      |-- never: browser flow, broker not loaded
+      `-- auto/always: azure.StartBroker() -> msalruntime.Startup()
+            |-- fail, auto: browser flow (silent, debug log only)
+            |-- fail, always: error, profile untouched
+            `-- ok: authMode = broker
   azure.BaseCredential()   -> BrokerCredential (interactive, tenant "organizations")
   DiscoverAllSubscriptionsWithAuth
       |-- ok: save profile (AuthMode, BrokerAccountID)
-      `-- error, authMode==broker, ctx not cancelled:
+      `-- error, authMode==broker, mode != always, ctx not cancelled:
             SetAuthMode(default); BaseCredential() -> MSAL interactive; rediscover
             both fail -> "<browser err> (Windows sign-in also failed: <broker err>)"
 ```
@@ -48,7 +72,7 @@ login, so this fallback turns a DLL load failure into a normal "please run
   `context.Background()`, so the guard never fires today. Ctrl-C ends the
   process via default SIGINT handling. A WAM sign-in that hits the 10 minute
   `defaultOperationTimeout` does fall through to the browser retry.
-- `pkg/azure/broker.go`: `BrokerAvailable`, `BrokerCredential` (silent first,
+- `pkg/azure/broker.go`: `StartBroker`, `BrokerCredential` (silent first,
   interactive only for the initial sign-in credential), `ErrBrokerUnavailable`
   (alias of `msalruntime.ErrNotAvailable`), `BrokerAccountID`.
 - `pkg/azure/msalruntime/dll_windows.go`: DLL resolution, `Startup`, proc binding.
@@ -93,8 +117,10 @@ bound export, call `MSALRUNTIME_Startup`. Any failure wraps `ErrNotAvailable`.
   loses a race, the winner's file is used.
 - **Resolve all exports in `Startup`.** `LazyProc.Call` panics on a missing
   export; an older DLL must disable the broker, not crash the process.
-- **Any broker failure retries in the browser, once.** Covers WAM dialogs that
-  die on broken VDI images. Not gated on error type. The retry runs the browser
+- **Any broker failure retries in the browser, once** (mode `auto`). Covers WAM
+  dialogs that die on broken VDI images. Not gated on error type. Mode
+  `always` exists for tenants where only a WAM sign-in satisfies Conditional
+  Access, so a browser retry would only produce a confusing second failure. The retry runs the browser
   flow with the default auth mode, so the saved profile is a normal MSAL one.
 - **Only the initial credential is interactive.** Tenant-scoped credentials are
   silent so discovering N tenants cannot open N windows.
@@ -126,5 +152,7 @@ bound export, call `MSALRUNTIME_Startup`. Any failure wraps `ErrNotAvailable`.
 - `pkg/azure/msalruntime/extract_windows_test.go`: extraction.
 - `pkg/azure/msalruntime/window_windows_test.go`: pump window ownership/close.
 - `pkg/azure/msalruntime/types_test.go`: status values, error unwrapping.
+- `internal/auth/broker_mode_test.go`: flag/env resolution and the mode
+  decision (`chooseAuthMode`) with a fake broker start.
 - No test covers the login fallback in `internal/auth/login.go`
   (`login_test.go` tests subscription and tenant filtering only).

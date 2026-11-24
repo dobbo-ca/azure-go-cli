@@ -13,7 +13,18 @@ import (
 
 const subscriptionThreshold = 10
 
-func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, tenantFilter string, useAzureCLI bool) error {
+func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, tenantFilter string, useAzureCLI bool, brokerMode string) error {
+	// Pick the sign-in mode before touching the profile, so a --broker always
+	// failure leaves the existing login intact.
+	setAuthMode, err := chooseAuthMode(useAzureCLI, brokerMode, azure.StartBroker)
+	if err != nil {
+		return err
+	}
+	authMode := setAuthMode
+	if authMode == azure.AuthModeDefault {
+		authMode = ""
+	}
+
 	// Clear any existing profile to ensure fresh login
 	// This prevents old subscription data from persisting if the new login fails.
 	// In azure-cli mode, keep msal_token_cache.json - it's the Python Azure
@@ -27,18 +38,6 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 		_ = err
 	}
 
-	authMode := ""
-	setAuthMode := azure.AuthModeDefault
-	if useAzureCLI {
-		authMode = azure.AuthModeAzureCLI
-		setAuthMode = azure.AuthModeAzureCLI
-	} else if azure.BrokerAvailable() {
-		// Windows: sign in through the WAM broker. Otherwise fall through to
-		// the browser flow silently - a broker that won't start is normal, not
-		// an error worth showing.
-		authMode = azure.AuthModeBroker
-		setAuthMode = azure.AuthModeBroker
-	}
 	azure.SetAuthMode(setAuthMode)
 
 	if useAzureCLI {
@@ -68,9 +67,10 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 	// 3. For each tenant, get subscriptions silently using cached tokens
 	logger.Info("Retrieving tenants and subscriptions for the selection...")
 	tenantInfos, authRecord, err := azure.DiscoverAllSubscriptionsWithAuth(ctx, cred)
-	if err != nil && authMode == azure.AuthModeBroker && ctx.Err() == nil {
+	if err != nil && authMode == azure.AuthModeBroker && brokerMode != BrokerAlways && ctx.Err() == nil {
 		// Any broker failure (unavailable, or a WAM dialog that dies on a
-		// broken VDI image) gets one retry in the browser flow.
+		// broken VDI image) gets one retry in the browser flow, unless
+		// --broker always forbids it.
 		logger.Debug("Broker sign-in failed, retrying with browser sign-in: %v", err)
 		logger.Println("Windows sign-in failed, opening a browser instead.")
 		logger.Println("")

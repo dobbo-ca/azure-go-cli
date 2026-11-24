@@ -17,7 +17,7 @@ import (
 // AuthModeBroker signs in through the Windows WAM broker (msalruntime.dll),
 // which satisfies device-based Conditional Access without a browser. Only
 // reachable on Windows, where the DLL is embedded in the binary. See
-// BrokerAvailable.
+// StartBroker.
 const AuthModeBroker = "broker"
 
 // brokerClientID is the Azure CLI's client ID, as used everywhere else here.
@@ -46,15 +46,15 @@ func BrokerAccountID() string {
 	return profile.BrokerAccountID
 }
 
-// BrokerAvailable reports whether the WAM broker can be used. Failure is the
-// normal case (non-Windows, or Windows without msalruntime.dll), so it's
-// logged at debug level and the caller silently falls back to the browser flow.
-func BrokerAvailable() bool {
+// StartBroker loads the WAM broker and reports why it can't be used. Failure
+// is the normal case (non-Windows, or Windows without msalruntime.dll), so
+// it's logged at debug level; az login decides whether that is fatal.
+func StartBroker() error {
 	if err := msalruntime.Startup(); err != nil {
-		logger.Debug("WAM broker unavailable, using browser sign-in: %v", err)
-		return false
+		logger.Debug("WAM broker unavailable: %v", err)
+		return err
 	}
-	return true
+	return nil
 }
 
 // BrokerCredential acquires tokens through the WAM broker. Silent acquisition

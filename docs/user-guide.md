@@ -132,11 +132,19 @@ Design: [docs/design/login-use-azure-cli.md](design/login-use-azure-cli.md)
 
 On Windows, `az login` signs in through the Windows broker (WAM), which satisfies device-based Conditional Access without a browser. The broker DLL is bundled in the Windows build, and if broker sign-in fails the login retries in your browser.
 
-**How it differs from the Python Azure CLI.** Python also uses WAM by default on Windows, so WAM itself is not new. The differences: if WAM fails, Python reports the failure, whereas this CLI retries once in the browser and reports both errors if that also fails. Python has no setting to choose the broker DLL; this CLI lets you point at one with `AZ_MSALRUNTIME_DLL`. Python lets you turn WAM off with `az config set core.enable_broker_on_windows=false`; this CLI has no off switch (use `az login --use-azure-cli`, or point `AZ_MSALRUNTIME_DLL` at a non-existent path, to avoid it).
+**How it differs from the Python Azure CLI.** Python also uses WAM by default on Windows, so WAM itself is not new. The differences: if WAM fails, Python reports the failure, whereas this CLI retries once in the browser and reports both errors if that also fails. Python has no setting to choose the broker DLL; this CLI lets you point at one with `AZ_MSALRUNTIME_DLL`. Python lets you turn WAM off with `az config set core.enable_broker_on_windows=false`; this CLI honors the same setting through its environment variable `AZURE_CORE_ENABLE_BROKER_ON_WINDOWS=false`, and adds `az login --broker` to choose per login: `never` (browser only) or `always` (WAM only, no browser fallback). Python has no way to forbid the browser fallback.
 
 ```powershell
-# Normal sign-in: uses WAM automatically on Windows
+# Normal sign-in: uses WAM automatically on Windows (same as --broker auto)
 az login
+
+# Never use WAM: browser sign-in only, msalruntime.dll is not loaded
+az login --broker never
+$env:AZURE_CORE_ENABLE_BROKER_ON_WINDOWS = 'false'   # same, for every login
+
+# WAM only: fail instead of falling back to the browser
+# (for tenants whose Conditional Access only a WAM sign-in satisfies)
+az login --broker always
 
 # Pin a specific broker DLL (full path) for this session
 $env:AZ_MSALRUNTIME_DLL = 'C:\tools\msalruntime\msalruntime.dll'
@@ -153,12 +161,14 @@ az login --debug
 
 If WAM fails you will see `Windows sign-in failed, opening a browser instead.` and the browser sign-in starts. If that also fails, the error ends with `(Windows sign-in also failed: ...)`.
 
+The mode you sign in with is saved in your profile, so later commands keep it until the next `az login`. `--broker` overrides `AZURE_CORE_ENABLE_BROKER_ON_WINDOWS`. With `--broker always`, a missing or broken broker stops the login before your existing profile is cleared; on macOS and Linux it fails with `the WAM broker is only available on Windows`. `--broker always` cannot be combined with `--use-azure-cli`.
+
 Notes:
 
 - DLL lookup order: `AZ_MSALRUNTIME_DLL`, then `msalruntime.dll` beside the `az` executable, then the copy embedded in the binary (extracted on first use to `%LOCALAPPDATA%\az-go\msalruntime\<hash>\`).
-- An invalid `AZ_MSALRUNTIME_DLL` path, or a DLL missing required exports, makes the broker unavailable. Login then uses the browser without a message unless you pass `--debug`.
-- macOS and Linux builds have no broker and always use the browser flow.
-- The WAM window works under Windows Terminal, VS Code and conhost. WAM sign-in times out after 10 minutes, after which the login falls back to the browser.
+- An invalid `AZ_MSALRUNTIME_DLL` path, or a DLL missing required exports, makes the broker unavailable. Login then uses the browser without a message unless you pass `--debug` (or fails, with `--broker always`).
+- macOS and Linux builds have no broker and always use the browser flow; `--broker never` and `auto` have no effect there.
+- The WAM window works under Windows Terminal, VS Code and conhost. WAM sign-in times out after 10 minutes, after which the login falls back to the browser (or fails, with `--broker always`).
 - `az login --use-azure-cli` is a separate mode that borrows tokens from the Python CLI and skips this path.
 
 Design: [docs/design/windows-wam-broker.md](design/windows-wam-broker.md)
