@@ -47,11 +47,8 @@ func defaultDeps() deps {
 			}
 			return fetchMe(ctx, cred)
 		},
-		localZone: func() string {
-			link, _ := os.Readlink("/etc/localtime")
-			return ianaFromTZ(os.Getenv("TZ"), link)
-		},
-		getenv: os.Getenv,
+		localZone: localIANAZone,
+		getenv:    os.Getenv,
 	}
 }
 

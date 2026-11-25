@@ -165,3 +165,17 @@ func TestDetailPasteIntoAttachPath(t *testing.T) {
 		t.Fatalf("paste ignored:\n%s", view(a))
 	}
 }
+
+func TestDetailWrapsLongBody(t *testing.T) {
+	fc := newFake()
+	a := detailApp(t, fc, nil)
+	a.width = 40
+	d := a.top().(*detailScreen)
+	d.vp.SetWidth(40)
+	d.vp.SetContent(renderThread(fc.tickets["T1"], []*armsupport.CommunicationDetails{
+		comm("c", "Hello, we have investigated your issue and found that the root cause is X. Please apply Y.", armsupport.CommunicationDirectionOutbound, 9),
+	}))
+	if v := view(a); !strings.Contains(v, "apply Y.") {
+		t.Fatalf("body clipped:\n%s", v)
+	}
+}

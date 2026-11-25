@@ -114,8 +114,12 @@ func createTicket(ctx context.Context, c Client, name string, td armsupport.Tick
 		if !workspaceNamePattern.MatchString(ws) {
 			ws = newName()
 		}
+		// A workspace left over from a rejected earlier attempt must not block a retry.
 		if err := c.CheckName(ctx, ws, typeFileWorkspaces); err != nil {
-			return td, err
+			ws = newName()
+			if err := c.CheckName(ctx, ws, typeFileWorkspaces); err != nil {
+				return td, err
+			}
 		}
 		if _, err := c.CreateFileWorkspace(ctx, ws); err != nil {
 			return td, err

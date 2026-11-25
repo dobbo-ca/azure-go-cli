@@ -61,7 +61,9 @@ var severities = []string{
 }
 
 func newDetailScreen(name string) *detailScreen {
-	return &detailScreen{name: name, input: newInput(), vp: viewport.New()}
+	vp := viewport.New()
+	vp.SoftWrap = true
+	return &detailScreen{name: name, input: newInput(), vp: vp}
 }
 
 func (d *detailScreen) init(a *app) tea.Cmd {
