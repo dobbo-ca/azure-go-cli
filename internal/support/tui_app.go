@@ -105,8 +105,14 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.err = m.err
 			return a, nil
 		}
-		// same scope: rebuild the client only, so an in-progress draft survives
-		a.client, a.err = a.d.newClient(a.scope)
+		// same scope: rebuild the client only, so an in-progress draft survives;
+		// on failure keep the old client so the screens never see a nil one
+		c, err := a.d.newClient(a.scope)
+		if err != nil {
+			a.err = err
+			return a, nil
+		}
+		a.client, a.err = c, nil
 		return a, a.top().init(a)
 	}
 	if gen, name, err, ok := detailMsg(msg); ok && gen == a.gen {

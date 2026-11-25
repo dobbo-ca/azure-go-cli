@@ -1,6 +1,7 @@
 package support
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -101,5 +102,16 @@ func TestReauthKeepsReplyDraft(t *testing.T) {
 	drive(t, a, reauthDoneMsg{})
 	if _, ok := a.top().(*replyScreen); !ok || !strings.Contains(view(a), "Long carefully written reply") {
 		t.Fatalf("draft lost, top = %T\n%s", a.top(), view(a))
+	}
+}
+
+func TestReauthClientErrorKeepsScreen(t *testing.T) {
+	fc := newFake()
+	a := replyApp(t, fc, nil)
+	drive(t, a, keys("tab", "draft text")...)
+	fc.newClientErr = errors.New("profile gone")
+	drive(t, a, reauthDoneMsg{})
+	if _, ok := a.top().(*replyScreen); !ok || a.client == nil || a.err == nil {
+		t.Fatalf("top = %T, client nil = %v, err = %v", a.top(), a.client == nil, a.err)
 	}
 }
