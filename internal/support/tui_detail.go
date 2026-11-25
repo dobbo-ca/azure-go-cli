@@ -262,6 +262,11 @@ func (d *detailScreen) key(a *app, m tea.KeyPressMsg) tea.Cmd {
 			d.err, d.mode = nil, modeSeverity
 			d.sev = newPicker(severities, "")
 			return nil
+		case "r":
+			if d.ticket != nil {
+				return a.push(newReplyScreen(*d.ticket))
+			}
+			return nil
 		case "a":
 			d.err = nil
 			if deref(d.props().FileWorkspaceName) == "" {
