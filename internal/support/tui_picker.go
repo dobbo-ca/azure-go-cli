@@ -51,7 +51,7 @@ func (p *picker) update(msg tea.Msg) (picked int, done bool, cmd tea.Cmd) {
 			p.cursor = max(p.cursor-1, 0)
 			return 0, false, nil
 		case "down":
-			p.cursor = min(p.cursor+1, len(p.shown)-1)
+			p.cursor = max(min(p.cursor+1, len(p.shown)-1), 0)
 			return 0, false, nil
 		case "enter":
 			if p.cursor < len(p.shown) {

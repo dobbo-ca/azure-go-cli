@@ -15,3 +15,13 @@ func TestPickerFilters(t *testing.T) {
 		t.Fatalf("picked %d done %v", got, done)
 	}
 }
+
+func TestPickerNoMatchDownEnter(t *testing.T) {
+	p := newPicker([]string{"a", "b"}, "")
+	for _, m := range keys("zzzz", "down") {
+		p.update(m)
+	}
+	if _, done, _ := p.update(keys("enter")[0]); done {
+		t.Fatal("picked with no matches")
+	}
+}

@@ -164,6 +164,12 @@ func (d *detailScreen) update(a *app, msg tea.Msg) tea.Cmd {
 		d.vp.SetHeight(a.bodyHeight())
 	case tea.KeyPressMsg:
 		return d.key(a, m)
+	case tea.PasteMsg:
+		if d.mode == modeAttach || d.mode == modePhone {
+			var cmd tea.Cmd
+			d.input, cmd = d.input.Update(m)
+			return cmd
+		}
 	}
 	return nil
 }

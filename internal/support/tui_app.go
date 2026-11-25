@@ -110,6 +110,10 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, a.setScope(a.scope)
 	}
+	if _, ok := msg.(ticketsLoadedMsg); ok {
+		// the list is always the bottom screen; it may be covered while loading
+		return a, a.stack[0].update(a, msg)
+	}
 	return a, a.top().update(a, msg)
 }
 

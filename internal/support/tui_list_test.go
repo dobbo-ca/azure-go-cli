@@ -92,3 +92,21 @@ func TestListIgnoresStaleFilterResults(t *testing.T) {
 		t.Fatal("stale filter result shown")
 	}
 }
+
+func TestListDownEnterOnEmptyDoesNotPanic(t *testing.T) {
+	a := listApp(t, newFake())
+	drive(t, a, keys("down", "enter")...)
+}
+
+func TestListResultReachesCoveredScreen(t *testing.T) {
+	fc := newFake()
+	fc.tickets["x"] = ticket("x", "Covered load", 5)
+	a := newTestApp(t, fc)
+	cmd := a.Init()
+	drive(t, a, keys("t")...) // scope screen covers the list before the load lands
+	driveCmd(t, a, cmd)
+	drive(t, a, keys("esc")...)
+	if !strings.Contains(view(a), "Covered load") {
+		t.Fatalf("list stuck:\n%s", view(a))
+	}
+}

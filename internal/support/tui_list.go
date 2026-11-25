@@ -99,6 +99,13 @@ func (l *listScreen) update(a *app, msg tea.Msg) tea.Cmd {
 		sort.SliceStable(l.tickets, func(i, j int) bool { return created(l.tickets[i]).After(created(l.tickets[j])) })
 	case tea.KeyPressMsg:
 		return l.key(a, m)
+	case tea.PasteMsg:
+		if l.searching {
+			var cmd tea.Cmd
+			l.search, cmd = l.search.Update(m)
+			l.cursor = 0
+			return cmd
+		}
 	}
 	return nil
 }
@@ -110,7 +117,7 @@ func (l *listScreen) key(a *app, m tea.KeyPressMsg) tea.Cmd {
 		l.cursor = max(l.cursor-1, 0)
 		return nil
 	case "down":
-		l.cursor = min(l.cursor+1, len(l.visible())-1)
+		l.cursor = max(min(l.cursor+1, len(l.visible())-1), 0)
 		return nil
 	case "enter":
 		if rows := l.visible(); l.cursor < len(rows) {
