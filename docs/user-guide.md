@@ -18,6 +18,8 @@ Each section links to a design document in [`docs/design/`](design/) that explai
   - [Bastion tunnel tuning](#bastion-tunnel-tuning)
 - Access
   - [Privileged Identity Management (az pim)](#privileged-identity-management-az-pim)
+- Support
+  - [Support tickets (az support)](#support-tickets-az-support)
 - Tooling
   - [Terraform-compatible az version](#terraform-compatible-az-version)
 
@@ -375,6 +377,64 @@ Notes and limitations:
 Full guide: [docs/pim.md](pim.md)
 
 Design: [docs/design/az-pim.md](design/az-pim.md)
+
+
+
+## Support tickets (az support)
+
+`az support` opens a full-screen terminal UI to list, read, reply to and create Azure support tickets for any subscription or tenant. It also has flag commands with the same names and flags as the Python `support` extension, for scripts.
+
+Python's `support` extension has no interactive mode. Filing a ticket there means finding the service and problem type GUIDs yourself; here you search a local list by typing words from your title.
+
+```bash
+az support                       # TUI on a terminal; help otherwise
+az support tui                   # force the TUI (errors without a terminal)
+az support --tenant <tenant-id>  # start at tenant level
+az support --subscription <id>   # start in another subscription
+az support --no-input            # never start the TUI
+```
+
+The starting scope is the active profile's default subscription, or the one from `--subscription` or `--tenant`. `t` on the list switches scope, including tenant-level tickets (no subscription) and other tenants you can reach. Switching never changes the profile's default subscription.
+
+Keys:
+
+- List: `n` new ticket, `f` open/all (last 30 days), `t` scope, `/` search, `enter` open, `ctrl+r` reload, `q` quit.
+- Detail: `r` reply, `a` attach a file, `s` close or reopen, `v` severity, `ctrl+r` reload, `esc` back.
+- Reply: `tab` next field, `ctrl+s` send, `esc` cancel.
+- New ticket: `tab` next field, `ctrl+n` next step, `esc` back one step (values are kept), `enter` picks from a list or moves on. On the contact step, `enter` on country, time zone and language opens a picker, and `space` toggles the contact method.
+- Everywhere: `ctrl+l` signs in to the current tenant (MFA), `ctrl+c` quits.
+
+Contact details are pre-filled so the common case is a few keystrokes: name, email and country from Microsoft Graph `/me` (`givenName`, `surname`, `mail`, `usageLocation`); the time zone from your local zone; the language from `LC_ALL`, `LC_MESSAGES` or `LANG`. If Graph fails (a guest tenant, for example) the name and email start empty, the rest is still filled, and the flow continues.
+
+Limits:
+
+- A Basic support plan can only file billing, subscription-management and quota tickets. The API error is shown verbatim for anything else.
+- Quota tickets are not filed in the TUI. Use `az quota` or `--quota-change-*` on the flag command.
+- Critical and highest critical impact need a plan that allows them, and a phone number.
+- Every ticket this CLI creates gets a file workspace named after the ticket, so attachments work later. Tickets made elsewhere may have none; the UI says so instead of failing.
+
+Flag examples:
+
+```bash
+az support in-subscription tickets list
+az support in-subscription tickets show --ticket-name <guid>
+az support in-subscription communication create --ticket-name <guid> \
+  --communication-name <guid> --communication-sender me@example.com \
+  --communication-subject "Re: ..." --communication-body "..."
+az support in-subscription file upload --file-workspace-name <guid> --file-path ./log.txt
+az support services problem-classifications list --service-name <service-guid>
+az support no-subscription tickets list
+```
+
+Differences from the Python extension:
+
+- Flags that take a list of objects (`--secondary-consent`, `--quota-change-requests`) take JSON, or `@file`.
+- `--contact-additional-emails` is a repeatable or comma-separated list.
+- `tickets create` creates a file workspace unless `--file-workspace` / `--file-workspace-name` is given.
+- Blocked upload extensions match case-insensitively (`RUN.EXE` is rejected).
+- List commands have `--max-items` but no `--next-token`.
+
+Design: [docs/design/az-support.md](design/az-support.md)
 
 
 

@@ -17,6 +17,7 @@ These features are not in the official Python Azure CLI, or work differently the
 - **AKS through Azure Bastion (az aks bastion)** — one command opens the Bastion tunnel, writes a kubeconfig and runs `--cmd` or prints an export line. [Guide](docs/user-guide.md#aks-through-azure-bastion-az-aks-bastion)
 - **Bastion tunnel tuning** — tunable buffers, 30s WebSocket ping/pong and token-exchange retry for `az network bastion tunnel/ssh` and `az aks bastion`. [Guide](docs/user-guide.md#bastion-tunnel-tuning)
 - **Privileged Identity Management (az pim)** — list eligible assignments and activate Azure resource roles and Entra group memberships, which the Python CLI has no command for. [Guide](docs/user-guide.md#privileged-identity-management-az-pim)
+- **Support tickets (az support)** — a full-screen TUI to file, read and reply to Azure support tickets for any subscription or tenant, with local service search and pre-filled contact details; flag commands match the Python `support` extension. [Guide](docs/user-guide.md#support-tickets-az-support)
 - **Terraform-compatible az version** — `az version` reports a fixed `azure-cli` value for Terraform plus the real `azure-cli-go` version. [Guide](docs/user-guide.md#terraform-compatible-az-version)
 
 ## Features
