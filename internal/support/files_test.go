@@ -67,3 +67,18 @@ func TestUploadFileChunks(t *testing.T) {
 		require.Len(t, raw, want)
 	}
 }
+
+func TestFileWorkspaceCreateBadName(t *testing.T) {
+	f := newFake()
+	_, err := runCmd(t, f, "in-subscription", "file-workspace", "create", "--file-workspace-name", "a/b")
+	require.Error(t, err)
+	require.Empty(t, f.calls)
+}
+
+func TestFileUploadPrintsPythonMessage(t *testing.T) {
+	p := writeFile(t, "notes.txt", 10)
+	f := newFake()
+	out, err := runCmd(t, f, "no-subscription", "file", "upload", "--file-workspace-name", "ws", "--file-path", p)
+	require.NoError(t, err)
+	require.Equal(t, "File 'notes.txt' has been successfully uploaded.\n", out)
+}
