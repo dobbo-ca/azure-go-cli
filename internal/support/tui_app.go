@@ -232,27 +232,3 @@ func runTUI(cmd *cobra.Command) error {
 	_, err = tea.NewProgram(a, tea.WithContext(ctx)).Run()
 	return err
 }
-
-// listScreen is a placeholder until the ticket list lands.
-type listScreen struct{}
-
-func newListScreen() *listScreen          { return &listScreen{} }
-func (l *listScreen) init(a *app) tea.Cmd { return nil }
-func (l *listScreen) view(a *app) string  { return "tickets" }
-func (l *listScreen) update(a *app, msg tea.Msg) tea.Cmd {
-	if k, ok := msg.(tea.KeyPressMsg); ok {
-		switch k.String() {
-		case "t":
-			p, err := a.d.loadProfile()
-			if err != nil {
-				a.err = err
-				return nil
-			}
-			return a.push(newScopeScreen(p))
-		case "q":
-			a.quitting = true
-			return tea.Quit
-		}
-	}
-	return nil
-}
