@@ -49,6 +49,9 @@ func main() {
 		Use:   "az",
 		Short: "Azure CLI implemented in Go",
 		Long:  "A lightweight Azure CLI implementation in Go with core authentication and management commands",
+		// main prints the error once; don't let cobra print it plus usage too.
+		SilenceErrors: true,
+		SilenceUsage:  true,
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			// Enable debug logging if --debug flag is set
 			debug, _ := cmd.Flags().GetBool("debug")
