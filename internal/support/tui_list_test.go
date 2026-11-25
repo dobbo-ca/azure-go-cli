@@ -110,3 +110,13 @@ func TestListResultReachesCoveredScreen(t *testing.T) {
 		t.Fatalf("list stuck:\n%s", view(a))
 	}
 }
+
+func TestListNewWithoutClientDoesNotPanic(t *testing.T) {
+	fc := newFake()
+	fc.newClientErr = errors.New("AADSTS50076: MFA required")
+	a := listApp(t, fc)
+	drive(t, a, keys("n")...)
+	if !strings.Contains(view(a), "ctrl+l") {
+		t.Fatalf("view:\n%s", view(a))
+	}
+}

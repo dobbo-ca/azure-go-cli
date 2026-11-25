@@ -106,8 +106,8 @@ func TestCreateResourceStepTenantLevelSkipped(t *testing.T) {
 	a.scope = Scope{TenantID: "t2"}
 	toService(t, a, "Cannot connect")
 	drive(t, a, keys("enter")...)
-	if c.step != stepSeverity {
-		t.Fatalf("step %v", c.step)
+	if c.row.ServiceName != vmGUID || c.step != stepSeverity {
+		t.Fatalf("row %q step %v", c.row.ServiceName, c.step)
 	}
 }
 

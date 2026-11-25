@@ -149,6 +149,9 @@ func (l *listScreen) key(a *app, m tea.KeyPressMsg) tea.Cmd {
 	case "ctrl+r":
 		return l.init(a)
 	case "n":
+		if a.client == nil {
+			return nil
+		}
 		return a.push(newCreateScreen())
 	case "t":
 		p, err := a.d.loadProfile()

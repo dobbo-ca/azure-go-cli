@@ -88,6 +88,7 @@ type catalogLoadedMsg struct {
 
 type resourcesLoadedMsg struct {
 	gen  int
+	svc  string
 	rows []resourceRef
 	err  error
 }
@@ -154,7 +155,7 @@ func (c *createScreen) update(a *app, msg tea.Msg) tea.Cmd {
 		}
 		return nil
 	case resourcesLoadedMsg:
-		if m.gen != a.gen {
+		if m.gen != a.gen || c.step != stepResource || m.svc != c.row.ServiceName {
 			return nil
 		}
 		c.resLoading, c.err, c.resources = false, m.err, m.rows
@@ -602,11 +603,11 @@ func (c *createScreen) enter(a *app, step createStep) tea.Cmd {
 	case stepResource:
 		c.resManual, c.resources, c.resLoading = false, nil, true
 		c.resPick = newPicker(c.resourceItems(), "")
-		s, types, gen := a.scope, c.row.ResourceTypes, a.gen
+		s, types, gen, svc := a.scope, c.row.ResourceTypes, a.gen, c.row.ServiceName
 		list := a.d.listResources
 		return func() tea.Msg {
 			rows, err := list(a.ctx, s, types)
-			return resourcesLoadedMsg{gen, rows, err}
+			return resourcesLoadedMsg{gen, svc, rows, err}
 		}
 	}
 	return nil
