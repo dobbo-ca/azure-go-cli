@@ -26,7 +26,7 @@ jobs:
     with:
       mode: ${{ inputs.mode || 'auto' }}
       dry-run: ${{ inputs.dry_run || false }}
-      go-version: '1.23'
+      go-version: '1.27.4'
       binary-name: az
       cmd-path: ./cmd/az/main.go
       version-pkg: main
