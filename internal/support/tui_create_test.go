@@ -2,6 +2,8 @@ package support
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -133,5 +135,127 @@ func TestCreateEscKeepsValues(t *testing.T) {
 	drive(t, a, keys("esc")...)
 	if c.step != stepDescribe || c.title.Value() != "Cannot connect" {
 		t.Fatalf("step %v title %q", c.step, c.title.Value())
+	}
+}
+
+func adaMe(a *app) {
+	a.d.fetchMe = func(context.Context, Scope) (me, error) {
+		return me{GivenName: "Ada", Surname: "Lovelace", Mail: "ada@x.com", UsageLocation: "GB"}, nil
+	}
+	a.d.localZone = func() string { return "Europe/London" }
+	a.d.getenv = func(k string) string {
+		if k == "LANG" {
+			return "fr_FR.UTF-8"
+		}
+		return ""
+	}
+}
+
+// toSeverity runs the describe and service steps for the billing row.
+func toSeverity(t *testing.T, a *app) {
+	t.Helper()
+	toService(t, a, "Billing question - please ignore")
+	drive(t, a, keys("enter")...)
+}
+
+func TestCreateEndToEnd(t *testing.T) {
+	stubName(t, "11111111-1111-1111-1111-111111111111")
+	fc := createFake()
+	a, c := createApp(t, fc)
+	adaMe(a)
+	toSeverity(t, a)
+	drive(t, a, keys("enter")...)  // severity Minimal -> contact
+	drive(t, a, keys("ctrl+n")...) // contact -> attach
+	drive(t, a, keys("ctrl+n")...) // attach -> review
+	if c.step != stepReview {
+		t.Fatalf("step %v err %v", c.step, c.err)
+	}
+	drive(t, a, keys("enter")...)
+	tk, ok := fc.tickets["11111111-1111-1111-1111-111111111111"]
+	if !ok {
+		t.Fatalf("no ticket; calls %v", fc.calls)
+	}
+	p := tk.Properties
+	cp := p.ContactDetails
+	if deref(p.Title) != "Billing question - please ignore" || deref(p.Description) != "testing" ||
+		*p.Severity != armsupport.SeverityLevelMinimal || *p.AdvancedDiagnosticConsent != armsupport.ConsentYes || p.Require24X7Response != nil ||
+		deref(p.ServiceID) != "/providers/Microsoft.Support/services/"+billingGUID ||
+		deref(p.FileWorkspaceName) != "11111111-1111-1111-1111-111111111111" ||
+		deref(cp.FirstName) != "Ada" || deref(cp.LastName) != "Lovelace" || deref(cp.PrimaryEmailAddress) != "ada@x.com" ||
+		deref(cp.Country) != "GBR" || deref(cp.PreferredTimeZone) != "GMT Standard Time" || deref(cp.PreferredSupportLanguage) != "fr-fr" ||
+		*cp.PreferredContactMethod != armsupport.PreferredContactMethodEmail {
+		t.Fatalf("stored %+v contact %+v", p, cp)
+	}
+	d, ok := a.top().(*detailScreen)
+	if !ok || d.name != "11111111-1111-1111-1111-111111111111" {
+		t.Fatalf("top = %T", a.top())
+	}
+}
+
+func TestCreateCriticalNeedsPhone(t *testing.T) {
+	a, c := createApp(t, createFake())
+	adaMe(a)
+	toSeverity(t, a)
+	drive(t, a, keys("down", "down", "ctrl+n", "ctrl+n")...)
+	if !strings.Contains(view(a), "Phone number is required") || c.step != stepContact {
+		t.Fatalf("step %v view:\n%s", c.step, view(a))
+	}
+	if p := c.ticketDetails(a).Properties; p.Require24X7Response == nil || !*p.Require24X7Response {
+		t.Fatal("Require24X7Response not set")
+	}
+}
+
+func TestCreateGraphFailureStillPrefillsLocale(t *testing.T) {
+	a, c := createApp(t, createFake())
+	adaMe(a)
+	a.d.fetchMe = func(context.Context, Scope) (me, error) { return me{}, errString("403 forbidden") }
+	toSeverity(t, a)
+	drive(t, a, keys("enter")...)
+	if c.first.Value() != "" || c.zone != "GMT Standard Time" || c.lang != "fr-fr" || !strings.Contains(view(a), "Could not read your profile from Microsoft Graph: 403 forbidden") {
+		t.Fatalf("first %q zone %q lang %q\n%s", c.first.Value(), c.zone, c.lang, view(a))
+	}
+}
+
+func TestCreateTechnicalResourceInRequest(t *testing.T) {
+	a, c := createApp(t, createFake())
+	adaMe(a)
+	vmID := "/subscriptions/s2/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm1"
+	a.d.listResources = func(context.Context, Scope, []string) ([]resourceRef, error) {
+		return []resourceRef{{ID: vmID, Name: "vm1", Type: "Microsoft.Compute/virtualMachines"}}, nil
+	}
+	toService(t, a, "Cannot connect to VM after reboot")
+	drive(t, a, keys("enter", "vm1", "enter")...)
+	if got := c.ticketDetails(a).Properties.TechnicalTicketDetails; got == nil || deref(got.ResourceID) != vmID {
+		t.Fatalf("technical = %+v", got)
+	}
+}
+
+func TestCreateSubmitErrorStaysOnReview(t *testing.T) {
+	fc := createFake()
+	a, c := createApp(t, fc)
+	adaMe(a)
+	fc.err["CreateTicket"] = errString("plan does not allow")
+	toSeverity(t, a)
+	drive(t, a, keys("enter", "ctrl+n", "ctrl+n", "enter")...)
+	if c.step != stepReview || !strings.Contains(view(a), "Error: plan does not allow") {
+		t.Fatalf("step %v\n%s", c.step, view(a))
+	}
+	drive(t, a, keys("enter")...)
+	if n := countCalls(fc, "CreateTicket"); n != 2 {
+		t.Fatalf("CreateTicket calls = %d", n)
+	}
+}
+
+func TestCreateAttachValidatedBeforeSubmit(t *testing.T) {
+	a, c := createApp(t, createFake())
+	adaMe(a)
+	path := filepath.Join(t.TempDir(), "a.bat")
+	if err := os.WriteFile(path, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	toSeverity(t, a)
+	drive(t, a, keys("enter", "ctrl+n", path, "ctrl+n")...)
+	if !strings.Contains(view(a), "The file extension is not supported.") || c.step != stepAttach {
+		t.Fatalf("step %v\n%s", c.step, view(a))
 	}
 }
