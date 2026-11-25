@@ -378,7 +378,7 @@ func AuthenticateForTenant(ctx context.Context, tenantID string) (azcore.TokenCr
 	scopes := []string{"https://management.azure.com/.default"}
 
 	// Interactive auth targeting this specific tenant — will trigger MFA
-	result, err := client.AcquireTokenInteractive(ctx, scopes, interactiveOpts()...)
+	result, err := acquireInteractive(ctx, client, scopes)
 	if err != nil {
 		return nil, fmt.Errorf("interactive authentication failed for tenant %s: %w", tenantID, err)
 	}

@@ -8,6 +8,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/policy"
 	"github.com/Azure/azure-sdk-for-go/sdk/azidentity"
 	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/public"
+	"github.com/cdobbyn/azure-go-cli/pkg/logger"
 )
 
 // MSALInteractiveCredential uses MSAL's AcquireTokenInteractive for initial auth
@@ -26,6 +27,35 @@ func interactiveOpts() []public.AcquireInteractiveOption {
 		return nil
 	}
 	return []public.AcquireInteractiveOption{public.WithOpenURL(interactiveOpenURL)}
+}
+
+// useDeviceCode switches interactive sign-in to the device code flow
+// (`az login --use-device-code`), for hosts with no usable browser.
+var useDeviceCode bool
+
+// SetDeviceCode makes interactive sign-in use the device code flow instead of
+// opening a browser.
+func SetDeviceCode(enabled bool) {
+	useDeviceCode = enabled
+}
+
+// DeviceCode reports whether interactive sign-in uses the device code flow.
+func DeviceCode() bool {
+	return useDeviceCode
+}
+
+// acquireInteractive signs the user in through the browser, or through the
+// device code flow when SetDeviceCode(true) was called.
+func acquireInteractive(ctx context.Context, client public.Client, scopes []string) (public.AuthResult, error) {
+	if !useDeviceCode {
+		return client.AcquireTokenInteractive(ctx, scopes, interactiveOpts()...)
+	}
+	dc, err := client.AcquireTokenByDeviceCode(ctx, scopes)
+	if err != nil {
+		return public.AuthResult{}, err
+	}
+	logger.Println(dc.Result.Message)
+	return dc.AuthenticationResult(ctx)
 }
 
 // NewMSALInteractiveCredential creates the base credential for "organizations" authentication
@@ -59,7 +89,7 @@ func NewMSALInteractiveCredential() (*MSALInteractiveCredential, error) {
 func (m *MSALInteractiveCredential) Authenticate(ctx context.Context) (azidentity.AuthenticationRecord, error) {
 	// AcquireTokenInteractive opens browser for user authentication
 	// This is equivalent to Python CLI's acquire_token_interactive
-	result, err := m.client.AcquireTokenInteractive(ctx, m.scopes, interactiveOpts()...)
+	result, err := acquireInteractive(ctx, m.client, m.scopes)
 	if err != nil {
 		return azidentity.AuthenticationRecord{}, fmt.Errorf("interactive authentication failed: %w", err)
 	}
@@ -93,7 +123,7 @@ func (m *MSALInteractiveCredential) GetToken(ctx context.Context, opts policy.To
 	}
 
 	// If silent fails, fall back to interactive
-	result, err := m.client.AcquireTokenInteractive(ctx, m.scopes, interactiveOpts()...)
+	result, err := acquireInteractive(ctx, m.client, m.scopes)
 	if err != nil {
 		return azcore.AccessToken{}, fmt.Errorf("failed to acquire token: %w", err)
 	}

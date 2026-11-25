@@ -13,7 +13,15 @@ import (
 
 const subscriptionThreshold = 10
 
-func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, tenantFilter string, useAzureCLI bool, brokerMode string) error {
+func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, tenantFilter string, useAzureCLI, useDeviceCode bool, brokerMode string) error {
+	// The device code flow signs in without the WAM broker.
+	if useDeviceCode {
+		if brokerMode == BrokerAlways {
+			return fmt.Errorf("--broker always cannot be combined with --use-device-code")
+		}
+		brokerMode = BrokerNever
+	}
+
 	// Pick the sign-in mode before touching the profile, so a --broker always
 	// failure leaves the existing login intact.
 	setAuthMode, err := chooseAuthMode(useAzureCLI, brokerMode, azure.StartBroker)
@@ -39,6 +47,7 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 	}
 
 	azure.SetAuthMode(setAuthMode)
+	azure.SetDeviceCode(useDeviceCode)
 
 	if useAzureCLI {
 		logger.Println("Borrowing tokens from the Azure CLI (az). Make sure you are already signed in with 'az login'.")
@@ -46,7 +55,7 @@ func Login(ctx context.Context, forceTenantSelection bool, subscriptionFilter, t
 	} else if authMode == azure.AuthModeBroker {
 		logger.Println("Signing in with Windows (WAM broker).")
 		logger.Println("")
-	} else {
+	} else if !useDeviceCode {
 		logger.Println("A web browser has been opened at https://login.microsoftonline.com/organizations/oauth2/v2.0/authorize.")
 		logger.Println("Please continue the login in the web browser.")
 		logger.Println("If no web browser is available or if the web browser fails to open, use device code flow with `az login --use-device-code`.")
@@ -357,8 +366,10 @@ func authenticateMFATenant(ctx context.Context, tenant *azure.TenantInfo) (*azur
 
 	logger.Println("")
 	logger.Println("Tenant '%s' requires additional authentication (MFA).", tenantName)
-	logger.Println("Opening browser for authentication...")
-	logger.Println("")
+	if !azure.DeviceCode() {
+		logger.Println("Opening browser for authentication...")
+		logger.Println("")
+	}
 
 	cred, err := azure.AuthenticateForTenant(ctx, tenant.TenantID)
 	if err != nil {
