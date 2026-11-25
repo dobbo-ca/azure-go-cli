@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/support/armsupport/v2"
 )
@@ -24,6 +25,7 @@ type fakeClient struct {
 	problems   map[string][]*armsupport.ProblemClassification
 	chats      map[string][]*armsupport.ChatTranscriptDetails
 
+	mu         sync.Mutex // guards calls (loadCatalog calls the fake concurrently)
 	calls      []string
 	lastFilter string
 	takenNames map[string]bool
@@ -46,7 +48,9 @@ func newFake() *fakeClient {
 }
 
 func (f *fakeClient) rec(method string, args ...string) error {
+	f.mu.Lock()
 	f.calls = append(f.calls, method+":"+strings.Join(args, "/"))
+	f.mu.Unlock()
 	return f.err[method]
 }
 
