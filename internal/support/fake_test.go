@@ -101,7 +101,7 @@ func (f *fakeClient) GetTicket(_ context.Context, name string) (armsupport.Ticke
 	return t, nil
 }
 
-func (f *fakeClient) ListTickets(_ context.Context, filter string) ([]*armsupport.TicketDetails, error) {
+func (f *fakeClient) ListTickets(_ context.Context, filter string, max int) ([]*armsupport.TicketDetails, error) {
 	f.lastFilter = filter
 	if err := f.rec("ListTickets", filter); err != nil {
 		return nil, err
@@ -111,7 +111,7 @@ func (f *fakeClient) ListTickets(_ context.Context, filter string) ([]*armsuppor
 		t := t
 		out = append(out, &t)
 	}
-	return out, nil
+	return truncate(out, max), nil
 }
 
 func (f *fakeClient) UpdateTicket(_ context.Context, name string, u armsupport.UpdateSupportTicket) (armsupport.TicketDetails, error) {
@@ -168,12 +168,12 @@ func (f *fakeClient) GetCommunication(_ context.Context, ticket, name string) (a
 	return armsupport.CommunicationDetails{}, fmt.Errorf("communication %s not found", name)
 }
 
-func (f *fakeClient) ListCommunications(_ context.Context, ticket, filter string) ([]*armsupport.CommunicationDetails, error) {
+func (f *fakeClient) ListCommunications(_ context.Context, ticket, filter string, max int) ([]*armsupport.CommunicationDetails, error) {
 	f.lastFilter = filter
 	if err := f.rec("ListCommunications", ticket, filter); err != nil {
 		return nil, err
 	}
-	return f.comms[ticket], nil
+	return truncate(f.comms[ticket], max), nil
 }
 
 func (f *fakeClient) GetChatTranscript(_ context.Context, ticket, name string) (armsupport.ChatTranscriptDetails, error) {
@@ -188,11 +188,11 @@ func (f *fakeClient) GetChatTranscript(_ context.Context, ticket, name string) (
 	return armsupport.ChatTranscriptDetails{}, fmt.Errorf("chat transcript %s not found", name)
 }
 
-func (f *fakeClient) ListChatTranscripts(_ context.Context, ticket string) ([]*armsupport.ChatTranscriptDetails, error) {
+func (f *fakeClient) ListChatTranscripts(_ context.Context, ticket string, max int) ([]*armsupport.ChatTranscriptDetails, error) {
 	if err := f.rec("ListChatTranscripts", ticket); err != nil {
 		return nil, err
 	}
-	return f.chats[ticket], nil
+	return truncate(f.chats[ticket], max), nil
 }
 
 func (f *fakeClient) CreateFileWorkspace(_ context.Context, name string) (armsupport.FileWorkspaceDetails, error) {
@@ -242,11 +242,11 @@ func (f *fakeClient) GetFile(_ context.Context, workspace, name string) (armsupp
 	return armsupport.FileDetails{}, fmt.Errorf("file %s not found", name)
 }
 
-func (f *fakeClient) ListFiles(_ context.Context, workspace string) ([]*armsupport.FileDetails, error) {
+func (f *fakeClient) ListFiles(_ context.Context, workspace string, max int) ([]*armsupport.FileDetails, error) {
 	if err := f.rec("ListFiles", workspace); err != nil {
 		return nil, err
 	}
-	return f.files[workspace], nil
+	return truncate(f.files[workspace], max), nil
 }
 
 func (f *fakeClient) ListServices(_ context.Context) ([]*armsupport.Service, error) {

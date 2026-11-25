@@ -411,7 +411,7 @@ Limits:
 - A Basic support plan can only file billing, subscription-management and quota tickets. The API error is shown verbatim for anything else.
 - Quota tickets are not filed in the TUI. Use `az quota` or `--quota-change-*` on the flag command.
 - Critical and highest critical impact need a plan that allows them, and a phone number.
-- Every ticket this CLI creates gets a file workspace named after the ticket, so attachments work later. Tickets made elsewhere may have none; the UI says so instead of failing.
+- Every ticket this CLI creates gets a file workspace (named after the ticket when possible) unless one is given, so attachments work later. Tickets made elsewhere may have none; the UI says so instead of failing.
 
 Flag examples:
 

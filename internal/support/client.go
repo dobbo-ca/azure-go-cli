@@ -20,20 +20,20 @@ type Client interface {
 	CheckName(ctx context.Context, name string, typ armsupport.Type) error // nil = available; else errors.New(*Message)
 	CreateTicket(ctx context.Context, name string, t armsupport.TicketDetails) (armsupport.TicketDetails, error)
 	GetTicket(ctx context.Context, name string) (armsupport.TicketDetails, error)
-	ListTickets(ctx context.Context, filter string) ([]*armsupport.TicketDetails, error) // all pages; "" = no filter
+	ListTickets(ctx context.Context, filter string, max int) ([]*armsupport.TicketDetails, error) // all pages; "" = no filter
 	UpdateTicket(ctx context.Context, name string, u armsupport.UpdateSupportTicket) (armsupport.TicketDetails, error)
 	CheckCommunicationName(ctx context.Context, ticket, name string) error
 	CreateCommunication(ctx context.Context, ticket, name string, c armsupport.CommunicationDetails) (armsupport.CommunicationDetails, error)
 	GetCommunication(ctx context.Context, ticket, name string) (armsupport.CommunicationDetails, error)
-	ListCommunications(ctx context.Context, ticket, filter string) ([]*armsupport.CommunicationDetails, error) // all pages
+	ListCommunications(ctx context.Context, ticket, filter string, max int) ([]*armsupport.CommunicationDetails, error) // all pages
 	GetChatTranscript(ctx context.Context, ticket, name string) (armsupport.ChatTranscriptDetails, error)
-	ListChatTranscripts(ctx context.Context, ticket string) ([]*armsupport.ChatTranscriptDetails, error)
+	ListChatTranscripts(ctx context.Context, ticket string, max int) ([]*armsupport.ChatTranscriptDetails, error)
 	CreateFileWorkspace(ctx context.Context, name string) (armsupport.FileWorkspaceDetails, error)
 	GetFileWorkspace(ctx context.Context, name string) (armsupport.FileWorkspaceDetails, error)
 	CreateFile(ctx context.Context, workspace, name string, f armsupport.FileDetails) (armsupport.FileDetails, error)
 	UploadChunk(ctx context.Context, workspace, name string, index int32, content string) error
 	GetFile(ctx context.Context, workspace, name string) (armsupport.FileDetails, error)
-	ListFiles(ctx context.Context, workspace string) ([]*armsupport.FileDetails, error)
+	ListFiles(ctx context.Context, workspace string, max int) ([]*armsupport.FileDetails, error)
 	ListServices(ctx context.Context) ([]*armsupport.Service, error)
 	GetService(ctx context.Context, name string) (armsupport.Service, error)
 	ListProblemClassifications(ctx context.Context, service string) ([]*armsupport.ProblemClassification, error)
@@ -44,16 +44,16 @@ type Client interface {
 const typeFileWorkspaces = armsupport.Type("Microsoft.Support/fileWorkspaces")
 
 // collect drains every page of a pager.
-func collect[R, T any](ctx context.Context, p *runtime.Pager[R], items func(R) []*T) ([]*T, error) {
+func collect[R, T any](ctx context.Context, p *runtime.Pager[R], items func(R) []*T, max int) ([]*T, error) {
 	var out []*T
-	for p.More() {
+	for p.More() && (max <= 0 || len(out) < max) {
 		page, err := p.NextPage(ctx)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, items(page)...)
 	}
-	return out, nil
+	return truncate(out, max), nil
 }
 
 // available turns a name-availability result into nil or the service's message.
@@ -88,7 +88,7 @@ func newCatalog(cred azcore.TokenCredential, opts *arm.ClientOptions) (catalog, 
 }
 
 func (c catalog) ListServices(ctx context.Context) ([]*armsupport.Service, error) {
-	return collect(ctx, c.services.NewListPager(nil), func(r armsupport.ServicesClientListResponse) []*armsupport.Service { return r.Value })
+	return collect(ctx, c.services.NewListPager(nil), func(r armsupport.ServicesClientListResponse) []*armsupport.Service { return r.Value }, 0)
 }
 
 func (c catalog) GetService(ctx context.Context, name string) (armsupport.Service, error) {
@@ -99,7 +99,7 @@ func (c catalog) GetService(ctx context.Context, name string) (armsupport.Servic
 func (c catalog) ListProblemClassifications(ctx context.Context, service string) ([]*armsupport.ProblemClassification, error) {
 	return collect(ctx, c.problems.NewListPager(service, nil), func(r armsupport.ProblemClassificationsClientListResponse) []*armsupport.ProblemClassification {
 		return r.Value
-	})
+	}, 0)
 }
 
 func (c catalog) GetProblemClassification(ctx context.Context, service, name string) (armsupport.ProblemClassification, error) {
@@ -135,12 +135,12 @@ func (c *subscriptionClient) GetTicket(ctx context.Context, name string) (armsup
 	return r.TicketDetails, err
 }
 
-func (c *subscriptionClient) ListTickets(ctx context.Context, filter string) ([]*armsupport.TicketDetails, error) {
+func (c *subscriptionClient) ListTickets(ctx context.Context, filter string, max int) ([]*armsupport.TicketDetails, error) {
 	o := &armsupport.TicketsClientListOptions{}
 	if filter != "" {
 		o.Filter = &filter
 	}
-	return collect(ctx, c.tickets.NewListPager(o), func(r armsupport.TicketsClientListResponse) []*armsupport.TicketDetails { return r.Value })
+	return collect(ctx, c.tickets.NewListPager(o), func(r armsupport.TicketsClientListResponse) []*armsupport.TicketDetails { return r.Value }, max)
 }
 
 func (c *subscriptionClient) UpdateTicket(ctx context.Context, name string, u armsupport.UpdateSupportTicket) (armsupport.TicketDetails, error) {
@@ -168,14 +168,14 @@ func (c *subscriptionClient) GetCommunication(ctx context.Context, ticket, name 
 	return r.CommunicationDetails, err
 }
 
-func (c *subscriptionClient) ListCommunications(ctx context.Context, ticket, filter string) ([]*armsupport.CommunicationDetails, error) {
+func (c *subscriptionClient) ListCommunications(ctx context.Context, ticket, filter string, max int) ([]*armsupport.CommunicationDetails, error) {
 	o := &armsupport.CommunicationsClientListOptions{}
 	if filter != "" {
 		o.Filter = &filter
 	}
 	return collect(ctx, c.comms.NewListPager(ticket, o), func(r armsupport.CommunicationsClientListResponse) []*armsupport.CommunicationDetails {
 		return r.Value
-	})
+	}, max)
 }
 
 func (c *subscriptionClient) GetChatTranscript(ctx context.Context, ticket, name string) (armsupport.ChatTranscriptDetails, error) {
@@ -183,10 +183,10 @@ func (c *subscriptionClient) GetChatTranscript(ctx context.Context, ticket, name
 	return r.ChatTranscriptDetails, err
 }
 
-func (c *subscriptionClient) ListChatTranscripts(ctx context.Context, ticket string) ([]*armsupport.ChatTranscriptDetails, error) {
+func (c *subscriptionClient) ListChatTranscripts(ctx context.Context, ticket string, max int) ([]*armsupport.ChatTranscriptDetails, error) {
 	return collect(ctx, c.chats.NewListPager(ticket, nil), func(r armsupport.ChatTranscriptsClientListResponse) []*armsupport.ChatTranscriptDetails {
 		return r.Value
-	})
+	}, max)
 }
 
 func (c *subscriptionClient) CreateFileWorkspace(ctx context.Context, name string) (armsupport.FileWorkspaceDetails, error) {
@@ -214,8 +214,8 @@ func (c *subscriptionClient) GetFile(ctx context.Context, workspace, name string
 	return r.FileDetails, err
 }
 
-func (c *subscriptionClient) ListFiles(ctx context.Context, workspace string) ([]*armsupport.FileDetails, error) {
-	return collect(ctx, c.files.NewListPager(workspace, nil), func(r armsupport.FilesClientListResponse) []*armsupport.FileDetails { return r.Value })
+func (c *subscriptionClient) ListFiles(ctx context.Context, workspace string, max int) ([]*armsupport.FileDetails, error) {
+	return collect(ctx, c.files.NewListPager(workspace, nil), func(r armsupport.FilesClientListResponse) []*armsupport.FileDetails { return r.Value }, max)
 }
 
 type tenantClient struct {
@@ -246,14 +246,14 @@ func (c *tenantClient) GetTicket(ctx context.Context, name string) (armsupport.T
 	return r.TicketDetails, err
 }
 
-func (c *tenantClient) ListTickets(ctx context.Context, filter string) ([]*armsupport.TicketDetails, error) {
+func (c *tenantClient) ListTickets(ctx context.Context, filter string, max int) ([]*armsupport.TicketDetails, error) {
 	o := &armsupport.TicketsNoSubscriptionClientListOptions{}
 	if filter != "" {
 		o.Filter = &filter
 	}
 	return collect(ctx, c.tickets.NewListPager(o), func(r armsupport.TicketsNoSubscriptionClientListResponse) []*armsupport.TicketDetails {
 		return r.Value
-	})
+	}, max)
 }
 
 func (c *tenantClient) UpdateTicket(ctx context.Context, name string, u armsupport.UpdateSupportTicket) (armsupport.TicketDetails, error) {
@@ -281,14 +281,14 @@ func (c *tenantClient) GetCommunication(ctx context.Context, ticket, name string
 	return r.CommunicationDetails, err
 }
 
-func (c *tenantClient) ListCommunications(ctx context.Context, ticket, filter string) ([]*armsupport.CommunicationDetails, error) {
+func (c *tenantClient) ListCommunications(ctx context.Context, ticket, filter string, max int) ([]*armsupport.CommunicationDetails, error) {
 	o := &armsupport.CommunicationsNoSubscriptionClientListOptions{}
 	if filter != "" {
 		o.Filter = &filter
 	}
 	return collect(ctx, c.comms.NewListPager(ticket, o), func(r armsupport.CommunicationsNoSubscriptionClientListResponse) []*armsupport.CommunicationDetails {
 		return r.Value
-	})
+	}, max)
 }
 
 func (c *tenantClient) GetChatTranscript(ctx context.Context, ticket, name string) (armsupport.ChatTranscriptDetails, error) {
@@ -296,10 +296,10 @@ func (c *tenantClient) GetChatTranscript(ctx context.Context, ticket, name strin
 	return r.ChatTranscriptDetails, err
 }
 
-func (c *tenantClient) ListChatTranscripts(ctx context.Context, ticket string) ([]*armsupport.ChatTranscriptDetails, error) {
+func (c *tenantClient) ListChatTranscripts(ctx context.Context, ticket string, max int) ([]*armsupport.ChatTranscriptDetails, error) {
 	return collect(ctx, c.chats.NewListPager(ticket, nil), func(r armsupport.ChatTranscriptsNoSubscriptionClientListResponse) []*armsupport.ChatTranscriptDetails {
 		return r.Value
-	})
+	}, max)
 }
 
 func (c *tenantClient) CreateFileWorkspace(ctx context.Context, name string) (armsupport.FileWorkspaceDetails, error) {
@@ -327,10 +327,10 @@ func (c *tenantClient) GetFile(ctx context.Context, workspace, name string) (arm
 	return r.FileDetails, err
 }
 
-func (c *tenantClient) ListFiles(ctx context.Context, workspace string) ([]*armsupport.FileDetails, error) {
+func (c *tenantClient) ListFiles(ctx context.Context, workspace string, max int) ([]*armsupport.FileDetails, error) {
 	return collect(ctx, c.files.NewListPager(workspace, nil), func(r armsupport.FilesNoSubscriptionClientListResponse) []*armsupport.FileDetails {
 		return r.Value
-	})
+	}, max)
 }
 
 // credentialFor returns a credential bound to tenantID, or the default

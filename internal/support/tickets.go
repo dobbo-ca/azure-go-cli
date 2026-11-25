@@ -458,11 +458,11 @@ func newTicketsCmd(tenantLevel bool) *cobra.Command {
 			if !cmd.Flags().Changed("filter") && !cmd.Flags().Changed("max-items") {
 				filter = defaultListFilter(now())
 			}
-			items, err := c.ListTickets(cmd.Context(), filter)
+			items, err := c.ListTickets(cmd.Context(), filter, maxItems(cmd))
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(truncate(items, maxItems(cmd))))
+			return output.PrintJSON(cmd, listOrEmpty(items))
 		},
 	}
 	addStr(list, "filter", "OData filter, for example \"Status eq 'Open'\" or \"CreatedDate ge 2026-11-01\".", false)

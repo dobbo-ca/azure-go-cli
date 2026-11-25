@@ -74,7 +74,7 @@ func (d *detailScreen) init(a *app) tea.Cmd {
 		if err != nil {
 			return ticketLoadedMsg{gen: gen, name: name, err: err}
 		}
-		comms, err := c.ListCommunications(a.ctx, name, "")
+		comms, err := c.ListCommunications(a.ctx, name, "", 0)
 		return ticketLoadedMsg{gen, name, &t, comms, err}
 	}
 }

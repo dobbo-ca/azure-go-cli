@@ -173,7 +173,8 @@ func (c *createScreen) update(a *app, msg tea.Msg) tea.Cmd {
 			c.err = m.err
 			return nil
 		}
-		return a.replace(newDetailScreen(m.name))
+		// the list underneath is now stale; reload it for when esc returns
+		return tea.Batch(a.replace(newDetailScreen(m.name)), a.stack[0].init(a))
 	case tea.KeyPressMsg:
 		if c.submitting {
 			return nil

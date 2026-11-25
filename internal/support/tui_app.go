@@ -105,17 +105,19 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			a.err = m.err
 			return a, nil
 		}
-		return a, a.setScope(a.scope)
+		// same scope: rebuild the client only, so an in-progress draft survives
+		a.client, a.err = a.d.newClient(a.scope)
+		return a, a.top().init(a)
 	}
-	if m, ok := msg.(ticketChangedMsg); ok && m.gen == a.gen {
+	if gen, name, err, ok := detailMsg(msg); ok && gen == a.gen {
 		// the detail screen may be covered or already left; never drop a failure
 		for i := len(a.stack) - 1; i >= 0; i-- {
-			if d, ok := a.stack[i].(*detailScreen); ok && d.name == m.name {
+			if d, ok := a.stack[i].(*detailScreen); ok && d.name == name {
 				return a, d.update(a, msg)
 			}
 		}
-		if m.err != nil {
-			a.err = m.err
+		if err != nil {
+			a.err = err
 		}
 		return a, nil
 	}
@@ -124,6 +126,17 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return a, a.stack[0].update(a, msg)
 	}
 	return a, a.top().update(a, msg)
+}
+
+// detailMsg unpacks the messages that belong to one ticket's detail screen.
+func detailMsg(msg tea.Msg) (gen int, name string, err error, ok bool) {
+	switch m := msg.(type) {
+	case ticketLoadedMsg:
+		return m.gen, m.name, m.err, true
+	case ticketChangedMsg:
+		return m.gen, m.name, m.err, true
+	}
+	return 0, "", nil, false
 }
 
 func (a *app) View() tea.View {

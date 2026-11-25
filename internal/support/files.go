@@ -119,11 +119,11 @@ func newFileCmd(tenantLevel bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			items, err := c.ListFiles(cmd.Context(), str(cmd, "file-workspace-name"))
+			items, err := c.ListFiles(cmd.Context(), str(cmd, "file-workspace-name"), maxItems(cmd))
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(truncate(items, maxItems(cmd))))
+			return output.PrintJSON(cmd, listOrEmpty(items))
 		},
 	}
 	addStr(list, "file-workspace-name", "File workspace name.", true)

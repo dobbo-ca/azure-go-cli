@@ -47,11 +47,11 @@ func newCommunicationCmd(tenantLevel bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			items, err := c.ListCommunications(cmd.Context(), str(cmd, "ticket-name"), str(cmd, "filter"))
+			items, err := c.ListCommunications(cmd.Context(), str(cmd, "ticket-name"), str(cmd, "filter"), maxItems(cmd))
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(truncate(items, maxItems(cmd))))
+			return output.PrintJSON(cmd, listOrEmpty(items))
 		},
 	}
 	addStr(list, "ticket-name", "Support ticket name.", true)
@@ -88,11 +88,11 @@ func newChatTranscriptCmd(tenantLevel bool) *cobra.Command {
 			if err != nil {
 				return err
 			}
-			items, err := c.ListChatTranscripts(cmd.Context(), str(cmd, "ticket-name"))
+			items, err := c.ListChatTranscripts(cmd.Context(), str(cmd, "ticket-name"), maxItems(cmd))
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(truncate(items, maxItems(cmd))))
+			return output.PrintJSON(cmd, listOrEmpty(items))
 		},
 	}
 	addStr(list, "ticket-name", "Support ticket name.", true)

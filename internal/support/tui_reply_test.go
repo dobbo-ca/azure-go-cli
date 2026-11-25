@@ -92,3 +92,14 @@ func TestReplyAttachNoWorkspace(t *testing.T) {
 		t.Fatalf("calls %v\n%s", fc.calls, view(a))
 	}
 }
+
+func TestReauthKeepsReplyDraft(t *testing.T) {
+	fc := newFake()
+	a := replyApp(t, fc, nil)
+	fc.err["CreateCommunication"] = errString("AADSTS50076: MFA required")
+	drive(t, a, keys("tab", "Long carefully written reply", "ctrl+s")...)
+	drive(t, a, reauthDoneMsg{})
+	if _, ok := a.top().(*replyScreen); !ok || !strings.Contains(view(a), "Long carefully written reply") {
+		t.Fatalf("draft lost, top = %T\n%s", a.top(), view(a))
+	}
+}
