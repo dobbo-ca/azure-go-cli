@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/support/armsupport/v2"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -83,4 +84,11 @@ func uploadFile(ctx context.Context, c Client, workspace string, u upload) error
 		}
 	}
 	return nil
+}
+
+func newFileCmd(tenantLevel bool) *cobra.Command {
+	return group("file", "Manage files in a file workspace")
+}
+func newFileWorkspaceCmd(tenantLevel bool) *cobra.Command {
+	return group("file-workspace", "Manage file workspaces")
 }

@@ -31,6 +31,7 @@ import (
 	"github.com/cdobbyn/azure-go-cli/internal/sig"
 	"github.com/cdobbyn/azure-go-cli/internal/ssh"
 	"github.com/cdobbyn/azure-go-cli/internal/storage"
+	"github.com/cdobbyn/azure-go-cli/internal/support"
 	"github.com/cdobbyn/azure-go-cli/internal/vm"
 	"github.com/cdobbyn/azure-go-cli/internal/vmss"
 	"github.com/cdobbyn/azure-go-cli/pkg/logger"
@@ -101,6 +102,7 @@ func main() {
 		pim.NewPIMCommand(),
 		pipelines.NewPipelinesCommand(),
 		storage.NewStorageCommand(),
+		support.NewSupportCommand(),
 		postgres.NewPostgresCommand(),
 		provider.NewProviderCommand(),
 		keyvault.NewKeyVaultCommand(),

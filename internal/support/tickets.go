@@ -10,6 +10,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/support/armsupport/v2"
 	"github.com/google/uuid"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -122,4 +123,8 @@ func createTicket(ctx context.Context, c Client, name string, td armsupport.Tick
 		}
 	}
 	return c.CreateTicket(ctx, name, td)
+}
+
+func newTicketsCmd(tenantLevel bool) *cobra.Command {
+	return group("tickets", "Manage support tickets")
 }
