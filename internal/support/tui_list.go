@@ -148,6 +148,8 @@ func (l *listScreen) key(a *app, m tea.KeyPressMsg) tea.Cmd {
 		return l.init(a)
 	case "ctrl+r":
 		return l.init(a)
+	case "n":
+		return a.push(newCreateScreen())
 	case "t":
 		p, err := a.d.loadProfile()
 		if err != nil {
@@ -192,6 +194,6 @@ func (l *listScreen) view(a *app) string {
 			b.WriteString("\n" + mark + ticketRowText(rows[i]))
 		}
 	}
-	b.WriteString("\n\nf open/all · / search · t scope · ctrl+r reload · q quit")
+	b.WriteString("\n\nn new · f open/all · / search · t scope · ctrl+r reload · q quit")
 	return b.String()
 }
