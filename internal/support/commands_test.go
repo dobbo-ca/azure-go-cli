@@ -21,6 +21,14 @@ var parityRows = []struct{ path, flags string }{
 	{"services show", "*service-name"},
 	{"services problem-classifications list", "*service-name"},
 	{"services problem-classifications show", "*service-name *problem-classification-name"},
+	{"in-subscription tickets create", "*ticket-name *advanced-diagnostic-consent *description *problem-classification *severity *title start-time require-24-by-7-response secondary-consent enrollment-id technical-resource *contact-country *contact-first-name *contact-last-name *contact-method *contact-language *contact-timezone *contact-email contact-phone-number contact-additional-emails file-workspace quota-change-subtype quota-change-version quota-change-requests"},
+	{"in-subscription tickets update", "*ticket-name advanced-diagnostic-consent severity status secondary-consent contact-country contact-first-name contact-last-name contact-method contact-language contact-timezone contact-email contact-phone-number contact-additional-emails"},
+	{"in-subscription tickets list", "filter max-items"},
+	{"in-subscription tickets show", "*ticket-name"},
+	{"no-subscription tickets create", "*ticket-name *advanced-diagnostic-consent *description *problem-classification *severity *title start-time require-24-by-7-response secondary-consent enrollment-id technical-resource *contact-country *contact-first-name *contact-last-name *contact-method *contact-language *contact-timezone *contact-email contact-phone-number contact-additional-emails file-workspace-name"},
+	{"no-subscription tickets update", "*ticket-name advanced-diagnostic-consent severity status secondary-consent contact-country contact-first-name contact-last-name contact-method contact-language contact-timezone contact-email contact-phone-number contact-additional-emails"},
+	{"no-subscription tickets list", "filter max-items"},
+	{"no-subscription tickets show", "*ticket-name"},
 }
 
 func TestFlagParity(t *testing.T) {
@@ -43,4 +51,10 @@ func TestSupportNoSubcommandNonTTYPrintsHelp(t *testing.T) {
 	cmd.SetArgs([]string{"--no-input"})
 	require.NoError(t, cmd.Execute())
 	require.Contains(t, out.String(), "in-subscription")
+}
+
+func TestNoSubscriptionCreateHasNoQuotaFlags(t *testing.T) {
+	cmd, _, err := NewSupportCommand().Find([]string{"no-subscription", "tickets", "create"})
+	require.NoError(t, err)
+	require.Nil(t, cmd.Flags().Lookup("quota-change-subtype"))
 }

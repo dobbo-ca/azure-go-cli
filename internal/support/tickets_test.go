@@ -1,11 +1,14 @@
 package support
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/support/armsupport/v2"
+	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/require"
 )
 
@@ -123,4 +126,131 @@ func TestCreateTicketInvalidPC(t *testing.T) {
 	_, err := createTicket(context.Background(), f, "abc-1", td, nil)
 	require.EqualError(t, err, errInvalidProblemClassification)
 	require.Empty(t, f.calls)
+}
+
+// runCmd runs `az support <args>` against fake and returns stdout.
+func runCmd(t *testing.T, fake *fakeClient, args ...string) (string, error) {
+	t.Helper()
+	old := commandClientFn
+	commandClientFn = func(_ *cobra.Command, tenantLevel bool) (Client, string, error) {
+		if tenantLevel {
+			return fake, "", nil
+		}
+		return fake, "sub1", nil
+	}
+	t.Cleanup(func() { commandClientFn = old })
+	cmd := NewSupportCommand()
+	var out bytes.Buffer
+	cmd.SetOut(&out)
+	cmd.SetErr(&bytes.Buffer{})
+	cmd.SetArgs(args)
+	err := cmd.Execute()
+	return out.String(), err
+}
+
+func createArgs(extra ...string) []string {
+	return append([]string{"in-subscription", "tickets", "create",
+		"--ticket-name", "t1", "--advanced-diagnostic-consent", "Yes", "--description", "d",
+		"--problem-classification", pcID, "--severity", "moderate", "--title", "T",
+		"--contact-country", "CAN", "--contact-first-name", "A", "--contact-last-name", "B",
+		"--contact-method", "email", "--contact-language", "en-us",
+		"--contact-timezone", "Pacific Standard Time", "--contact-email", "a@x"}, extra...)
+}
+
+func TestTicketsCreateBuildsDetails(t *testing.T) {
+	fixNow(t)
+	f := newFake()
+	_, err := runCmd(t, f, createArgs("--contact-additional-emails", "a@x,b@y", "--require-24-by-7-response", "--start-time", "2026-11-20")...)
+	require.NoError(t, err)
+	p := f.tickets["t1"].Properties
+	require.Equal(t, "T", *p.Title)
+	require.Equal(t, "d", *p.Description)
+	require.Equal(t, armsupport.SeverityLevelModerate, *p.Severity)
+	require.Equal(t, armsupport.ConsentYes, *p.AdvancedDiagnosticConsent)
+	cd := p.ContactDetails
+	require.Equal(t, "CAN", *cd.Country)
+	require.Equal(t, armsupport.PreferredContactMethodEmail, *cd.PreferredContactMethod)
+	require.Equal(t, "Pacific Standard Time", *cd.PreferredTimeZone)
+	require.Equal(t, "en-us", *cd.PreferredSupportLanguage)
+	require.Equal(t, []*string{ptr("a@x"), ptr("b@y")}, cd.AdditionalEmailAddresses)
+	require.True(t, *p.Require24X7Response)
+	require.Equal(t, time.Date(2026, 11, 20, 0, 0, 0, 0, time.UTC), *p.ProblemStartTime)
+}
+
+func TestTicketsCreateTechnicalResourceMismatch(t *testing.T) {
+	fixNow(t)
+	f := newFake()
+	res := "/subscriptions/99999999-9999-9999-9999-999999999999/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm"
+	_, err := runCmd(t, f, createArgs("--technical-resource", res)...)
+	require.ErrorContains(t, err, "does not match with sub1")
+	require.Empty(t, f.calls)
+}
+
+func TestTicketsCreateQuotaFlags(t *testing.T) {
+	fixNow(t)
+	f := newFake()
+	_, err := runCmd(t, f, createArgs("--quota-change-requests", `[{"payload":"{}","region":"eastus"}]`)...)
+	require.NoError(t, err)
+	require.Equal(t, "eastus", *f.tickets["t1"].Properties.QuotaTicketDetails.QuotaChangeRequests[0].Region)
+}
+
+func TestTicketsCreateRejectsBadEnum(t *testing.T) {
+	_, err := runCmd(t, newFake(), createArgs("--severity", "urgent")...)
+	require.ErrorContains(t, err, "allowed values")
+}
+
+func TestTicketsCreateNeedsPhone(t *testing.T) {
+	_, err := runCmd(t, newFake(), createArgs("--severity", "critical")...)
+	require.ErrorContains(t, err, "--contact-phone-number is required")
+}
+
+func TestTicketsListDefaultFilter(t *testing.T) {
+	fixNow(t)
+	f := newFake()
+	_, err := runCmd(t, f, "in-subscription", "tickets", "list")
+	require.NoError(t, err)
+	require.Equal(t, "CreatedDate ge 2026-11-17", f.lastFilter)
+	_, err = runCmd(t, f, "in-subscription", "tickets", "list", "--filter", "Status eq 'Open'")
+	require.NoError(t, err)
+	require.Equal(t, "Status eq 'Open'", f.lastFilter)
+	_, err = runCmd(t, f, "in-subscription", "tickets", "list", "--max-items", "5")
+	require.NoError(t, err)
+	require.Equal(t, "", f.lastFilter)
+	for _, n := range []string{"a", "b", "c"} {
+		f.tickets[n] = newTicket()
+	}
+	out, err := runCmd(t, f, "no-subscription", "tickets", "list", "--max-items", "2")
+	require.NoError(t, err)
+	var got []any
+	require.NoError(t, json.Unmarshal([]byte(out), &got))
+	require.Len(t, got, 2)
+}
+
+func TestTicketsUpdateOnlyChanged(t *testing.T) {
+	cmd, _, err := NewSupportCommand().Find([]string{"in-subscription", "tickets", "update"})
+	require.NoError(t, err)
+	require.NoError(t, cmd.ParseFlags([]string{"--ticket-name", "t1", "--status", "closed"}))
+	u := updateFromFlags(cmd)
+	require.Equal(t, armsupport.StatusClosed, *u.Status)
+	require.Nil(t, u.ContactDetails)
+	require.Nil(t, u.Severity)
+	require.NoError(t, cmd.ParseFlags([]string{"--contact-first-name", "Z"}))
+	require.Equal(t, "Z", *updateFromFlags(cmd).ContactDetails.FirstName)
+}
+
+func TestParseStartTime(t *testing.T) {
+	for _, s := range []string{"2026-11-20T01:02:03Z", "2026-11-20T01:02:03", "2026-11-20"} {
+		_, err := parseStartTime(s)
+		require.NoError(t, err, s)
+	}
+	_, err := parseStartTime("yesterday")
+	require.Error(t, err)
+}
+
+func TestParseSecondaryConsent(t *testing.T) {
+	got, err := parseSecondaryConsent(`[{"type":"x","user-consent":"Yes"}]`)
+	require.NoError(t, err)
+	require.Len(t, got, 1)
+	_, err = parseSecondaryConsent(`[{"user-consent":"maybe"}]`)
+	require.Error(t, err)
 }
