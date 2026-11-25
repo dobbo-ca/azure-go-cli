@@ -63,10 +63,14 @@ func supportLanguage(getenv func(string) string) string {
 	return "en-us"
 }
 
+// reservedRegions are exceptionally reserved / user-assigned codes whose ISO3 is
+// not a real ISO 3166-1 alpha-3 code.
+var reservedRegions = map[string]bool{"AC": true, "CP": true, "DG": true, "TA": true, "XK": true}
+
 // realCountry is the filter shared by countryAlpha3 and countryOptions.
 func realCountry(r language.Region) (string, bool) {
 	iso := r.ISO3()
-	if !r.IsCountry() || len(iso) != 3 || iso == "ZZZ" || r.Canonicalize() != r || display.English.Regions().Name(r) == "" {
+	if reservedRegions[r.String()] || !r.IsCountry() || len(iso) != 3 || iso == "ZZZ" || r.Canonicalize() != r || display.English.Regions().Name(r) == "" {
 		return "", false
 	}
 	return iso, true

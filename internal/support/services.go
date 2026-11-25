@@ -115,6 +115,7 @@ func loadCatalog(ctx context.Context, c Client, workers int) ([]catalogRow, erro
 	if err != nil {
 		return nil, err
 	}
+	workers = max(workers, 1)
 	var (
 		mu       sync.Mutex
 		wg       sync.WaitGroup

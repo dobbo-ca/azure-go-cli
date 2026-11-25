@@ -1,12 +1,14 @@
 package support
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/support/armsupport/v2"
 )
 
@@ -115,5 +117,51 @@ func TestDetailIgnoresOtherTicketLoad(t *testing.T) {
 	drive(t, a, ticketLoadedMsg{gen: a.gen, name: "X", ticket: &x})
 	if !strings.Contains(view(a), "Detail title") || strings.Contains(view(a), "Other ticket title") {
 		t.Fatal("other ticket's load shown")
+	}
+}
+
+func TestDetailKeysIgnoredBeforeLoad(t *testing.T) {
+	fc := newFake()
+	fc.tickets["T1"] = ticket("T1", "Detail title", 20)
+	a := newTestApp(t, fc)
+	a.push(newDetailScreen("T1")) // load withheld
+	drive(t, a, keys("s", "y", "v", "a")...)
+	d := a.top().(*detailScreen)
+	if len(fc.updates) != 0 || d.mode != modeView || d.err != nil {
+		t.Fatalf("updates %v mode %v err %v", fc.updates, d.mode, d.err)
+	}
+}
+
+func TestDetailChangeFailureShownAfterEsc(t *testing.T) {
+	fc := newFake()
+	fc.err["UpdateTicket"] = errors.New("forbidden-xyz")
+	a := detailApp(t, fc, nil)
+	drive(t, a, keys("s")...)
+	_, cmd := a.Update(keys("y")[0])
+	drive(t, a, keys("esc")...)
+	driveCmd(t, a, cmd)
+	if !strings.Contains(view(a), "forbidden-xyz") {
+		t.Fatalf("error lost:\n%s", view(a))
+	}
+}
+
+func TestDetailChangeUsesClientOfStartScope(t *testing.T) {
+	fc, other := newFake(), newFake()
+	a := detailApp(t, fc, nil)
+	drive(t, a, keys("s")...)
+	_, cmd := a.Update(keys("y")[0])
+	a.client = other // scope switched while the update is in flight
+	cmd()
+	if len(fc.updates) != 1 || len(other.updates) != 0 {
+		t.Fatalf("updates %d / %d", len(fc.updates), len(other.updates))
+	}
+}
+
+func TestDetailPasteIntoAttachPath(t *testing.T) {
+	a := detailApp(t, newFake(), func(p *armsupport.TicketDetailsProperties) { p.FileWorkspaceName = ref("ws1") })
+	drive(t, a, keys("a")...)
+	drive(t, a, tea.PasteMsg{Content: "/tmp/pasted.txt"})
+	if !strings.Contains(view(a), "/tmp/pasted.txt") {
+		t.Fatalf("paste ignored:\n%s", view(a))
 	}
 }

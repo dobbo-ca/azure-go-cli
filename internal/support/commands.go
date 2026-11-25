@@ -22,6 +22,7 @@ func NewSupportCommand() *cobra.Command {
 		Use:          "support",
 		Short:        "Manage Azure support tickets",
 		SilenceUsage: true,
+		Args:         cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if tuiAllowedFor(cmd) {
 				return runTUI(cmd)
@@ -36,6 +37,7 @@ func NewSupportCommand() *cobra.Command {
 		Use:          "tui",
 		Short:        "Open the interactive support ticket UI",
 		SilenceUsage: true,
+		Args:         cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if !tuiAllowedFor(cmd) {
 				return errors.New("az support tui needs an interactive terminal")

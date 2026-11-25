@@ -36,7 +36,7 @@ func TestCountryAlpha3(t *testing.T) {
 		require.True(t, ok, in)
 		require.Equal(t, want, got, in)
 	}
-	for _, in := range []string{"XX", "UK", "EZ", "DD"} {
+	for _, in := range []string{"XX", "UK", "EZ", "DD", "AC", "DG", "CP", "XK", "TA"} {
 		got, ok := countryAlpha3(in)
 		require.False(t, ok, in)
 		require.Empty(t, got, in)

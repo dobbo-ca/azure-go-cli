@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/support/armsupport/v2"
 )
 
@@ -118,5 +119,17 @@ func TestListNewWithoutClientDoesNotPanic(t *testing.T) {
 	drive(t, a, keys("n")...)
 	if !strings.Contains(view(a), "ctrl+l") {
 		t.Fatalf("view:\n%s", view(a))
+	}
+}
+
+func TestListPasteIntoSearch(t *testing.T) {
+	fc := newFake()
+	fc.tickets["a"] = ticket("a", "VM will not boot", 2)
+	fc.tickets["b"] = ticket("b", "Storage latency", 3)
+	a := listApp(t, fc)
+	drive(t, a, keys("/")...)
+	drive(t, a, tea.PasteMsg{Content: "storage"})
+	if v := view(a); !strings.Contains(v, "Storage latency") || strings.Contains(v, "VM will not boot") {
+		t.Fatalf("paste ignored:\n%s", v)
 	}
 }

@@ -41,6 +41,12 @@ func TestLoadCatalog(t *testing.T) {
 	require.Equal(t, []string{"Microsoft.X/a"}, rows[0].ResourceTypes)
 }
 
+func TestLoadCatalogNonPositiveWorkers(t *testing.T) {
+	rows, err := loadCatalog(context.Background(), catalogFake(), 0)
+	require.NoError(t, err)
+	require.Len(t, rows, 4)
+}
+
 func TestLoadCatalogPartialFailure(t *testing.T) {
 	f := catalogFake()
 	f.err["ListProblemClassifications"] = fmt.Errorf("boom")

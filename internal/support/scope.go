@@ -47,17 +47,19 @@ func flagScope(cmd *cobra.Command) (Scope, error) {
 }
 
 // commandClient builds the client for a command: tenant-level when asked, else
-// subscription-scoped. sessionSub is the subscription ID, empty at tenant level.
+// subscription-scoped. sessionSub is the default or --subscription ID, also at
+// tenant level, where it is only used to validate --technical-resource.
 func commandClient(cmd *cobra.Command, tenantLevel bool) (c Client, sessionSub string, err error) {
 	s, err := flagScope(cmd)
 	if err != nil {
 		return nil, "", err
 	}
+	sessionSub = s.SubscriptionID
 	if tenantLevel {
 		s.SubscriptionID, s.SubscriptionName = "", ""
 	}
 	c, err = NewClient(s)
-	return c, s.SubscriptionID, err
+	return c, sessionSub, err
 }
 
 // commandClientFn is the test seam; every command calls it.

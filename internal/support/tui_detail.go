@@ -130,10 +130,11 @@ func (d *detailScreen) props() *armsupport.TicketDetailsProperties {
 }
 
 // change runs fn off the UI goroutine and reloads the ticket when it succeeds.
-func (d *detailScreen) change(a *app, fn func() (status string, err error)) tea.Cmd {
-	gen, name := a.gen, d.name
+// fn gets the client of the scope the action was started in.
+func (d *detailScreen) change(a *app, fn func(c Client) (status string, err error)) tea.Cmd {
+	gen, name, c := a.gen, d.name, a.client
 	return func() tea.Msg {
-		status, err := fn()
+		status, err := fn(c)
 		return ticketChangedMsg{gen, name, status, err}
 	}
 }
@@ -196,8 +197,8 @@ func (d *detailScreen) key(a *app, m tea.KeyPressMsg) tea.Cmd {
 			if strings.EqualFold(deref(d.props().Status), "closed") {
 				next = armsupport.StatusOpen
 			}
-			return d.change(a, func() (string, error) {
-				_, err := a.client.UpdateTicket(a.ctx, d.name, armsupport.UpdateSupportTicket{Status: &next})
+			return d.change(a, func(c Client) (string, error) {
+				_, err := c.UpdateTicket(a.ctx, d.name, armsupport.UpdateSupportTicket{Status: &next})
 				return "", err
 			})
 		case "n":
@@ -242,18 +243,21 @@ func (d *detailScreen) key(a *app, m tea.KeyPressMsg) tea.Cmd {
 			path := strings.TrimSpace(d.input.Value())
 			ws := deref(d.props().FileWorkspaceName)
 			d.mode = modeView
-			return d.change(a, func() (string, error) {
+			return d.change(a, func(c Client) (string, error) {
 				u, err := readUpload(path)
 				if err != nil {
 					return "", err
 				}
-				if err := uploadFile(a.ctx, a.client, ws, u); err != nil {
+				if err := uploadFile(a.ctx, c, ws, u); err != nil {
 					return "", err
 				}
 				return "Uploaded " + u.Name, nil
 			})
 		}
 	default:
+		if d.ticket == nil && (k == "s" || k == "v" || k == "a") {
+			return nil // the actions need the loaded ticket
+		}
 		switch k {
 		case "s":
 			d.err, d.mode = nil, modeConfirmStatus
@@ -292,8 +296,8 @@ func (d *detailScreen) setSeverity(a *app, sev armsupport.SeverityLevel, phone s
 	if phone != "" {
 		u.ContactDetails = &armsupport.UpdateContactProfile{PhoneNumber: &phone}
 	}
-	return d.change(a, func() (string, error) {
-		_, err := a.client.UpdateTicket(a.ctx, d.name, u)
+	return d.change(a, func(c Client) (string, error) {
+		_, err := c.UpdateTicket(a.ctx, d.name, u)
 		return "", err
 	})
 }

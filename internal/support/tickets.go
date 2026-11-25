@@ -378,20 +378,13 @@ func newTicketsCmd(tenantLevel bool) *cobra.Command {
 				return err
 			}
 			if resource := str(cmd, "technical-resource"); resource != "" {
+				// Like Python: always send it, validate only for technical services.
 				if service, _, ok := parseProblemClassificationID(*td.Properties.ProblemClassificationID); ok && isTechnicalService(service) {
-					if tenantLevel {
-						// Python validates against the default subscription for both variants.
-						s, err := flagScope(cmd)
-						if err != nil {
-							return err
-						}
-						sessionSub = s.SubscriptionID
-					}
 					if err := validateTechnicalResource(resource, sessionSub); err != nil {
 						return err
 					}
-					td.Properties.TechnicalTicketDetails = &armsupport.TechnicalTicketDetails{ResourceID: &resource}
 				}
+				td.Properties.TechnicalTicketDetails = &armsupport.TechnicalTicketDetails{ResourceID: &resource}
 			}
 			t, err := createTicket(cmd.Context(), c, str(cmd, "ticket-name"), td, nil)
 			if err != nil {

@@ -259,3 +259,21 @@ func TestCreateAttachValidatedBeforeSubmit(t *testing.T) {
 		t.Fatalf("step %v\n%s", c.step, view(a))
 	}
 }
+
+func TestCreateBackToResourceAfterDroppedLoad(t *testing.T) {
+	a, c := createApp(t, createFake())
+	a.d.listResources = func(context.Context, Scope, []string) ([]resourceRef, error) {
+		return []resourceRef{{ID: "/x/vm1", Name: "vm1", Type: "T"}}, nil
+	}
+	toService(t, a, "Cannot connect to VM after reboot")
+	_, load := a.Update(keys("enter")[0]) // resource load starts, result withheld
+	drive(t, a, keys("skip", "enter")...)
+	if c.step != stepSeverity {
+		t.Fatalf("step %v", c.step)
+	}
+	driveCmd(t, a, load) // late result is dropped
+	drive(t, a, keys("esc")...)
+	if c.step != stepResource || c.resLoading || !strings.Contains(view(a), "vm1") {
+		t.Fatalf("step %v loading %v\n%s", c.step, c.resLoading, view(a))
+	}
+}

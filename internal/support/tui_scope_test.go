@@ -157,3 +157,12 @@ func TestCredentialErrorOffersSignIn(t *testing.T) {
 		t.Fatalf("scopes = %+v", fc.scopes)
 	}
 }
+
+func TestScopeDiscoveryShowsSpinner(t *testing.T) {
+	a := newTestApp(t, newFake())
+	drive(t, a, keys("t", "other")...)
+	a.Update(keys("enter")[0]) // discovery withheld
+	if v := view(a); !strings.Contains(v, "Loading tenants") || !strings.Contains(v, a.top().(*scopeScreen).spin.View()) {
+		t.Fatalf("view:\n%s", v)
+	}
+}

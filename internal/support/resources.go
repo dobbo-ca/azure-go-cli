@@ -21,6 +21,9 @@ func resourceTypeFilter(types []string) string {
 
 // listResources lists the subscription's resources of the given types, sorted by name.
 func listResources(ctx context.Context, s Scope, types []string) ([]resourceRef, error) {
+	if len(types) == 0 {
+		return nil, nil // an empty $filter would be sent to ARM
+	}
 	cred, err := credentialFor(s.TenantID)
 	if err != nil {
 		return nil, err

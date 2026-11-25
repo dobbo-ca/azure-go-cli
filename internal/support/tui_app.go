@@ -110,6 +110,18 @@ func (a *app) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return a, a.setScope(a.scope)
 	}
+	if m, ok := msg.(ticketChangedMsg); ok && m.gen == a.gen {
+		// the detail screen may be covered or already left; never drop a failure
+		for i := len(a.stack) - 1; i >= 0; i-- {
+			if d, ok := a.stack[i].(*detailScreen); ok && d.name == m.name {
+				return a, d.update(a, msg)
+			}
+		}
+		if m.err != nil {
+			a.err = m.err
+		}
+		return a, nil
+	}
 	if _, ok := msg.(ticketsLoadedMsg); ok {
 		// the list is always the bottom screen; it may be covered while loading
 		return a, a.stack[0].update(a, msg)

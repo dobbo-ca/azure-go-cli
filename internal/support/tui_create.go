@@ -627,6 +627,10 @@ func (c *createScreen) back(a *app) tea.Cmd {
 		c.step = stepService
 	case stepSeverity:
 		if c.needsResourceStep(a) {
+			if c.resLoading {
+				// the load finished while this step was off screen and was dropped
+				return c.enter(a, stepResource)
+			}
 			c.step = stepResource
 		} else {
 			c.step = stepService

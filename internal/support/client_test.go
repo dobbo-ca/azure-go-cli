@@ -77,3 +77,16 @@ func TestCheckNameUnavailableReturnsMessage(t *testing.T) {
 	err := c.CheckName(context.Background(), "x", armsupport.TypeMicrosoftSupportSupportTickets)
 	require.EqualError(t, err, "Name taken")
 }
+
+func TestListHonorsContext(t *testing.T) {
+	var hits int
+	c := newTestClient(t, Scope{SubscriptionID: "s"}, func(w http.ResponseWriter, r *http.Request) {
+		hits++
+		w.Write([]byte(`{"value":[]}`))
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	_, err := c.ListTickets(ctx, "")
+	require.ErrorIs(t, err, context.Canceled)
+	require.Zero(t, hits)
+}

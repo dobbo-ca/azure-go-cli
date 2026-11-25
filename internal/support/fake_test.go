@@ -43,6 +43,7 @@ type fakeClient struct {
 	scopes       []Scope                          // fakeDeps.newClient arguments, in order
 	newClientErr error                            // returned by fakeDeps.newClient when set
 	discovered   int                              // fakeDeps.discover call count
+	checkTypes   []armsupport.Type                // CheckName type arguments, in order
 }
 
 var _ Client = (*fakeClient)(nil)
@@ -68,6 +69,9 @@ func (f *fakeClient) rec(method string, args ...string) error {
 }
 
 func (f *fakeClient) CheckName(_ context.Context, name string, typ armsupport.Type) error {
+	f.mu.Lock()
+	f.checkTypes = append(f.checkTypes, typ)
+	f.mu.Unlock()
 	if err := f.rec("CheckName", name); err != nil {
 		return err
 	}

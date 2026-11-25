@@ -3,6 +3,7 @@ package support
 import (
 	"strings"
 
+	"charm.land/bubbles/v2/spinner"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/cdobbyn/azure-go-cli/pkg/azure"
@@ -28,6 +29,7 @@ type scopeScreen struct {
 	p       picker
 	rows    []scopeRow
 	loading bool
+	spin    spinner.Model
 	err     error
 	names   map[string]string // tenant ID -> display name, from discovery
 }
@@ -72,7 +74,7 @@ func newScopeScreen(p *config.Profile) *scopeScreen {
 		}
 	}
 	rows = append(rows, scopeRow{text: otherTenant, kind: rowOther})
-	sc := &scopeScreen{names: map[string]string{}}
+	sc := &scopeScreen{names: map[string]string{}, spin: spinner.New()}
 	sc.setRows(rows)
 	return sc
 }
@@ -126,6 +128,13 @@ func (sc *scopeScreen) update(a *app, msg tea.Msg) tea.Cmd {
 		}
 		sc.setRows(rows)
 		return nil
+	case spinner.TickMsg:
+		if !sc.loading {
+			return nil
+		}
+		var cmd tea.Cmd
+		sc.spin, cmd = sc.spin.Update(m)
+		return cmd
 	case tea.KeyPressMsg:
 		if m.String() == "esc" {
 			a.pop()
@@ -142,10 +151,10 @@ func (sc *scopeScreen) update(a *app, msg tea.Msg) tea.Cmd {
 	case rowOther:
 		sc.loading, sc.err = true, nil
 		gen := a.gen
-		return func() tea.Msg {
+		return tea.Batch(func() tea.Msg {
 			t, err := a.d.discover(a.ctx)
 			return tenantsLoadedMsg{gen, t, err}
-		}
+		}, sc.spin.Tick)
 	case rowSignIn:
 		return a.signInCmd(r.scope.TenantID, func(subs []config.Subscription, err error) tea.Msg {
 			return tenantSignedInMsg{r.scope.TenantID, subs, err}
@@ -159,7 +168,7 @@ func (sc *scopeScreen) view(a *app) string {
 	b.WriteString("Switch scope (enter selects, esc cancels)\n")
 	switch {
 	case sc.loading:
-		b.WriteString("Loading tenants…")
+		b.WriteString(sc.spin.View() + " Loading tenants…")
 	case sc.err != nil:
 		b.WriteString(errView(sc.err) + "\n" + sc.p.view(a.bodyHeight()))
 	default:

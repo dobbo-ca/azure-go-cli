@@ -85,6 +85,7 @@ func TestCreateTicketOrder(t *testing.T) {
 		"CheckName:abc-1", "CheckName:abc-1", "CreateFileWorkspace:abc-1",
 		"CreateFile:abc-1/f.txt", "UploadChunk:abc-1/f.txt/0", "CreateTicket:abc-1",
 	}, f.calls)
+	require.Equal(t, []armsupport.Type{armsupport.TypeMicrosoftSupportSupportTickets, typeFileWorkspaces}, f.checkTypes)
 	p := f.tickets["abc-1"].Properties
 	require.Equal(t, "/providers/Microsoft.Support/services/"+svcGUID, *p.ServiceID)
 	require.Equal(t, "abc-1", *p.FileWorkspaceName)
@@ -133,9 +134,6 @@ func runCmd(t *testing.T, fake *fakeClient, args ...string) (string, error) {
 	t.Helper()
 	old := commandClientFn
 	commandClientFn = func(_ *cobra.Command, tenantLevel bool) (Client, string, error) {
-		if tenantLevel {
-			return fake, "", nil
-		}
 		return fake, "sub1", nil
 	}
 	t.Cleanup(func() { commandClientFn = old })
@@ -184,6 +182,24 @@ func TestTicketsCreateTechnicalResourceMismatch(t *testing.T) {
 	_, err := runCmd(t, f, createArgs("--technical-resource", res)...)
 	require.ErrorContains(t, err, "does not match with sub1")
 	require.Empty(t, f.calls)
+}
+
+func TestTicketsCreateNonTechnicalSendsResourceUnvalidated(t *testing.T) {
+	fixNow(t)
+	f := newFake()
+	res := "/subscriptions/99999999-9999-9999-9999-999999999999/resourceGroups/rg/providers/Microsoft.Compute/virtualMachines/vm"
+	billing := "/providers/Microsoft.Support/services/" + billingServiceGUID + "/problemClassifications/" + pcGUID
+	args := append(createArgs("--technical-resource", res), "--problem-classification", billing)
+	_, err := runCmd(t, f, args...)
+	require.NoError(t, err)
+	require.Equal(t, res, *f.tickets["t1"].Properties.TechnicalTicketDetails.ResourceID)
+}
+
+func TestSupportRejectsPositionalArgs(t *testing.T) {
+	_, err := runCmd(t, newFake(), "tickts")
+	require.ErrorContains(t, err, "unknown command")
+	_, err = runCmd(t, newFake(), "tui", "x")
+	require.Error(t, err)
 }
 
 func TestTicketsCreateQuotaFlags(t *testing.T) {
