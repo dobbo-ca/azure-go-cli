@@ -16,9 +16,6 @@ func tuiAllowedFor(cmd *cobra.Command) bool {
 	return tuiAllowed(noInput, term.IsTerminal(int(os.Stdin.Fd())), term.IsTerminal(int(os.Stdout.Fd())))
 }
 
-// runTUI is replaced by the real launcher in the TUI tasks.
-func runTUI(cmd *cobra.Command) error { return errors.New("TUI not built yet") }
-
 // NewSupportCommand returns the root `az support` command.
 func NewSupportCommand() *cobra.Command {
 	cmd := &cobra.Command{

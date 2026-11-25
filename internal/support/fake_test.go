@@ -3,10 +3,16 @@ package support
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 	"sync"
+	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/support/armsupport/v2"
+
+	"github.com/cdobbyn/azure-go-cli/pkg/azure"
+	"github.com/cdobbyn/azure-go-cli/pkg/config"
 )
 
 type chunk struct {
@@ -30,6 +36,13 @@ type fakeClient struct {
 	lastFilter string
 	takenNames map[string]bool
 	err        map[string]error // method name -> error to return
+
+	updates      []armsupport.UpdateSupportTicket // UpdateTicket arguments, in order
+	profile      *config.Profile                  // returned by fakeDeps.loadProfile
+	tenants      []azure.TenantInfo               // returned by fakeDeps.discover
+	scopes       []Scope                          // fakeDeps.newClient arguments, in order
+	newClientErr error                            // returned by fakeDeps.newClient when set
+	discovered   int                              // fakeDeps.discover call count
 }
 
 var _ Client = (*fakeClient)(nil)
@@ -101,6 +114,7 @@ func (f *fakeClient) UpdateTicket(_ context.Context, name string, u armsupport.U
 	if err := f.rec("UpdateTicket", name); err != nil {
 		return armsupport.TicketDetails{}, err
 	}
+	f.updates = append(f.updates, u)
 	t := f.tickets[name]
 	if t.Properties == nil {
 		t.Properties = &armsupport.TicketDetailsProperties{}
@@ -268,3 +282,92 @@ func (f *fakeClient) GetProblemClassification(_ context.Context, service, name s
 	}
 	return armsupport.ProblemClassification{}, fmt.Errorf("problem classification %s not found", name)
 }
+
+// fakeDeps wires deps to fc; nothing leaves the process.
+func fakeDeps(fc *fakeClient) deps {
+	return deps{
+		newClient: func(s Scope) (Client, error) {
+			fc.scopes = append(fc.scopes, s)
+			if fc.newClientErr != nil {
+				return nil, fc.newClientErr
+			}
+			return fc, nil
+		},
+		loadProfile: func() (*config.Profile, error) { return fc.profile, nil },
+		discover: func(context.Context) ([]azure.TenantInfo, error) {
+			fc.discovered++
+			return fc.tenants, nil
+		},
+		signIn:        func(context.Context, string) ([]config.Subscription, error) { return nil, nil },
+		listResources: func(context.Context, Scope, []string) ([]resourceRef, error) { return nil, nil },
+		fetchMe:       func(context.Context, Scope) (me, error) { return me{}, nil },
+		localZone:     func() string { return "" },
+		getenv:        func(string) string { return "" },
+	}
+}
+
+var namedKeys = map[string]tea.Key{
+	"enter":     {Code: tea.KeyEnter},
+	"esc":       {Code: tea.KeyEscape},
+	"tab":       {Code: tea.KeyTab},
+	"shift+tab": {Code: tea.KeyTab, Mod: tea.ModShift},
+	"up":        {Code: tea.KeyUp},
+	"down":      {Code: tea.KeyDown},
+	"space":     {Code: tea.KeySpace, Text: " "},
+	"ctrl+s":    {Code: 's', Mod: tea.ModCtrl},
+	"ctrl+r":    {Code: 'r', Mod: tea.ModCtrl},
+	"ctrl+n":    {Code: 'n', Mod: tea.ModCtrl},
+}
+
+// keys turns names ("enter", "ctrl+s", ...) into key presses; any other string is typed one rune at a time.
+func keys(s ...string) []tea.Msg {
+	var out []tea.Msg
+	for _, name := range s {
+		if k, ok := namedKeys[name]; ok {
+			out = append(out, tea.KeyPressMsg(k))
+			continue
+		}
+		for _, r := range name {
+			out = append(out, tea.KeyPressMsg{Code: r, Text: string(r)})
+		}
+	}
+	return out
+}
+
+// drive feeds msgs to the app, running each returned Cmd synchronously and
+// feeding its message back in. Unexported bubbletea messages (Exec and
+// friends) are dropped, as is anything past depth 50.
+func drive(t *testing.T, a *app, msgs ...tea.Msg) {
+	t.Helper()
+	for _, m := range msgs {
+		_, cmd := a.Update(m)
+		driveCmd(t, a, cmd)
+	}
+}
+
+// driveCmd runs cmd and everything it triggers.
+func driveCmd(t *testing.T, a *app, cmd tea.Cmd) { t.Helper(); pump(a, cmd, 0) }
+
+func pump(a *app, cmd tea.Cmd, depth int) {
+	if cmd == nil || depth > 50 {
+		return
+	}
+	msg := cmd()
+	if msg == nil {
+		return
+	}
+	if b, ok := msg.(tea.BatchMsg); ok {
+		for _, c := range b {
+			pump(a, c, depth+1)
+		}
+		return
+	}
+	typ := reflect.TypeOf(msg)
+	if typ.PkgPath() == reflect.TypeOf(tea.QuitMsg{}).PkgPath() && !isExported(typ.Name()) {
+		return
+	}
+	_, next := a.Update(msg)
+	pump(a, next, depth+1)
+}
+
+func isExported(name string) bool { return name != "" && name[0] >= 'A' && name[0] <= 'Z' }
