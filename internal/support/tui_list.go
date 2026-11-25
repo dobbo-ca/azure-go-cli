@@ -112,6 +112,11 @@ func (l *listScreen) key(a *app, m tea.KeyPressMsg) tea.Cmd {
 	case "down":
 		l.cursor = min(l.cursor+1, len(l.visible())-1)
 		return nil
+	case "enter":
+		if rows := l.visible(); l.cursor < len(rows) {
+			return a.push(newDetailScreen(deref(rows[l.cursor].Name)))
+		}
+		return nil
 	case "esc":
 		l.search.SetValue("")
 		l.search.Blur()
