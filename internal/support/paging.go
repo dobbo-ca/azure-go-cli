@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"unicode/utf16"
 	"unicode/utf8"
 
 	"github.com/Azure/azure-sdk-for-go/sdk/azcore/arm"
@@ -30,9 +31,25 @@ func (t pageToken) encode() string {
 		e := json.NewEncoder(&b)
 		e.SetEscapeHTML(false) // Python leaves & < > as is
 		_ = e.Encode(t.NextLink)
-		link = []byte(strings.TrimSuffix(b.String(), "\n"))
+		link = []byte(asciiJSON(strings.TrimSuffix(b.String(), "\n")))
 	}
 	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(`{"next_link": %s, "offset": %d}`, link, t.Offset)))
+}
+
+// asciiJSON escapes non-ASCII runes as \uXXXX, as Python's json.dumps
+// (ensure_ascii=True) does.
+func asciiJSON(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r < utf8.RuneSelf {
+			b.WriteRune(r)
+			continue
+		}
+		for _, u := range utf16.Encode([]rune{r}) {
+			fmt.Fprintf(&b, `\u%04x`, u)
+		}
+	}
+	return b.String()
 }
 
 // decodeToken parses a --next-token value with Python's error messages.
@@ -87,17 +104,28 @@ func checkLink(link, endpoint string) error {
 		return bad
 	}
 	u, err := url.Parse(link)
-	if err != nil || u.Scheme != "https" || u.User != nil || u.Opaque != "" || u.Host != strings.ToLower(ep.Host) {
+	if err != nil || u.Scheme != "https" || u.User != nil || u.Opaque != "" ||
+		strings.ToLower(u.Host) != u.Host || u.Hostname() != strings.ToLower(ep.Hostname()) || httpsPort(u) != httpsPort(ep) {
 		return bad
 	}
 	if u.Path != "" {
-		for _, seg := range strings.Split(u.Path, "/")[1:] {
-			if seg == "" || seg == "." || seg == ".." {
+		segs := strings.Split(u.Path, "/")[1:]
+		for i, seg := range segs {
+			// a trailing slash is fine, as in Python's normalize_url
+			if (seg == "" && i < len(segs)-1) || seg == "." || seg == ".." {
 				return bad
 			}
 		}
 	}
 	return nil
+}
+
+// httpsPort is the URL's port, with no port meaning 443 (Python's is_same_origin).
+func httpsPort(u *url.URL) string {
+	if p := u.Port(); p != "" {
+		return p
+	}
+	return "443"
 }
 
 // fetchPage GETs one list page by URL through the ARM pipeline.

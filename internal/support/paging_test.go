@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 
@@ -59,6 +60,8 @@ func TestDecodeTokenErrors(t *testing.T) {
 func TestCheckLink(t *testing.T) {
 	ep := "https://management.azure.com"
 	require.NoError(t, checkLink("https://management.azure.com/providers/x?api-version=1", ep))
+	require.NoError(t, checkLink("https://management.azure.com:443/providers/x?api-version=1", ep))
+	require.NoError(t, checkLink("https://management.azure.com/providers/x/?api-version=1", ep))
 	for _, l := range []string{
 		"http://management.azure.com/providers/x",
 		"https://management.azure.com.attacker/providers/x",
@@ -69,6 +72,7 @@ func TestCheckLink(t *testing.T) {
 		"https://management.azure.com\\@evil.example/x",
 		"https://MANAGEMENT.azure.com/x",
 		"https://management.azure.com:8443/x",
+		"https://management.azure.com/a//b",
 	} {
 		require.EqualError(t, checkLink(l, ep), "`next_link` '"+l+"' is not a valid endpoint.", l)
 	}
@@ -162,6 +166,11 @@ func TestListPaging(t *testing.T) {
 	require.Equal(t, &pageToken{NextLink: s.link(3), Offset: 1}, next)
 	require.Equal(t, []int{2, 3}, s.hits)
 
+	// Resume and cut again on the same page: offset counts from the page start.
+	got, next = names(t, c, 1, &pageToken{NextLink: s.link(2), Offset: 1})
+	require.Equal(t, []string{"t5"}, got)
+	require.Equal(t, &pageToken{NextLink: s.link(2), Offset: 2}, next)
+
 	// Resume a first-page token.
 	got, next = names(t, c, 2, &pageToken{Offset: 2})
 	require.Equal(t, []string{"t3", "t4"}, got)
@@ -218,4 +227,47 @@ func TestListCommandsNextToken(t *testing.T) {
 	_, _, err = runCmdStderr(t, f, "in-subscription", "tickets", "list", "--next-token", "!!")
 	require.EqualError(t, err, "--next-token: Invalid Base64 string.")
 	require.Empty(t, f.calls)
+}
+
+func TestPageTokenNonASCIIMatchesPython(t *testing.T) {
+	// base64.b64encode(json.dumps({"next_link": "https://management.azure.com/é😀", "offset": 3}).encode())
+	const py = "eyJuZXh0X2xpbmsiOiAiaHR0cHM6Ly9tYW5hZ2VtZW50LmF6dXJlLmNvbS9cdTAwZTlcdWQ4M2RcdWRlMDAiLCAib2Zmc2V0IjogM30="
+	tok := pageToken{NextLink: "https://management.azure.com/é😀", Offset: 3}
+	require.Equal(t, py, tok.encode())
+	got, err := decodeToken(py)
+	require.NoError(t, err)
+	require.Equal(t, &tok, got)
+}
+
+func TestEveryListCommandPassesNextToken(t *testing.T) {
+	two := func() *fakeClient {
+		f := newFake()
+		f.tickets["t1"] = armsupport.TicketDetails{Name: ptr("t1")}
+		f.tickets["t2"] = armsupport.TicketDetails{Name: ptr("t2")}
+		f.comms["t1"] = []*armsupport.CommunicationDetails{{Name: ptr("a")}, {Name: ptr("b")}}
+		f.chats["t1"] = []*armsupport.ChatTranscriptDetails{{Name: ptr("a")}, {Name: ptr("b")}}
+		f.files["ws"] = []*armsupport.FileDetails{{Name: ptr("a")}, {Name: ptr("b")}}
+		f.nextToken = &pageToken{NextLink: "https://management.azure.com/next", Offset: 1}
+		return f
+	}
+	in := pythonToken("https://management.azure.com/in", 2)
+	for _, scope := range []string{"in-subscription", "no-subscription"} {
+		for _, args := range [][]string{
+			{"tickets", "list"},
+			{"communication", "list", "--ticket-name", "t1"},
+			{"chat-transcript", "list", "--ticket-name", "t1"},
+			{"file", "list", "--file-workspace-name", "ws"},
+		} {
+			name := scope + " " + strings.Join(args, " ")
+			f := two()
+			argv := append(append([]string{scope}, args...), "--max-items", "1", "--next-token", in)
+			out, stderr, err := runCmdStderr(t, f, argv...)
+			require.NoError(t, err, name)
+			var got []any
+			require.NoError(t, json.Unmarshal([]byte(out), &got), name)
+			require.Len(t, got, 1, name)
+			require.Equal(t, &pageToken{NextLink: "https://management.azure.com/in", Offset: 2}, f.gotToken, name)
+			require.Equal(t, "WARNING: Token of next page: "+f.nextToken.encode()+"\n", stderr, name)
+		}
+	}
 }
