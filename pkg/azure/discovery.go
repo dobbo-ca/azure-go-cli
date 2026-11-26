@@ -324,12 +324,14 @@ func DiscoverAllSubscriptionsFromCache(ctx context.Context) ([]TenantInfo, error
 	return tenantInfos, nil
 }
 
-// needsInteractiveAuth reports whether a silent token acquisition failed for a
+func needsInteractiveAuth(err error) bool { return NeedsInteractiveAuth(err) }
+
+// NeedsInteractiveAuth reports whether a silent token acquisition failed for a
 // reason that interactive sign-in can fix: an MFA / Conditional Access challenge
 // (AADSTS50076), or an expired refresh token from Conditional Access sign-in
 // frequency policy (AADSTS70043). Both are resolved by re-authenticating the
 // tenant interactively, so the tenant is offered as "requires sign-in".
-func needsInteractiveAuth(err error) bool {
+func NeedsInteractiveAuth(err error) bool {
 	if err == nil {
 		return false
 	}
