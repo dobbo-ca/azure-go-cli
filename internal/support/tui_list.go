@@ -52,7 +52,7 @@ func (l *listScreen) init(a *app) tea.Cmd {
 	}
 	c, gen, all := a.client, a.gen, l.all
 	return func() tea.Msg {
-		t, err := c.ListTickets(a.ctx, filter, 0)
+		t, _, err := c.ListTickets(a.ctx, filter, 0, nil)
 		return ticketsLoadedMsg{gen, all, t, err}
 	}
 }

@@ -44,6 +44,17 @@ type fakeClient struct {
 	newClientErr error                            // returned by fakeDeps.newClient when set
 	discovered   int                              // fakeDeps.discover call count
 	checkTypes   []armsupport.Type                // CheckName type arguments, in order
+	gotToken     *pageToken                       // last tok passed to a List method
+	nextToken    *pageToken                       // returned by List methods when max cuts the list
+}
+
+// page truncates a fake list to max and returns f.nextToken when it cut it.
+func page[T any](f *fakeClient, items []*T, max int, tok *pageToken) ([]*T, *pageToken, error) {
+	f.gotToken = tok
+	if max > 0 && len(items) > max {
+		return items[:max], f.nextToken, nil
+	}
+	return items, nil, nil
 }
 
 var _ Client = (*fakeClient)(nil)
@@ -101,17 +112,17 @@ func (f *fakeClient) GetTicket(_ context.Context, name string) (armsupport.Ticke
 	return t, nil
 }
 
-func (f *fakeClient) ListTickets(_ context.Context, filter string, max int) ([]*armsupport.TicketDetails, error) {
+func (f *fakeClient) ListTickets(_ context.Context, filter string, max int, tok *pageToken) ([]*armsupport.TicketDetails, *pageToken, error) {
 	f.lastFilter = filter
 	if err := f.rec("ListTickets", filter); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var out []*armsupport.TicketDetails
 	for _, t := range f.tickets {
 		t := t
 		out = append(out, &t)
 	}
-	return truncate(out, max), nil
+	return page(f, out, max, tok)
 }
 
 func (f *fakeClient) UpdateTicket(_ context.Context, name string, u armsupport.UpdateSupportTicket) (armsupport.TicketDetails, error) {
@@ -168,12 +179,12 @@ func (f *fakeClient) GetCommunication(_ context.Context, ticket, name string) (a
 	return armsupport.CommunicationDetails{}, fmt.Errorf("communication %s not found", name)
 }
 
-func (f *fakeClient) ListCommunications(_ context.Context, ticket, filter string, max int) ([]*armsupport.CommunicationDetails, error) {
+func (f *fakeClient) ListCommunications(_ context.Context, ticket, filter string, max int, tok *pageToken) ([]*armsupport.CommunicationDetails, *pageToken, error) {
 	f.lastFilter = filter
 	if err := f.rec("ListCommunications", ticket, filter); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return truncate(f.comms[ticket], max), nil
+	return page(f, f.comms[ticket], max, tok)
 }
 
 func (f *fakeClient) GetChatTranscript(_ context.Context, ticket, name string) (armsupport.ChatTranscriptDetails, error) {
@@ -188,11 +199,11 @@ func (f *fakeClient) GetChatTranscript(_ context.Context, ticket, name string) (
 	return armsupport.ChatTranscriptDetails{}, fmt.Errorf("chat transcript %s not found", name)
 }
 
-func (f *fakeClient) ListChatTranscripts(_ context.Context, ticket string, max int) ([]*armsupport.ChatTranscriptDetails, error) {
+func (f *fakeClient) ListChatTranscripts(_ context.Context, ticket string, max int, tok *pageToken) ([]*armsupport.ChatTranscriptDetails, *pageToken, error) {
 	if err := f.rec("ListChatTranscripts", ticket); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return truncate(f.chats[ticket], max), nil
+	return page(f, f.chats[ticket], max, tok)
 }
 
 func (f *fakeClient) CreateFileWorkspace(_ context.Context, name string) (armsupport.FileWorkspaceDetails, error) {
@@ -242,11 +253,11 @@ func (f *fakeClient) GetFile(_ context.Context, workspace, name string) (armsupp
 	return armsupport.FileDetails{}, fmt.Errorf("file %s not found", name)
 }
 
-func (f *fakeClient) ListFiles(_ context.Context, workspace string, max int) ([]*armsupport.FileDetails, error) {
+func (f *fakeClient) ListFiles(_ context.Context, workspace string, max int, tok *pageToken) ([]*armsupport.FileDetails, *pageToken, error) {
 	if err := f.rec("ListFiles", workspace); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return truncate(f.files[workspace], max), nil
+	return page(f, f.files[workspace], max, tok)
 }
 
 func (f *fakeClient) ListServices(_ context.Context) ([]*armsupport.Service, error) {

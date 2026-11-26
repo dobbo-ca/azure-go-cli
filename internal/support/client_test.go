@@ -52,7 +52,7 @@ func TestSubscriptionClientListTicketsPaths(t *testing.T) {
 		}
 		fmt.Fprintf(w, `{"value":[{"name":"t1"}],"nextLink":"https://%s%s?api-version=2024-04-01&page=2"}`, r.Host, r.URL.Path)
 	})
-	got, err := c.ListTickets(context.Background(), "Status eq 'Open'", 0)
+	got, _, err := c.ListTickets(context.Background(), "Status eq 'Open'", 0, nil)
 	require.NoError(t, err)
 	require.Len(t, got, 2)
 	require.Equal(t, "/subscriptions/sub1/providers/Microsoft.Support/supportTickets", reqs[0].URL.Path)
@@ -65,7 +65,7 @@ func TestTenantClientListTicketsPath(t *testing.T) {
 		path = r.URL.Path
 		fmt.Fprint(w, `{"value":[]}`)
 	})
-	_, err := c.ListTickets(context.Background(), "", 0)
+	_, _, err := c.ListTickets(context.Background(), "", 0, nil)
 	require.NoError(t, err)
 	require.Equal(t, "/providers/Microsoft.Support/supportTickets", path)
 }
@@ -86,7 +86,7 @@ func TestListHonorsContext(t *testing.T) {
 	})
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := c.ListTickets(ctx, "", 0)
+	_, _, err := c.ListTickets(ctx, "", 0, nil)
 	require.ErrorIs(t, err, context.Canceled)
 	require.Zero(t, hits)
 }

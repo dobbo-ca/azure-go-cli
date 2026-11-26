@@ -191,11 +191,41 @@ func addContactFlags(cmd *cobra.Command, required bool) {
 	cmd.Flags().StringSlice("contact-additional-emails", nil, "Additional email addresses to notify.")
 }
 
+// addListFlags adds Python's pagination flags (help text minus the backticks, which cobra reads as a value name). As in Python, --next-token is
+// used only together with --max-items.
 func addListFlags(cmd *cobra.Command) {
-	cmd.Flags().Int("max-items", 0, "Maximum number of items to return.")
+	cmd.Flags().Int("max-items", 0, "Total number of items to return in the command's output. If the total number of items available is more than the value specified, a token is provided in the command's output. To resume pagination, provide the token value in --next-token argument of a subsequent command.")
+	cmd.Flags().String("next-token", "", "Token to specify where to start paginating. This is the token value from a previously truncated response.")
 }
 
-func maxItems(cmd *cobra.Command) int { n, _ := cmd.Flags().GetInt("max-items"); return n }
+// paging reads --max-items and --next-token. A malformed token is an error even
+// without --max-items, as Python validates it when parsing arguments.
+func paging(cmd *cobra.Command) (int, *pageToken, error) {
+	n, _ := cmd.Flags().GetInt("max-items")
+	if n < 0 {
+		return 0, nil, errors.New("--max-items must be at least 1")
+	}
+	s := str(cmd, "next-token")
+	if s == "" {
+		return n, nil, nil
+	}
+	tok, err := decodeToken(s)
+	if err != nil {
+		return 0, nil, fmt.Errorf("--next-token: %w", err)
+	}
+	return n, tok, nil
+}
+
+// printPage prints a list, then Python's warning with the token for the rest.
+func printPage[T any](cmd *cobra.Command, items []*T, next *pageToken) error {
+	if err := output.PrintJSON(cmd, listOrEmpty(items)); err != nil {
+		return err
+	}
+	if next != nil {
+		fmt.Fprintf(cmd.ErrOrStderr(), "WARNING: Token of next page: %s\n", next.encode())
+	}
+	return nil
+}
 
 func strPtrs(ss []string) []*string {
 	out := make([]*string, len(ss))
@@ -450,6 +480,10 @@ func newTicketsCmd(tenantLevel bool) *cobra.Command {
 		Use:   "list",
 		Short: "List support tickets. With no --filter and no --max-items, lists tickets created in the last 7 days.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			max, tok, err := paging(cmd)
+			if err != nil {
+				return err
+			}
 			c, _, err := commandClientFn(cmd, tenantLevel)
 			if err != nil {
 				return err
@@ -458,11 +492,11 @@ func newTicketsCmd(tenantLevel bool) *cobra.Command {
 			if !cmd.Flags().Changed("filter") && !cmd.Flags().Changed("max-items") {
 				filter = defaultListFilter(now())
 			}
-			items, err := c.ListTickets(cmd.Context(), filter, maxItems(cmd))
+			items, next, err := c.ListTickets(cmd.Context(), filter, max, tok)
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(items))
+			return printPage(cmd, items, next)
 		},
 	}
 	addStr(list, "filter", "OData filter, for example \"Status eq 'Open'\" or \"CreatedDate ge 2026-11-01\".", false)

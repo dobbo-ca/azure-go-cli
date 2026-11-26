@@ -34,6 +34,7 @@ tui_app.go (bubbletea root)  --------------+   through Client
 | `createTicket` | `tickets.go` | The shared create path for the flag command and the TUI. |
 | `readUpload`, `uploadFile` | `files.go` | Python's upload rules and chunking. |
 | `loadCatalog`, `rank` | `services.go`, `search.go` | Local service / problem search. |
+| `list`, `pageToken` | `paging.go` | Shared list paging for `--max-items` / `--next-token`. |
 | `contactFromMe` | `contact.go` | Contact defaults from Graph `/me`, locale and the local zone. |
 | `app`, `screen`, `deps` | `tui_app.go` | Root model, screen stack and injected dependencies. |
 
@@ -60,6 +61,10 @@ The API wants Windows time zone names and alpha-3 country codes. `cldr/windowsZo
 ## Stale scope results
 
 Every async TUI message carries `app.gen`, which `setScope` increments. Screens drop a message whose `gen` differs, so a slow fetch for the old scope cannot replace the new scope's list. The same guard exists a level down: a list load carries its filter, and a detail load carries its ticket name.
+
+## Paging
+
+`--next-token` uses Python's token, so tokens work in either CLI: base64 of `{"next_link": <URL of the page that was cut, or null for the first page>, "offset": <index in that page of the first item not shown>}`. `list` (`paging.go`) takes the first page of a query from the SDK pager and fetches every other page by link through an `arm.Client` pipeline built from the same credential and options, because the armsupport pagers cannot start from a link. When `--max-items` cuts the output it writes `WARNING: Token of next page: <token>` to stderr; a cut at the end of a page with a `nextLink` gives `{next_link: nextLink, offset: 0}` without fetching that page. As in Python, the token is used only with `--max-items`, and a first-page token (null `next_link`) needs the same `--filter` to resume. A token's `next_link` must be `https` on the ARM endpoint host and in normalized form, or it is rejected before any request carries the bearer token.
 
 ## Sign-in
 

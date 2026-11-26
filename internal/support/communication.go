@@ -43,15 +43,19 @@ func newCommunicationCmd(tenantLevel bool) *cobra.Command {
 		Use:   "list",
 		Short: "List the communications of a support ticket",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			max, tok, err := paging(cmd)
+			if err != nil {
+				return err
+			}
 			c, _, err := commandClientFn(cmd, tenantLevel)
 			if err != nil {
 				return err
 			}
-			items, err := c.ListCommunications(cmd.Context(), str(cmd, "ticket-name"), str(cmd, "filter"), maxItems(cmd))
+			items, next, err := c.ListCommunications(cmd.Context(), str(cmd, "ticket-name"), str(cmd, "filter"), max, tok)
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(items))
+			return printPage(cmd, items, next)
 		},
 	}
 	addStr(list, "ticket-name", "Support ticket name.", true)
@@ -84,15 +88,19 @@ func newChatTranscriptCmd(tenantLevel bool) *cobra.Command {
 		Use:   "list",
 		Short: "List the chat transcripts of a support ticket",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			max, tok, err := paging(cmd)
+			if err != nil {
+				return err
+			}
 			c, _, err := commandClientFn(cmd, tenantLevel)
 			if err != nil {
 				return err
 			}
-			items, err := c.ListChatTranscripts(cmd.Context(), str(cmd, "ticket-name"), maxItems(cmd))
+			items, next, err := c.ListChatTranscripts(cmd.Context(), str(cmd, "ticket-name"), max, tok)
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(items))
+			return printPage(cmd, items, next)
 		},
 	}
 	addStr(list, "ticket-name", "Support ticket name.", true)

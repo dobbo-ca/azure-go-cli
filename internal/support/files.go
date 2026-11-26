@@ -115,15 +115,19 @@ func newFileCmd(tenantLevel bool) *cobra.Command {
 		Use:   "list",
 		Short: "List the files in a file workspace",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			max, tok, err := paging(cmd)
+			if err != nil {
+				return err
+			}
 			c, _, err := commandClientFn(cmd, tenantLevel)
 			if err != nil {
 				return err
 			}
-			items, err := c.ListFiles(cmd.Context(), str(cmd, "file-workspace-name"), maxItems(cmd))
+			items, next, err := c.ListFiles(cmd.Context(), str(cmd, "file-workspace-name"), max, tok)
 			if err != nil {
 				return err
 			}
-			return output.PrintJSON(cmd, listOrEmpty(items))
+			return printPage(cmd, items, next)
 		},
 	}
 	addStr(list, "file-workspace-name", "File workspace name.", true)

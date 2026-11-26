@@ -426,13 +426,14 @@ az support services problem-classifications list --service-name <service-guid>
 az support no-subscription tickets list
 ```
 
+List commands take `--max-items` and `--next-token`, as in Python. When `--max-items` cuts the list, stderr shows `WARNING: Token of next page: <token>`; pass it back with `--next-token` and `--max-items` (the token is ignored without `--max-items`, and needs the same `--filter`). Tokens are interchangeable with Python `az`.
+
 Differences from the Python extension:
 
 - Flags that take a list of objects (`--secondary-consent`, `--quota-change-requests`) take JSON, or `@file`.
 - `--contact-additional-emails` is a repeatable or comma-separated list.
 - `tickets create` creates a file workspace unless `--file-workspace` / `--file-workspace-name` is given.
 - Blocked upload extensions match case-insensitively (`RUN.EXE` is rejected).
-- List commands have `--max-items` but no `--next-token`.
 
 Design: [docs/design/az-support.md](design/az-support.md)
 

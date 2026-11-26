@@ -79,14 +79,6 @@ func group(use, short string, subs ...*cobra.Command) *cobra.Command {
 	return cmd
 }
 
-// truncate caps a list at max items; 0 means unset.
-func truncate[T any](items []*T, max int) []*T {
-	if max > 0 && len(items) > max {
-		return items[:max]
-	}
-	return items
-}
-
 // listOrEmpty makes a nil list print as [] rather than null.
 func listOrEmpty[T any](items []*T) []*T {
 	if items == nil {
