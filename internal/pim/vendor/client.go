@@ -95,7 +95,6 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Message = err.Error()
 		_error.Err = err
 		_error.Request = req
-		logger.Error("%s", _error.Error())
 		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}
@@ -112,7 +111,6 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Err = err
 		_error.Request = req
 		_error.Response = res
-		logger.Error("%s", _error.Error())
 		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}
@@ -125,7 +123,6 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Err = err
 		_error.Request = req
 		_error.Response = res
-		logger.Error("%s", _error.Error())
 		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}
@@ -137,7 +134,6 @@ func Request(request *PIMRequest, responseModel any) (any, error) {
 		_error.Err = err
 		_error.Request = req
 		_error.Response = res
-		logger.Error("%s", _error.Error())
 		logger.Debug("%s", _error.Debug())
 		return nil, &_error
 	}

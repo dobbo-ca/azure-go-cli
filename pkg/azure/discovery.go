@@ -2,6 +2,8 @@ package azure
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -327,21 +329,41 @@ func DiscoverAllSubscriptionsFromCache(ctx context.Context) ([]TenantInfo, error
 func needsInteractiveAuth(err error) bool { return NeedsInteractiveAuth(err) }
 
 // NeedsInteractiveAuth reports whether a silent token acquisition failed for a
-// reason that interactive sign-in can fix: an MFA / Conditional Access challenge
-// (AADSTS50076), or an expired refresh token from Conditional Access sign-in
-// frequency policy (AADSTS70043). Both are resolved by re-authenticating the
-// tenant interactively, so the tenant is offered as "requires sign-in".
+// reason that interactive sign-in can fix: an MFA challenge (AADSTS50076,
+// 50078, 50079), or a refresh token that expired or was revoked (AADSTS70043
+// sign-in frequency, AADSTS50173 password reset, AADSTS700082 inactivity).
+// All are resolved by
+// re-authenticating the tenant interactively, so the tenant is offered as
+// "requires sign-in".
 func NeedsInteractiveAuth(err error) bool {
 	if err == nil {
 		return false
+	}
+	var loginErr *LoginRequiredError
+	if errors.As(err, &loginErr) {
+		return true
 	}
 	// The broker reports the same condition as a status rather than an AADSTS code.
 	if interactionRequired(err) {
 		return true
 	}
+	// Match specific codes, not every invalid_grant: a disabled or locked
+	// account (AADSTS50057, AADSTS50053) is also invalid_grant, and signing in
+	// again can't fix it, so discovery must keep warning about it instead.
 	errStr := err.Error()
-	return strings.Contains(errStr, "AADSTS50076") || // MFA required
-		strings.Contains(errStr, "AADSTS70043") // refresh token expired (sign-in frequency)
+	for _, code := range []string{
+		"AADSTS50076",  // MFA required
+		"AADSTS50079",  // MFA enrollment required
+		"AADSTS50078",  // MFA claim expired
+		"AADSTS70043",  // refresh token expired (sign-in frequency)
+		"AADSTS700082", // refresh token expired (inactivity)
+		"AADSTS50173",  // refresh token revoked (e.g. password reset)
+	} {
+		if strings.Contains(errStr, code) {
+			return true
+		}
+	}
+	return false
 }
 
 // AuthenticateForTenant performs interactive browser authentication targeting a specific tenant
@@ -431,4 +453,21 @@ func DiscoverTenantSubscriptions(ctx context.Context, tenantID string, cred azco
 	}
 
 	return subs, nil
+}
+
+// aadErrorDescription extracts the error_description from the JSON body that
+// MSAL embeds in a failed token request's error text, or "" if there is none.
+func aadErrorDescription(err error) string {
+	s := err.Error()
+	i := strings.Index(s, `{"error"`)
+	if i < 0 {
+		return ""
+	}
+	var body struct {
+		Description string `json:"error_description"`
+	}
+	if json.NewDecoder(strings.NewReader(s[i:])).Decode(&body) != nil {
+		return ""
+	}
+	return body.Description
 }

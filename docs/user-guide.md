@@ -339,14 +339,14 @@ Design: [docs/design/bastion-tunnel-tuning.md](design/bastion-tunnel-tuning.md)
 
 ## Privileged Identity Management (az pim)
 
-`az pim` lists your eligible Azure resource role and Entra group PIM assignments (current activations are not listed) and activates Azure resource roles and Entra group memberships on demand.
+`az pim` lists your eligible Azure resource role PIM assignments (current activations are not listed) and activates them on demand. Entra group PIM was removed because Microsoft retired the API it used; see [docs/pim.md](pim.md).
 
 The Python azure-cli has no PIM command group (not in core, not in any extension); there you have to call the PIM REST API through `az rest`. Here it runs in the same binary and credential, so `AZ_SESSION` isolation applies automatically.
 
 ```bash
 # List eligible assignments (table by default)
 az pim list
-az pim list --type resource        # or: --type group
+az pim list --type resource
 az pim list --output json
 
 # Activate a resource role
@@ -358,12 +358,8 @@ az pim activate resource \
   --duration 60 \
   --set-subscription
 
-# Activate an Entra group membership
-az pim activate group --name customer-acme-admins \
-  --justification "Customer hand-off" --duration 120
-
 # Fail instead of prompting when a flag is missing
-az pim activate group --name customer-acme-admins --no-input
+az pim activate resource --role Contributor --no-input
 ```
 
 Notes and limitations:

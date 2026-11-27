@@ -116,8 +116,11 @@ func (b *BrokerCredential) token(ctx context.Context, scopes []string) (*msalrun
 		if err == nil {
 			return res, nil
 		}
-		if !b.interactive || !interactionRequired(err) {
+		if !interactionRequired(err) {
 			return nil, err
+		}
+		if !b.interactive {
+			return nil, &LoginRequiredError{TenantID: strings.TrimPrefix(b.authority, "https://login.microsoftonline.com/"), Err: err}
 		}
 		logger.Debug("Broker requires interaction for %s: %v", b.authority, err)
 	} else if !b.interactive {

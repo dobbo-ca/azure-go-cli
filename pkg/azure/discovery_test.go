@@ -2,6 +2,7 @@ package azure
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -20,6 +21,12 @@ func TestNeedsInteractiveAuth(t *testing.T) {
 		{"nil error", nil, false},
 		{"MFA required (AADSTS50076)", errors.New("failed to list: AADSTS50076: due to a configuration change made by your administrator"), true},
 		{"refresh token expired (AADSTS70043)", errors.New(reportedTokenExpiredErr), true},
+		{"refresh token revoked (AADSTS50173)", errors.New("reply status code was 400:\n" + revokedGrantBody), true},
+		{"refresh token inactive (AADSTS700082)", errors.New(`reply status code was 400:\n{"error":"invalid_grant","error_description":"AADSTS700082: The refresh token has expired due to inactivity.","error_codes":[700082]}`), true},
+		{"MFA enrollment (AADSTS50079)", errors.New(`reply status code was 400:\n{"error":"interaction_required","error_description":"AADSTS50079: Due to a configuration change made by your administrator, you must enroll in multi-factor authentication.","error_codes":[50079]}`), true},
+		{"disabled account (AADSTS50057)", errors.New(`reply status code was 400:\n{"error":"invalid_grant","error_description":"AADSTS50057: The user account is disabled.","error_codes":[50057]}`), false},
+		{"wrapped LoginRequiredError", fmt.Errorf("list: %w", &LoginRequiredError{TenantID: "t", Err: errors.New("x")}), true},
+		{"transient AAD error", errors.New(`reply status code was 503:\n{"error":"temporarily_unavailable","error_description":"AADSTS90033: A transient error has occurred."}`), false},
 		{"unrelated permission error", errors.New("AADSTS500011: The resource principal was not found in the tenant"), false},
 		{"plain network error", errors.New("dial tcp: connection refused"), false},
 	}

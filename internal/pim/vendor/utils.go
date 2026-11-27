@@ -169,7 +169,6 @@ func CreateResourceAssignmentScheduleInfo(duration int, startDate string, startT
 	if (startDate != "") || (startTime != "") {
 		startDateTime, err := parseDateTime(startDate, startTime)
 		if err != nil {
-			logger.Error("%s", err.Error())
 			logger.Debug("%s", err.Debug())
 			return nil, fmt.Errorf("CreateResourceAssignmentScheduleInfo: %w", err)
 		}
@@ -213,7 +212,6 @@ func CreateGovernanceRoleAssignmentScheduleInfo(duration int, startDate string, 
 	if (startDate != "") || (startTime != "") {
 		startDateTime, err := parseDateTime(startDate, startTime)
 		if err != nil {
-			logger.Error("%s", err.Error())
 			logger.Debug("%s", err.Debug())
 			return nil, fmt.Errorf("CreateGovernanceRoleAssignmentScheduleInfo: %w", err)
 		}
