@@ -4,25 +4,15 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob"
 	"github.com/Azure/azure-sdk-for-go/sdk/storage/azblob/container"
-	"github.com/cdobbyn/azure-go-cli/pkg/azure"
 	"github.com/cdobbyn/azure-go-cli/pkg/output"
 	"github.com/spf13/cobra"
 )
 
-func List(ctx context.Context, cmd *cobra.Command, accountName, containerName string) error {
-	cred, err := azure.GetCredential()
+func List(ctx context.Context, cmd *cobra.Command, containerName string) error {
+	client, err := newClient(ctx, cmd)
 	if err != nil {
 		return err
-	}
-
-	// Build blob service URL
-	serviceURL := fmt.Sprintf("https://%s.blob.core.windows.net/", accountName)
-
-	client, err := azblob.NewClient(serviceURL, cred, nil)
-	if err != nil {
-		return fmt.Errorf("failed to create blob client: %w", err)
 	}
 
 	var blobs []*container.BlobItem
@@ -30,7 +20,7 @@ func List(ctx context.Context, cmd *cobra.Command, accountName, containerName st
 	for pager.More() {
 		page, err := pager.NextPage(ctx)
 		if err != nil {
-			return fmt.Errorf("failed to list blobs: %w", err)
+			return fmt.Errorf("failed to list blobs: %w", storageError(err))
 		}
 
 		if page.Segment == nil || page.Segment.BlobItems == nil {

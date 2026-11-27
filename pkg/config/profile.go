@@ -125,6 +125,17 @@ func GetDefaultSubscription() (string, error) {
 	return "", fmt.Errorf("no subscription found")
 }
 
+// SetUser stamps every subscription with the signed-in user, as azure-cli's
+// profile does. A blank name leaves the subscriptions unchanged.
+func SetUser(subs []Subscription, name string) {
+	if name == "" {
+		return
+	}
+	for i := range subs {
+		subs[i].User = User{Name: name, Type: "user"}
+	}
+}
+
 // DefaultUserName returns the user of the default subscription, or "".
 func DefaultUserName() string {
 	profile, err := Load()

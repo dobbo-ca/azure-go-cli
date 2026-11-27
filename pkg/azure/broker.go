@@ -2,6 +2,8 @@ package azure
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -92,6 +94,7 @@ func (b *BrokerCredential) Authenticate(ctx context.Context) (azidentity.Authent
 	return azidentity.AuthenticationRecord{
 		Authority:     "login.microsoftonline.com",
 		HomeAccountID: res.HomeAccountID,
+		Username:      usernameFromIDToken(res.IDToken),
 		ClientID:      brokerClientID,
 		Version:       "1.0",
 	}, nil
@@ -192,4 +195,29 @@ func interactionRequired(err error) bool {
 		return true
 	}
 	return false
+}
+
+// usernameFromIDToken reads the sign-in name from an ID token, the way MSAL
+// fills an account's username: preferred_username, else upn. The token came
+// straight from the broker, so its signature is not checked here.
+func usernameFromIDToken(idToken string) string {
+	parts := strings.Split(idToken, ".")
+	if len(parts) != 3 {
+		return ""
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return ""
+	}
+	var claims struct {
+		PreferredUsername string `json:"preferred_username"`
+		UPN               string `json:"upn"`
+	}
+	if json.Unmarshal(payload, &claims) != nil {
+		return ""
+	}
+	if claims.PreferredUsername != "" {
+		return claims.PreferredUsername
+	}
+	return claims.UPN
 }
