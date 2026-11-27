@@ -226,11 +226,9 @@ az pim list
 # Activate a resource role
 az pim activate resource --role Contributor --scope "Acme Corp/Acme Production" \
   --ticket Jira:TEC-1234 --justification "Investigating INC-9999" --duration 60
-
-# Activate an Entra group membership
-az pim activate group --name customer-acme-admins \
-  --justification "Customer hand-off" --duration 120
 ```
+
+Entra group PIM is not supported: Microsoft retired the API it used. See [`docs/pim.md`](docs/pim.md).
 
 See [`docs/pim.md`](docs/pim.md) and the [user guide](docs/user-guide.md#privileged-identity-management-az-pim) for the full guide: the four-form `--scope` resolver, `--set-subscription` behavior, validation pre-flight, AZ_SESSION integration for multi-customer workflows, the vendored upstream attribution, and current limitations.
 

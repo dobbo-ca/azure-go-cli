@@ -33,7 +33,7 @@ func newListCmd() *cobra.Command {
 			return runList(cmd, typeFilter)
 		},
 	}
-	cmd.Flags().String("type", "", "filter by type: resource or group")
+	cmd.Flags().String("type", "", "filter by type: resource (the only type left; see docs/pim.md)")
 	return cmd
 }
 
@@ -45,6 +45,9 @@ func runList(cmd *cobra.Command, typeFilter string) error {
 	if !cmd.Flags().Changed("output") {
 		format = "table"
 	}
+	if typeFilter != "" && typeFilter != "resource" {
+		return fmt.Errorf("unsupported --type %q: Entra group PIM was removed because Microsoft retired the API it used; only \"resource\" is supported", typeFilter)
+	}
 	cred, err := azure.GetCredential()
 	if err != nil {
 		return fmt.Errorf("get credential: %w", err)
@@ -53,7 +56,7 @@ func runList(cmd *cobra.Command, typeFilter string) error {
 	client := pimvendor.AzureClient{ARMBaseURL: pimvendor.ARM_GLOBAL_BASE_URL}
 
 	_ = ctx
-	rows, err := collectRows(ts, client, typeFilter)
+	rows, err := collectRows(ts, client)
 	if err != nil {
 		return err
 	}
@@ -70,68 +73,35 @@ func runList(cmd *cobra.Command, typeFilter string) error {
 	return RenderListTable(cmd.OutOrStdout(), rows)
 }
 
-func collectRows(ts *TokenSource, client pimvendor.AzureClient, typeFilter string) ([]ListRow, error) {
+func collectRows(ts *TokenSource, client pimvendor.AzureClient) ([]ListRow, error) {
 	profile, _ := config.Load() // tolerate missing profile; tenant names degrade to UUIDs
 
 	var rows []ListRow
 
-	if typeFilter == "" || typeFilter == "resource" {
-		armToken, err := ts.GetAccessToken("https://management.azure.com/.default")
-		if err != nil {
-			return nil, err
-		}
-		resp, err := client.GetEligibleResourceAssignments(armToken)
-		if err != nil {
-			return nil, err
-		}
-		for _, a := range resp.Value {
-			if a.Properties == nil {
-				continue
-			}
-			tenant, sub := lookupTenantAndSub(profile, a.Properties.Scope)
-			var roleDisplayName string
-			if a.Properties.ExpandedProperties != nil {
-				roleDisplayName = displayNameOrEmpty(a.Properties.ExpandedProperties.RoleDefinition)
-			}
-			rows = append(rows, ListRow{
-				Type:         "resource",
-				Tenant:       tenant,
-				Subscription: sub,
-				Name:         roleDisplayName,
-				Status:       formatStatus(a.Properties.Status, a.Properties.EndDateTime),
-			})
-		}
+	armToken, err := ts.GetAccessToken("https://management.azure.com/.default")
+	if err != nil {
+		return nil, err
 	}
-
-	if typeFilter == "" || typeFilter == "group" {
-		graphToken, err := ts.GetAccessToken("https://graph.microsoft.com/.default")
-		if err != nil {
-			return nil, err
+	resp, err := client.GetEligibleResourceAssignments(armToken)
+	if err != nil {
+		return nil, err
+	}
+	for _, a := range resp.Value {
+		if a.Properties == nil {
+			continue
 		}
-		info, err := pimvendor.GetUserInfo(graphToken)
-		if err != nil {
-			return nil, err
+		tenant, sub := lookupTenantAndSub(profile, a.Properties.Scope)
+		var roleDisplayName string
+		if a.Properties.ExpandedProperties != nil {
+			roleDisplayName = displayNameOrEmpty(a.Properties.ExpandedProperties.RoleDefinition)
 		}
-		resp, err := client.GetEligibleGovernanceRoleAssignments(pimvendor.ROLE_TYPE_AAD_GROUPS, info.ObjectId, graphToken)
-		if err != nil {
-			return nil, err
-		}
-		for _, a := range resp.Value {
-			var tenantID, name string
-			if a.RoleDefinition != nil {
-				name = a.RoleDefinition.DisplayName
-				if a.RoleDefinition.Resource != nil {
-					tenantID = a.RoleDefinition.Resource.Id
-				}
-			}
-			rows = append(rows, ListRow{
-				Type:         "group",
-				Tenant:       resolveTenantName(profile, tenantID),
-				Subscription: "—",
-				Name:         name,
-				Status:       formatStatus(a.AssignmentState, ""), // eligible groups have no expiry until activated
-			})
-		}
+		rows = append(rows, ListRow{
+			Type:         "resource",
+			Tenant:       tenant,
+			Subscription: sub,
+			Name:         roleDisplayName,
+			Status:       formatStatus(a.Properties.Status, a.Properties.EndDateTime),
+		})
 	}
 
 	return rows, nil
@@ -170,18 +140,6 @@ func lookupTenantAndSub(p *config.Profile, armScope string) (tenant, sub string)
 		}
 	}
 	return "", subID
-}
-
-func resolveTenantName(p *config.Profile, tenantID string) string {
-	if p == nil {
-		return tenantID
-	}
-	for _, s := range p.Subscriptions {
-		if s.TenantID == tenantID {
-			return s.TenantID
-		}
-	}
-	return tenantID
 }
 
 func extractSubscriptionID(armScope string) string {

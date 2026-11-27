@@ -17,3 +17,6 @@ The following changes are applied across Tasks 1–4 of `docs/superpowers/plans/
    - `github.com/netr0m/az-pim-cli/pkg/pim` → `(this package)`
 6. `utils_test.go`: `TestParseDateTime` patched to compute the expected timezone offset from the parsed date (Dec 31 2024) rather than `time.Now()`. The upstream version fails whenever the machine clock is in a different DST window than the parsed date.
 7. `test_data.go` renamed to `test_data_test.go` (its contents are test fixtures only, referenced solely from `client_test.go`) and `TEST_DUMMY_JWT` is now generated at runtime (`mustGenerateTestJWT`, signed with a local dummy HS256 key) instead of a hardcoded token literal, so no token-shaped material is checked into source control. Being a `_test.go` file, none of it — including the runtime JWT signing — is compiled into the shipped binary.
+8. `client.go` (`Request`), `utils.go` (`parseDateTime` callers): the `logger.Error` line before each returned error was removed, keeping only `logger.Debug`. The caller prints the returned error, so the error-level log printed every failure twice.
+
+The governance-API (Entra group/role) functions are kept but no longer called: `az pim` dropped Entra group PIM after Microsoft retired that API for CLI tokens (upstream issue #121).
